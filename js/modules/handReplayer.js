@@ -2,7 +2,7 @@
 // Review and replay hands from your training sessions
 
 import storage from '../utils/storage.js';
-import { createHandDisplay, createCardElement } from '../components/Card.js';
+import { createHandDisplay, createCard } from '../components/Card.js';
 import { formatPercentage } from '../utils/helpers.js';
 
 let allSessions = [];
@@ -360,7 +360,7 @@ function showHandDetails(result, index) {
             scenario.board.forEach(cardStr => {
                 const rank = cardStr.slice(0, -1);
                 const suit = cardStr.slice(-1);
-                const card = createCardElement(rank, suit);
+                const card = createCard({ rank, suit });
                 boardDisplay.appendChild(card);
             });
 

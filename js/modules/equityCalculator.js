@@ -2,7 +2,7 @@
 // Calculate hand vs hand equity and basic hand vs range equity
 
 import { RANKS, SUITS } from '../utils/constants.js';
-import { createCardElement } from '../components/Card.js';
+import { createCard } from '../components/Card.js';
 import { randomItem } from '../utils/helpers.js';
 
 // Hand evaluator ranks (simplif ied)
@@ -473,7 +473,7 @@ function createHandResult(label, hand, equity, wins) {
     hand.forEach(cardStr => {
         const rank = cardStr.slice(0, -1);
         const suit = cardStr.slice(-1);
-        const card = createCardElement(rank, suit);
+        const card = createCard({ rank, suit });
         cardsDiv.appendChild(card);
     });
 

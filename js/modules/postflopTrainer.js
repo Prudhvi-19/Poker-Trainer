@@ -2,7 +2,7 @@
 
 import { POSITIONS, ACTIONS, TRAINER_TYPES, BET_SIZES, RANKS, SUITS, SUIT_NAMES } from '../utils/constants.js';
 import { randomItem, generateId, formatPercentage, showToast } from '../utils/helpers.js';
-import { createHandDisplay, createCardElement } from '../components/Card.js';
+import { createHandDisplay, createCard } from '../components/Card.js';
 import storage from '../utils/storage.js';
 
 let currentSession = null;
@@ -299,7 +299,7 @@ function createBoardDisplay(board) {
     board.forEach(cardString => {
         const rank = cardString.slice(0, -1);
         const suit = cardString.slice(-1);
-        const card = createCardElement(rank, suit);
+        const card = createCard({ rank, suit });
         cardsContainer.appendChild(card);
     });
 
