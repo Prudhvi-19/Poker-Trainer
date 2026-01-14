@@ -126,6 +126,24 @@ function createBBDefenseCharts() {
 function createRangeChart(title, range, percentage) {
     const card = document.createElement('div');
     card.className = 'chart-card';
+    card.style.cursor = 'pointer';
+    card.style.transition = 'all 0.2s ease';
+
+    // Add hover effect
+    card.addEventListener('mouseenter', () => {
+        card.style.transform = 'translateY(-4px)';
+        card.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.2)';
+    });
+
+    card.addEventListener('mouseleave', () => {
+        card.style.transform = 'translateY(0)';
+        card.style.boxShadow = '';
+    });
+
+    // Add click to expand
+    card.addEventListener('click', () => {
+        showExpandedChart(title, range, percentage);
+    });
 
     const header = document.createElement('div');
     header.className = 'chart-header';
@@ -142,21 +160,102 @@ function createRangeChart(title, range, percentage) {
 
     card.appendChild(header);
 
-    // Create non-interactive grid
+    // Create non-interactive grid (improved readability)
     const grid = createHandGrid(range, null, false);
-    grid.style.transform = 'scale(0.8)';
-    grid.style.transformOrigin = 'top left';
+    grid.style.transform = 'scale(0.9)';
+    grid.style.transformOrigin = 'top center';
+    grid.style.margin = '0 auto';
     card.appendChild(grid);
 
-    // Hand list
-    const handList = document.createElement('div');
-    handList.style.marginTop = '1rem';
-    handList.style.fontSize = '0.875rem';
-    handList.style.color = 'var(--color-text-secondary)';
-    handList.textContent = range.join(', ');
-    card.appendChild(handList);
+    // Add "Click to expand" hint
+    const hint = document.createElement('div');
+    hint.style.textAlign = 'center';
+    hint.style.marginTop = '0.5rem';
+    hint.style.fontSize = '0.875rem';
+    hint.style.color = 'var(--color-text-muted)';
+    hint.textContent = 'Click to expand';
+    card.appendChild(hint);
 
     return card;
+}
+
+function showExpandedChart(title, range, percentage) {
+    // Create modal overlay
+    const modal = document.createElement('div');
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.right = '0';
+    modal.style.bottom = '0';
+    modal.style.background = 'rgba(0, 0, 0, 0.85)';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.zIndex = '1000';
+    modal.style.padding = '2rem';
+
+    // Close on click outside
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            document.body.removeChild(modal);
+        }
+    });
+
+    // Create modal content
+    const content = document.createElement('div');
+    content.className = 'card';
+    content.style.maxWidth = '800px';
+    content.style.width = '100%';
+    content.style.maxHeight = '90vh';
+    content.style.overflow = 'auto';
+
+    // Header
+    const header = document.createElement('div');
+    header.style.display = 'flex';
+    header.style.justifyContent = 'space-between';
+    header.style.alignItems = 'center';
+    header.style.marginBottom = '1.5rem';
+
+    const titleEl = document.createElement('h2');
+    titleEl.textContent = title;
+
+    const percentEl = document.createElement('span');
+    percentEl.className = 'badge badge-success';
+    percentEl.style.fontSize = '1.25rem';
+    percentEl.style.padding = '0.5rem 1rem';
+    percentEl.textContent = percentage;
+
+    header.appendChild(titleEl);
+    header.appendChild(percentEl);
+
+    content.appendChild(header);
+
+    // Full-size grid
+    const grid = createHandGrid(range, null, false);
+    grid.style.margin = '0 auto';
+    content.appendChild(grid);
+
+    // Hand count
+    const countDiv = document.createElement('div');
+    countDiv.style.textAlign = 'center';
+    countDiv.style.marginTop = '1.5rem';
+    countDiv.style.color = 'var(--color-text-secondary)';
+    countDiv.textContent = `${range.length} hand combinations`;
+    content.appendChild(countDiv);
+
+    // Close button
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'btn btn-secondary';
+    closeBtn.textContent = '✕ Close';
+    closeBtn.style.marginTop = '1.5rem';
+    closeBtn.style.width = '100%';
+    closeBtn.addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
+    content.appendChild(closeBtn);
+
+    modal.appendChild(content);
+    document.body.appendChild(modal);
 }
 
 export default {

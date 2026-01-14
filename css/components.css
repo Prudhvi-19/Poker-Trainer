@@ -200,11 +200,6 @@
     transform: scale(1.05);
 }
 
-.hand-cell.selected {
-    background-color: var(--color-success);
-    color: var(--color-bg-primary);
-}
-
 .hand-cell.pair {
     background-color: var(--color-bg-secondary);
 }
@@ -212,6 +207,18 @@
 .hand-cell.suited {
     position: relative;
     border: 2px solid var(--color-info);
+}
+
+.hand-cell.offsuit {
+    position: relative;
+    border: 2px solid transparent;
+}
+
+/* Selected state must come AFTER type classes to override them */
+.hand-cell.selected {
+    background-color: var(--color-success) !important;
+    color: var(--color-bg-primary) !important;
+    font-weight: 600;
 }
 
 .hand-cell.suited::after {
@@ -222,11 +229,6 @@
     font-size: 10px;
     color: var(--color-info);
     opacity: 0.6;
-}
-
-.hand-cell.offsuit {
-    position: relative;
-    border: 2px solid transparent;
 }
 
 .hand-cell.offsuit::after {

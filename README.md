@@ -36,6 +36,36 @@ A comprehensive, single-page web application for learning and practicing Game Th
 - Session statistics and accuracy tracking
 - Full keyboard shortcut support
 
+### 🎰 Multi-Street Trainer ⭐ NEW!
+- **Full hand progression** from preflop → flop → turn → river
+- Make GTO decisions on every street of a complete hand
+- Dynamic board generation for each street
+- Position-aware gameplay (in position vs out of position)
+- Tracks all decisions across all streets
+- Session statistics: hands played, total decisions, accuracy
+- Real-time feedback for each decision
+- Complete poker hand experience
+
+### 🧮 Equity Calculator ⭐ NEW!
+- **Hand vs hand equity** calculation
+- **Monte Carlo simulation** (10,000 iterations for accuracy)
+- Optional board input (0-5 cards: flop, turn, river)
+- Visual equity bars with win percentages
+- Full hand evaluator (pairs through straight flush)
+- Random hand generator for quick tests
+- Duplicate card validation
+- See exact win/tie percentages
+
+### 🎬 Hand Replayer ⭐ NEW!
+- **Review all past training hands** from completed sessions
+- Session selector with dates, module, and accuracy
+- Click any hand to see detailed breakdown in modal
+- Shows your action vs GTO action side-by-side
+- Displays complete scenario: board, position, situation, hand
+- Session summary statistics (total hands, accuracy)
+- Learn from your mistakes
+- Track improvement over time
+
 ### 🎨 Hand Range Visualizer
 - Interactive 13×13 hand grid
 - Click to select/deselect hands
@@ -43,6 +73,7 @@ A comprehensive, single-page web application for learning and practicing Game Th
 - Range statistics (combos, percentage)
 - Save custom ranges
 - Compare ranges side-by-side
+- **Fixed**: Selected pairs now properly highlighted
 
 ### 📈 Charts Reference
 - Complete GTO charts for 6-max cash games
@@ -50,7 +81,9 @@ A comprehensive, single-page web application for learning and practicing Game Th
 - 3-Bet ranges vs each position
 - BB Defense ranges (vs UTG to vs SB)
 - Print-friendly formatting
-- Visual grids + text lists
+- **Click any chart to expand** for detailed view
+- Cleaner visual design (removed text lists)
+- Hover effects for better UX
 
 ### 📚 Scenarios Library
 - 20+ curated poker situations with detailed analysis
@@ -217,18 +250,42 @@ All data is stored in your browser's localStorage:
 
 **Export Your Data**: Use Settings → Export Data to backup your progress
 
+## 🎉 Recent Updates (v2.0)
+
+### ⭐ Major Features Added
+- ✅ **Multi-Street Trainer**: Complete hand progression (preflop → river)
+- ✅ **Equity Calculator**: Hand vs hand equity with Monte Carlo simulation
+- ✅ **Hand Replayer**: Review and learn from all past training sessions
+
+### 🐛 Bug Fixes & Improvements
+- ✅ Fixed session history duplicates (sessions now update correctly)
+- ✅ Fixed dropdown selection issues in trainers
+- ✅ Fixed hand randomization bias (now uses all 169 starting hands equally)
+- ✅ Fixed range visualizer pair highlighting (pairs now show correctly when selected)
+- ✅ Improved charts readability (click to expand, removed text lists, better scaling)
+- ✅ Added hover effects and visual feedback throughout the app
+
+### 📊 Complete Feature Set
+This app now includes:
+- ✅ **6 Preflop Trainer Modes** (RFI, 3-bet, 4-bet, cold call, squeeze, BB defense)
+- ✅ **5 Postflop Trainer Modes** (c-bet, facing c-bet, turn, river, board texture)
+- ✅ **Multi-Street Trainer** (full hands across all streets)
+- ✅ **Equity Calculator** (hand vs hand with board input)
+- ✅ **Hand Replayer** (review past sessions)
+- ✅ **Complete GTO Data** (all positions, all scenarios)
+- ✅ **12 Total Modules** for comprehensive poker training
+
 ## 🚀 Future Enhancements
 
-- [ ] Advanced multi-street scenarios (flop → turn → river practice)
-- [ ] Hand replayer for analyzing played hands
-- [ ] Equity calculator with range vs range
 - [ ] GTO bot to play against
+- [ ] Range vs range equity visualization
 - [ ] Achievement system and badges
 - [ ] Study plan generator based on weaknesses
 - [ ] Spaced repetition system for weak areas
-- [ ] Range vs range equity visualization
 - [ ] Custom scenario builder
 - [ ] Multi-language support
+- [ ] Advanced tournament-specific training (ICM, bubble play)
+- [ ] Solver integration for custom spot analysis
 
 ## 🤝 Contributing
 
@@ -239,9 +296,11 @@ This is an open-source project. Contributions are welcome!
 - More detailed theory content
 - Bug fixes and optimizations
 - UI/UX improvements
-- Advanced multi-street scenario trainer
-- Equity calculator implementation
-- Range vs range analysis tools
+- Range vs range equity analysis
+- GTO bot opponent
+- Tournament-specific training modes
+- Custom scenario builder
+- Multi-language translations
 
 ## 📝 License
 

@@ -1,7 +1,7 @@
 // Preflop Trainer Module
 
 import { POSITIONS, ACTIONS, TRAINER_TYPES, MODULES } from '../utils/constants.js';
-import { randomItem, generateId, formatPercentage, showToast } from '../utils/helpers.js';
+import { randomItem, generateId, formatPercentage, showToast, randomHand } from '../utils/helpers.js';
 import { createHandDisplay } from '../components/Card.js';
 import ranges from '../data/ranges.js';
 import storage from '../utils/storage.js';
@@ -362,36 +362,6 @@ function generateSqueezeScenario() {
         description: `You are ${heroPos}. ${raiserPos} raises to 2.5bb, ${callerPos} calls. What do you do?`,
         options: [ACTIONS.RAISE, ACTIONS.CALL, ACTIONS.FOLD],
         correctAction
-    };
-}
-
-function randomHand() {
-    const allHands = [
-        'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77', '66', '55', '44', '33', '22',
-        'AKs', 'AQs', 'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s',
-        'KQs', 'KJs', 'KTs', 'K9s', 'K8s', 'K7s', 'K6s', 'K5s',
-        'QJs', 'QTs', 'Q9s', 'Q8s', 'Q7s', 'Q6s',
-        'JTs', 'J9s', 'J8s', 'J7s',
-        'T9s', 'T8s', 'T7s',
-        '98s', '87s', '76s', '65s', '54s', '43s', '32s',
-        'AKo', 'AQo', 'AJo', 'ATo', 'A9o', 'A8o', 'A7o',
-        'KQo', 'KJo', 'KTo', 'K9o',
-        'QJo', 'QTo', 'Q9o',
-        'JTo', 'J9o',
-        'T9o', 'T8o',
-        '98o', '87o', '76o', '65o'
-    ];
-
-    const handString = randomItem(allHands);
-    const suited = handString.endsWith('s');
-    const rank1 = handString[0];
-    const rank2 = handString[1];
-
-    return {
-        rank1,
-        rank2,
-        suited,
-        display: handString
     };
 }
 

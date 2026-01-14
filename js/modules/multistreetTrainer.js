@@ -2,7 +2,7 @@
 // Full hand progression: Preflop → Flop → Turn → River
 
 import { POSITIONS, ACTIONS, TRAINER_TYPES, RANKS, SUITS, STREET } from '../utils/constants.js';
-import { randomItem, generateId, formatPercentage } from '../utils/helpers.js';
+import { randomItem, generateId, formatPercentage, randomHand } from '../utils/helpers.js';
 import { createHandDisplay, createCardElement } from '../components/Card.js';
 import ranges from '../data/ranges.js';
 import storage from '../utils/storage.js';
@@ -105,7 +105,7 @@ function generateNewHand() {
     const villainPosition = randomItem(POSITIONS.filter(p => p !== heroPosition));
 
     // Generate hero hand
-    const heroHand = generateRandomHand();
+    const heroHand = randomHand();
 
     // Determine who is preflop aggressor
     const heroIsAggressor = Math.random() > 0.5;
@@ -123,27 +123,6 @@ function generateNewHand() {
         board: [],
         actions: [],
         decisions: []
-    };
-}
-
-function generateRandomHand() {
-    const allHands = [
-        'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77', '66', '55', '44', '33', '22',
-        'AKs', 'AQs', 'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s',
-        'KQs', 'KJs', 'KTs', 'K9s', 'Q Js', 'QTs', 'JTs', 'T9s', '98s', '87s', '76s', '65s',
-        'AKo', 'AQo', 'AJo', 'ATo', 'KQo', 'KJo', 'QJo', 'JTo'
-    ];
-
-    const handString = randomItem(allHands);
-    const suited = handString.endsWith('s');
-    const rank1 = handString[0];
-    const rank2 = handString[1];
-
-    return {
-        rank1,
-        rank2,
-        suited,
-        display: handString
     };
 }
 
