@@ -4,7 +4,7 @@ import { RANKS, SUITS, POKER_QUOTES } from './constants.js';
 
 // Generate unique ID
 export function generateId() {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
 // Get random item from array
@@ -134,6 +134,36 @@ export function randomHand() {
 export function handsEqual(hand1, hand2) {
     if (!hand1 || !hand2) return false;
     return formatHand(hand1) === formatHand(hand2);
+}
+
+// Check if position1 is in position (acts after) position2
+export function isInPosition(position1, position2) {
+    // Import POSITIONS from constants
+    const positions = ['UTG', 'HJ', 'CO', 'BTN', 'SB', 'BB'];
+
+    const pos1Index = positions.indexOf(position1);
+    const pos2Index = positions.indexOf(position2);
+
+    if (pos1Index === -1 || pos2Index === -1) {
+        return false;
+    }
+
+    // Postflop: SB acts first, then BB, then UTG through BTN
+    // So order is: SB, BB, UTG, HJ, CO, BTN
+    // Button has position over everyone postflop
+    // Higher index in original array = better position postflop (except blinds)
+
+    // For simplicity: later position in array has position over earlier (UTG to BTN)
+    // Blinds (SB/BB) are OOP against all other positions postflop
+    if (position1 === 'SB' || position1 === 'BB') {
+        return false; // Blinds always OOP postflop
+    }
+    if (position2 === 'SB' || position2 === 'BB') {
+        return true; // IP vs blinds
+    }
+
+    // Among non-blind positions, higher index = better position
+    return pos1Index > pos2Index;
 }
 
 // Debounce function

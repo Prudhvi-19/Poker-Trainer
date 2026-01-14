@@ -316,8 +316,19 @@ function runMonteCarloSimulation(hand1, hand2, board, iterations) {
 }
 
 function getRandomCard(usedCards) {
+    // Safety check to prevent infinite loop
+    if (usedCards.size >= 52) {
+        throw new Error('No cards available - all 52 cards are in use');
+    }
+
     let card;
+    let attempts = 0;
+    const maxAttempts = 100;
+
     do {
+        if (attempts++ > maxAttempts) {
+            throw new Error(`Failed to find available card after ${maxAttempts} attempts`);
+        }
         const rank = randomItem(RANKS);
         const suit = randomItem(Object.values(SUITS));
         card = `${rank}${suit}`;
@@ -387,7 +398,9 @@ function checkStraight(ranks) {
     }
 
     // Check for A-2-3-4-5 (wheel)
-    if (sorted.includes(12) && sorted.includes(3) && sorted.includes(2) && sorted.includes(1) && sorted.includes(0)) {
+    // RANKS = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2']
+    // Indices: A=0, 5=9, 4=10, 3=11, 2=12
+    if (sorted.includes(0) && sorted.includes(9) && sorted.includes(10) && sorted.includes(11) && sorted.includes(12)) {
         return true;
     }
 

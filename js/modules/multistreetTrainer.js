@@ -2,7 +2,7 @@
 // Full hand progression: Preflop → Flop → Turn → River
 
 import { POSITIONS, ACTIONS, TRAINER_TYPES, RANKS, SUITS, STREET } from '../utils/constants.js';
-import { randomItem, generateId, formatPercentage, randomHand } from '../utils/helpers.js';
+import { randomItem, generateId, formatPercentage, randomHand, isInPosition } from '../utils/helpers.js';
 import { createHandDisplay, createCard } from '../components/Card.js';
 import ranges from '../data/ranges.js';
 import storage from '../utils/storage.js';
@@ -107,6 +107,9 @@ function generateNewHand() {
     // Generate hero hand
     const heroHand = randomHand();
 
+    // Generate actual cards with suits for the hero hand
+    const heroCards = generateHeroCards(heroHand);
+
     // Determine who is preflop aggressor
     const heroIsAggressor = Math.random() > 0.5;
 
@@ -115,6 +118,7 @@ function generateNewHand() {
         heroPosition,
         villainPosition,
         heroHand,
+        heroCards, // Store actual cards to prevent duplicates on board
         heroIsAggressor,
         currentStreet: STREET.PREFLOP,
         pot: 1.5, // Blinds posted
@@ -124,6 +128,36 @@ function generateNewHand() {
         actions: [],
         decisions: []
     };
+}
+
+function generateHeroCards(hand) {
+    // Generate actual card objects with specific suits
+    let suit1, suit2;
+
+    if (hand.suited) {
+        // Same suit - randomly pick one
+        const suits = Object.values(SUITS);
+        suit1 = suit2 = suits[Math.floor(Math.random() * suits.length)];
+    } else if (hand.rank1 === hand.rank2) {
+        // Pair - different suits
+        const suits = Object.values(SUITS);
+        suit1 = suits[Math.floor(Math.random() * suits.length)];
+        do {
+            suit2 = suits[Math.floor(Math.random() * suits.length)];
+        } while (suit2 === suit1);
+    } else {
+        // Offsuit - different suits
+        const suits = Object.values(SUITS);
+        suit1 = suits[Math.floor(Math.random() * suits.length)];
+        do {
+            suit2 = suits[Math.floor(Math.random() * suits.length)];
+        } while (suit2 === suit1);
+    }
+
+    return [
+        `${hand.rank1}${suit1}`,
+        `${hand.rank2}${suit2}`
+    ];
 }
 
 function updateHandInfo() {
@@ -182,8 +216,24 @@ function showCurrentStreet() {
     handLabel.style.marginBottom = '0.5rem';
     card.appendChild(handLabel);
 
-    const handDisplay = createHandDisplay(currentHand.heroHand, true);
-    card.appendChild(handDisplay);
+    // Use actual hero cards to prevent showing different cards each render
+    const handContainer = document.createElement('div');
+    handContainer.className = 'hand-display';
+    if (currentHand.heroCards) {
+        currentHand.heroCards.forEach(cardStr => {
+            const rank = cardStr.slice(0, -1);
+            const suit = cardStr.slice(-1);
+            const cardEl = createCard({ rank, suit }, true);
+            handContainer.appendChild(cardEl);
+        });
+    } else {
+        // Fallback to old method if heroCards not available
+        const handDisplay = createHandDisplay(currentHand.heroHand, true);
+        card.appendChild(handDisplay);
+    }
+    if (currentHand.heroCards) {
+        card.appendChild(handContainer);
+    }
 
     // Show action history
     if (currentHand.actions.length > 0) {
@@ -283,7 +333,7 @@ function generatePreflopDecision() {
 
 function generatePostflopDecision() {
     // Simplified postflop: c-bet or check/call decisions
-    const isInPosition = POSITIONS.indexOf(currentHand.heroPosition) > POSITIONS.indexOf(currentHand.villainPosition);
+    const heroHasPosition = isInPosition(currentHand.heroPosition, currentHand.villainPosition);
 
     if (currentHand.heroIsAggressor) {
         // Should we c-bet?
@@ -293,7 +343,7 @@ function generatePostflopDecision() {
         return {
             street: currentHand.currentStreet,
             correctAction,
-            description: `You raised preflop and villain called. ${isInPosition ? 'You have position' : 'You are OOP'}. What do you do?`,
+            description: `You raised preflop and villain called. ${heroHasPosition ? 'You have position' : 'You are OOP'}. What do you do?`,
             options: [
                 { action: ACTIONS.BET, label: `Bet ${(currentHand.pot * 0.67).toFixed(1)}bb` },
                 { action: ACTIONS.CHECK, label: 'Check' }
@@ -453,6 +503,11 @@ function advanceStreet() {
 function generateBoard(numCards) {
     const cards = [];
     const usedCards = new Set(currentHand.board);
+
+    // CRITICAL FIX: Exclude hero's actual cards to prevent duplicates
+    if (currentHand.heroCards) {
+        currentHand.heroCards.forEach(card => usedCards.add(card));
+    }
 
     while (cards.length < numCards) {
         const rank = randomItem(RANKS);

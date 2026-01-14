@@ -18,6 +18,30 @@ class Storage {
             localStorage.setItem(key, JSON.stringify(value));
             return true;
         } catch (error) {
+            if (error.name === 'QuotaExceededError') {
+                // Handle storage quota exceeded
+                console.warn('localStorage quota exceeded, attempting cleanup...');
+
+                // Try to clean up old sessions
+                if (key === STORAGE_KEYS.SESSIONS) {
+                    const sessions = this.getSessions();
+                    if (sessions.length > 50) {
+                        // Keep only 50 most recent sessions
+                        sessions.length = 50;
+                        try {
+                            localStorage.setItem(key, JSON.stringify(sessions));
+                            return true;
+                        } catch (retryError) {
+                            console.error('Failed to save even after cleanup:', retryError);
+                            return false;
+                        }
+                    }
+                }
+
+                console.error(`Storage full and cleanup failed for ${key}`);
+                return false;
+            }
+
             console.error(`Error writing to localStorage (${key}):`, error);
             return false;
         }
@@ -69,9 +93,11 @@ class Storage {
             sessions.unshift(session);
         }
 
-        // Keep only last 100 sessions
-        if (sessions.length > 100) {
-            sessions.length = 100;
+        // Keep only configured number of sessions (default 200)
+        const settings = this.getSettings();
+        const maxSessions = settings.maxStoredSessions || DEFAULT_SETTINGS.maxStoredSessions || 200;
+        if (sessions.length > maxSessions) {
+            sessions.length = maxSessions;
         }
         return this.set(STORAGE_KEYS.SESSIONS, sessions);
     }

@@ -302,6 +302,11 @@ class Stats {
         const firstHalf = trend.slice(0, midpoint);
         const secondHalf = trend.slice(midpoint);
 
+        // Safety check: prevent division by zero
+        if (firstHalf.length === 0 || secondHalf.length === 0) {
+            return 0;
+        }
+
         const firstHalfAvg = firstHalf.reduce((sum, d) => sum + d.accuracy, 0) / firstHalf.length;
         const secondHalfAvg = secondHalf.reduce((sum, d) => sum + d.accuracy, 0) / secondHalf.length;
 

@@ -128,7 +128,8 @@ export const DEFAULT_SETTINGS = {
     defaultSessionLength: 25,
     showHints: false,
     timedMode: false,
-    difficulty: DIFFICULTY.MEDIUM
+    difficulty: DIFFICULTY.MEDIUM,
+    maxStoredSessions: 200  // Increased from hardcoded 100
 };
 
 export const POKER_QUOTES = [

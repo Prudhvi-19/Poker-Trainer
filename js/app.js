@@ -102,8 +102,9 @@ function applySettings() {
  */
 function initKeyboardShortcuts() {
     document.addEventListener('keydown', (e) => {
-        // Don't trigger shortcuts when typing in inputs
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+        // Don't trigger shortcuts when typing in inputs or when modal is open
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' ||
+            e.target.tagName === 'SELECT' || document.querySelector('.modal-overlay')) {
             return;
         }
 
