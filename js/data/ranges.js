@@ -278,6 +278,80 @@ export const FOUR_BET_RANGES = {
     vsSB: ['AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', 'AKs', 'AKo', 'AQs', 'AJs', 'A5s', 'A4s', 'A3s', 'A2s', 'KQs']
 };
 
+// Cold calling ranges (facing a raise, not in blinds)
+export const COLD_CALL_RANGES = {
+    vsUTG: [ // Very tight, prefer 3-bet or fold
+        'JJ', 'TT', '99', '88', '77',
+        'AJs', 'ATs', 'KQs', 'QJs', 'JTs',
+        'AQo'
+    ],
+    vsHJ: [
+        'TT', '99', '88', '77', '66', '55',
+        'AJs', 'ATs', 'A9s', 'KQs', 'KJs', 'QJs', 'JTs', 'T9s',
+        'AQo', 'AJo'
+    ],
+    vsCO: [
+        '99', '88', '77', '66', '55', '44', '33', '22',
+        'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s',
+        'KJs', 'KTs', 'QJs', 'QTs', 'JTs', 'T9s', '98s', '87s', '76s',
+        'AJo', 'ATo', 'KQo'
+    ],
+    vsBTN: [
+        '88', '77', '66', '55', '44', '33', '22',
+        'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s',
+        'KTs', 'K9s', 'QJs', 'QTs', 'JTs', 'J9s', 'T9s', '98s', '87s', '76s', '65s', '54s',
+        'AJo', 'ATo', 'KQo', 'KJo'
+    ],
+    vsSB: [
+        '77', '66', '55', '44', '33', '22',
+        'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s',
+        'KJs', 'KTs', 'K9s', 'QJs', 'QTs', 'JTs', 'J9s', 'T9s', 'T8s', '98s', '87s', '76s', '65s', '54s',
+        'ATo', 'A9o', 'KQo', 'KJo', 'QJo'
+    ]
+};
+
+// Squeeze ranges (facing raise + call[s])
+export const SQUEEZE_RANGES = {
+    vsUTG: [ // Tight - original raiser is strong
+        'AA', 'KK', 'QQ', 'JJ',
+        'AKs', 'AQs',
+        'AKo'
+    ],
+    vsHJ: [
+        'AA', 'KK', 'QQ', 'JJ', 'TT',
+        'AKs', 'AQs', 'AJs',
+        'AKo', 'AQo',
+        'A5s', 'A4s' // Bluffs
+    ],
+    vsCO: [
+        'AA', 'KK', 'QQ', 'JJ', 'TT', '99',
+        'AKs', 'AQs', 'AJs', 'ATs',
+        'KQs', 'KJs',
+        'AKo', 'AQo',
+        'A5s', 'A4s', 'A3s', 'A2s',
+        '76s', '65s' // Bluffs
+    ],
+    vsBTN: [ // Wider - BTN likely weak
+        'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77',
+        'AKs', 'AQs', 'AJs', 'ATs', 'A9s',
+        'KQs', 'KJs', 'KTs',
+        'QJs', 'JTs',
+        'AKo', 'AQo', 'AJo',
+        ...SUITED_ACES, // More bluffs
+        '87s', '76s', '65s', '54s'
+    ],
+    vsSB: [ // Very wide
+        'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77', '66',
+        'AKs', 'AQs', 'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s',
+        'KQs', 'KJs', 'KTs', 'K9s',
+        'QJs', 'QTs',
+        'JTs', 'T9s',
+        '98s', '87s', '76s', '65s', '54s',
+        'AKo', 'AQo', 'AJo', 'ATo',
+        'KQo'
+    ]
+};
+
 // Helper function to check if hand is in range
 export function isInRange(hand, range) {
     if (!hand || !range) return false;
@@ -341,6 +415,8 @@ export default {
     BB_DEFENSE_RANGES,
     CALL_3BET_RANGES,
     FOUR_BET_RANGES,
+    COLD_CALL_RANGES,
+    SQUEEZE_RANGES,
     isInRange,
     getRangeSize,
     getRangePercentage,

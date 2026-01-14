@@ -94,6 +94,9 @@ function createTypeSelector() {
     const types = [
         { value: TRAINER_TYPES.RFI, label: 'RFI (Raise First In)' },
         { value: TRAINER_TYPES.THREE_BET, label: '3-Bet' },
+        { value: TRAINER_TYPES.FOUR_BET, label: '4-Bet vs 3-Bet' },
+        { value: TRAINER_TYPES.COLD_CALL, label: 'Cold Call' },
+        { value: TRAINER_TYPES.SQUEEZE, label: 'Squeeze' },
         { value: TRAINER_TYPES.BB_DEFENSE, label: 'BB Defense' }
     ];
 
@@ -219,6 +222,12 @@ function generateScenario(trainerType) {
             return generateRFIScenario();
         case TRAINER_TYPES.THREE_BET:
             return generate3BetScenario();
+        case TRAINER_TYPES.FOUR_BET:
+            return generate4BetScenario();
+        case TRAINER_TYPES.COLD_CALL:
+            return generateColdCallScenario();
+        case TRAINER_TYPES.SQUEEZE:
+            return generateSqueezeScenario();
         case TRAINER_TYPES.BB_DEFENSE:
             return generateBBDefenseScenario();
         default:
@@ -275,6 +284,79 @@ function generateBBDefenseScenario() {
         hand,
         description: `You are BB. ${villainPos} raises to 2.5bb. What do you do?`,
         options: [ACTIONS.CALL, ACTIONS.RAISE, ACTIONS.FOLD],
+        correctAction
+    };
+}
+
+function generate4BetScenario() {
+    const villainPos = randomItem(['UTG', 'HJ', 'CO', 'BTN', 'SB']);
+    const heroPos = randomItem(POSITIONS.filter(p => POSITIONS.indexOf(p) > POSITIONS.indexOf(villainPos)));
+    const hand = randomHand();
+
+    const posKey = `vs${villainPos}`;
+
+    // Determine correct action: 4-bet, call, or fold
+    let correctAction = ACTIONS.FOLD;
+    if (ranges.isInRange(hand.display, ranges.FOUR_BET_RANGES[posKey])) {
+        correctAction = ACTIONS.RAISE;
+    } else if (ranges.isInRange(hand.display, ranges.CALL_3BET_RANGES[posKey])) {
+        correctAction = ACTIONS.CALL;
+    }
+
+    return {
+        type: TRAINER_TYPES.FOUR_BET,
+        position: heroPos,
+        villainPosition: villainPos,
+        hand,
+        description: `You are ${heroPos}. You raised to 2.5bb, ${villainPos} 3-bet to 9bb. What do you do?`,
+        options: [ACTIONS.RAISE, ACTIONS.CALL, ACTIONS.FOLD],
+        correctAction
+    };
+}
+
+function generateColdCallScenario() {
+    const villainPos = randomItem(['UTG', 'HJ', 'CO', 'BTN', 'SB']);
+    const heroPos = randomItem(POSITIONS.filter(p => POSITIONS.indexOf(p) > POSITIONS.indexOf(villainPos)));
+    const hand = randomHand();
+
+    const posKey = `vs${villainPos}`;
+
+    // Determine correct action: 3-bet, cold call, or fold
+    let correctAction = ACTIONS.FOLD;
+    const threeBetKey = `vs${villainPos}`;
+    if (ranges.isInRange(hand.display, ranges.THREE_BET_RANGES[threeBetKey])) {
+        correctAction = ACTIONS.RAISE;
+    } else if (ranges.isInRange(hand.display, ranges.COLD_CALL_RANGES[posKey])) {
+        correctAction = ACTIONS.CALL;
+    }
+
+    return {
+        type: TRAINER_TYPES.COLD_CALL,
+        position: heroPos,
+        villainPosition: villainPos,
+        hand,
+        description: `You are ${heroPos}. ${villainPos} raises to 2.5bb. What do you do?`,
+        options: [ACTIONS.RAISE, ACTIONS.CALL, ACTIONS.FOLD],
+        correctAction
+    };
+}
+
+function generateSqueezeScenario() {
+    const raiserPos = randomItem(['UTG', 'HJ', 'CO', 'BTN', 'SB']);
+    const callerPos = randomItem(POSITIONS.filter(p => POSITIONS.indexOf(p) > POSITIONS.indexOf(raiserPos)));
+    const heroPos = randomItem(POSITIONS.filter(p => POSITIONS.indexOf(p) > POSITIONS.indexOf(callerPos)));
+    const hand = randomHand();
+
+    const posKey = `vs${raiserPos}`;
+    const correctAction = ranges.isInRange(hand.display, ranges.SQUEEZE_RANGES[posKey]) ? ACTIONS.RAISE : ACTIONS.FOLD;
+
+    return {
+        type: TRAINER_TYPES.SQUEEZE,
+        position: heroPos,
+        villainPosition: raiserPos,
+        hand,
+        description: `You are ${heroPos}. ${raiserPos} raises to 2.5bb, ${callerPos} calls. What do you do?`,
+        options: [ACTIONS.RAISE, ACTIONS.CALL, ACTIONS.FOLD],
         correctAction
     };
 }

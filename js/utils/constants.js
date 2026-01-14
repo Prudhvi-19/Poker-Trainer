@@ -62,12 +62,16 @@ export const TRAINER_TYPES = {
     RFI: 'rfi',
     THREE_BET: '3bet',
     FOUR_BET: '4bet',
+    COLD_CALL: 'cold-call',
+    SQUEEZE: 'squeeze',
     BB_DEFENSE: 'bb-defense',
     BLIND_VS_BLIND: 'blind-vs-blind',
     CBET: 'cbet',
+    FACING_CBET: 'facing-cbet',
     BOARD_TEXTURE: 'board-texture',
     TURN_PLAY: 'turn',
-    RIVER_PLAY: 'river'
+    RIVER_PLAY: 'river',
+    MULTISTREET: 'multistreet'
 };
 
 export const STREET = {
