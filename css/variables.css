@@ -91,3 +91,40 @@
     --color-diamonds: #ef4444;
     --color-clubs: #000000;
 }
+
+/* Light Theme */
+[data-theme="light"] {
+    /* Colors - Light Theme */
+    --color-bg-primary: #ffffff;
+    --color-bg-secondary: #f8f9fa;
+    --color-bg-tertiary: #e9ecef;
+    --color-border: #dee2e6;
+    --color-border-hover: #adb5bd;
+
+    /* Text Colors */
+    --color-text-primary: #212529;
+    --color-text-secondary: #6c757d;
+    --color-text-muted: #adb5bd;
+
+    /* Action Colors stay the same */
+    --color-success: #22c55e;
+    --color-success-dark: #16a34a;
+    --color-error: #ef4444;
+    --color-error-dark: #dc2626;
+    --color-warning: #f59e0b;
+    --color-warning-dark: #d97706;
+    --color-info: #3b82f6;
+    --color-info-dark: #2563eb;
+
+    /* Shadows for light mode */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.15);
+    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.2);
+
+    /* Card Suit Colors for light mode */
+    --color-spades: #000000;
+    --color-hearts: #dc2626;
+    --color-diamonds: #2563eb;
+    --color-clubs: #16a34a;
+}

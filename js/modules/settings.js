@@ -53,6 +53,19 @@ function createDisplaySettings() {
     const settings = document.createElement('div');
     settings.className = 'settings-group';
 
+    // Theme
+    const themeSetting = createSelectSetting(
+        'Theme',
+        'Choose between dark and light theme',
+        'theme',
+        [
+            { value: 'dark', label: '🌙 Dark Theme' },
+            { value: 'light', label: '☀️ Light Theme' }
+        ],
+        currentSettings.theme || 'dark'
+    );
+    settings.appendChild(themeSetting);
+
     // Deck Style
     const deckStyleSetting = createSelectSetting(
         'Deck Style',
@@ -278,6 +291,10 @@ function saveSettings() {
     storage.saveSettings(currentSettings);
 
     // Apply settings immediately
+    if (currentSettings.theme) {
+        document.documentElement.setAttribute('data-theme', currentSettings.theme);
+    }
+
     if (currentSettings.deckStyle) {
         document.documentElement.setAttribute('data-deck-style', currentSettings.deckStyle);
     }

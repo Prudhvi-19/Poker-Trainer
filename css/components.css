@@ -211,28 +211,27 @@
 
 .hand-cell.suited {
     position: relative;
+    border: 2px solid var(--color-info);
 }
 
 .hand-cell.suited::after {
-    content: 's';
+    content: '♠';
     position: absolute;
-    bottom: 2px;
+    top: 1px;
     right: 2px;
-    font-size: var(--font-size-xs);
-    color: var(--color-text-secondary);
+    font-size: 10px;
+    color: var(--color-info);
+    opacity: 0.6;
 }
 
 .hand-cell.offsuit {
     position: relative;
+    border: 2px solid transparent;
 }
 
 .hand-cell.offsuit::after {
-    content: 'o';
-    position: absolute;
-    bottom: 2px;
-    right: 2px;
-    font-size: var(--font-size-xs);
-    color: var(--color-text-secondary);
+    content: '';
+    /* No visual indicator for offsuit - cleaner look */
 }
 
 /* Stats Display */

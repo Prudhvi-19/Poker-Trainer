@@ -58,6 +58,9 @@ function init() {
     // Apply saved settings
     applySettings();
 
+    // Initialize keyboard shortcuts
+    initKeyboardShortcuts();
+
     console.log('✅ GTO Poker Trainer - Ready!');
 }
 
@@ -66,6 +69,11 @@ function init() {
  */
 function applySettings() {
     const savedSettings = storage.getSettings();
+
+    // Apply theme
+    if (savedSettings.theme) {
+        document.documentElement.setAttribute('data-theme', savedSettings.theme);
+    }
 
     // Apply deck style
     if (savedSettings.deckStyle) {
@@ -81,6 +89,45 @@ function applySettings() {
         };
         document.documentElement.style.fontSize = fontSizes[savedSettings.fontSize] || '16px';
     }
+}
+
+/**
+ * Initialize global keyboard shortcuts
+ */
+function initKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+        // Don't trigger shortcuts when typing in inputs
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+            return;
+        }
+
+        const key = e.key.toLowerCase();
+
+        // Dispatch custom events for keyboard shortcuts
+        switch (key) {
+            case 'r':
+                document.dispatchEvent(new CustomEvent('poker-shortcut', { detail: { action: 'raise' } }));
+                break;
+            case 'c':
+                document.dispatchEvent(new CustomEvent('poker-shortcut', { detail: { action: 'call' } }));
+                break;
+            case 'f':
+                document.dispatchEvent(new CustomEvent('poker-shortcut', { detail: { action: 'fold' } }));
+                break;
+            case ' ':
+                e.preventDefault();
+                document.dispatchEvent(new CustomEvent('poker-shortcut', { detail: { action: 'next' } }));
+                break;
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+                document.dispatchEvent(new CustomEvent('poker-shortcut', { detail: { action: 'bet-size', value: parseInt(key) } }));
+                break;
+        }
+    });
 }
 
 // Initialize app when DOM is ready

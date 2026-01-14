@@ -15,7 +15,7 @@ function render() {
     // Header
     const header = document.createElement('div');
     header.className = 'trainer-header';
-    header.innerHTML = '<h1>🎯 Preflop Trainer</h1>';
+    header.innerHTML = '<h1>🎯 Preflop Trainer</h1><p class="text-muted">Use keyboard: R=Raise, C=Call, F=Fold, Space=Next</p>';
     container.appendChild(header);
 
     // Trainer type selector
@@ -34,6 +34,46 @@ function render() {
 
     // Initialize session
     startNewSession(TRAINER_TYPES.RFI);
+
+    // Add keyboard shortcut listener
+    const keyboardHandler = (e) => {
+        const action = e.detail.action;
+        const scenarioEl = document.getElementById('scenario-container');
+        if (!scenarioEl) return;
+
+        // Check if we're in feedback mode
+        if (scenarioEl.querySelector('.feedback-panel')) {
+            // In feedback mode, space advances
+            if (action === 'next') {
+                showNextScenario();
+            }
+            return;
+        }
+
+        // Get current scenario from buttons
+        const buttons = scenarioEl.querySelectorAll('.action-buttons .btn');
+        if (buttons.length === 0) return;
+
+        // Map action to button
+        let targetButton = null;
+        buttons.forEach(btn => {
+            const btnText = btn.textContent.toLowerCase();
+            if (btnText === action) {
+                targetButton = btn;
+            }
+        });
+
+        if (targetButton) {
+            targetButton.click();
+        }
+    };
+
+    document.addEventListener('poker-shortcut', keyboardHandler);
+
+    // Cleanup on navigation away
+    window.addEventListener('hashchange', () => {
+        document.removeEventListener('poker-shortcut', keyboardHandler);
+    }, { once: true });
 
     return container;
 }
@@ -288,17 +328,22 @@ function handleAnswer(scenario, userAnswer) {
 
     showFeedback(scenario, userAnswer, isCorrect);
     updateStats();
-
-    // Auto-advance after delay
-    setTimeout(() => {
-        showNextScenario();
-    }, 2500);
 }
 
 function showFeedback(scenario, userAnswer, isCorrect) {
     const scenarioEl = document.getElementById('scenario-container');
     if (!scenarioEl) return;
 
+    const card = scenarioEl.querySelector('.scenario-card');
+    if (!card) return;
+
+    // Hide action buttons
+    const buttons = card.querySelector('.action-buttons');
+    if (buttons) {
+        buttons.style.display = 'none';
+    }
+
+    // Create feedback panel
     const feedback = document.createElement('div');
     feedback.className = `feedback-panel ${isCorrect ? 'correct' : 'incorrect'}`;
 
@@ -315,13 +360,23 @@ function showFeedback(scenario, userAnswer, isCorrect) {
             <p>Correct answer: <strong>${scenario.correctAction.toUpperCase()}</strong></p>
         `;
     } else {
-        explanation.textContent = 'Great job!';
+        explanation.textContent = 'Great job! Keep going!';
     }
+
+    // Add next button
+    const nextButton = document.createElement('button');
+    nextButton.className = 'btn btn-primary';
+    nextButton.textContent = 'Next Hand (Space)';
+    nextButton.style.marginTop = '1rem';
+    nextButton.addEventListener('click', () => {
+        showNextScenario();
+    });
 
     feedback.appendChild(title);
     feedback.appendChild(explanation);
+    feedback.appendChild(nextButton);
 
-    scenarioEl.appendChild(feedback);
+    card.appendChild(feedback);
 
     // Save to storage if session has enough hands
     if (currentSession.results.length >= 10) {

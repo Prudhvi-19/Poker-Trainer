@@ -113,6 +113,7 @@ export const STORAGE_KEYS = {
 };
 
 export const DEFAULT_SETTINGS = {
+    theme: 'dark',
     deckStyle: '4-color',
     soundEnabled: false,
     animationSpeed: 'normal',
