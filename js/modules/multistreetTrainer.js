@@ -553,10 +553,10 @@ function createBoardDisplay(board) {
 function saveHandToSession() {
     currentSession.hands.push(currentHand);
 
-    if (currentSession.hands.length >= 5) {
-        currentSession.endTime = new Date().toISOString();
-        storage.saveSession(currentSession);
-    }
+    // Save session after every hand (storage handles deduplication by ID)
+    // This ensures sessions are saved even if user plays < 5 hands
+    currentSession.endTime = new Date().toISOString();
+    storage.saveSession(currentSession);
 }
 
 function updateStats() {

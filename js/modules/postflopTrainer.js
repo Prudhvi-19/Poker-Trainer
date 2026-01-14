@@ -624,11 +624,10 @@ function showFeedback(scenario, userAnswer, isCorrect) {
 
     card.appendChild(feedback);
 
-    // Save to storage if session has enough hands
-    if (currentSession.results.length >= 10) {
-        currentSession.endTime = new Date().toISOString();
-        storage.saveSession(currentSession);
-    }
+    // Save session after every hand (storage handles deduplication by ID)
+    // This ensures sessions are saved even if user plays < 10 hands
+    currentSession.endTime = new Date().toISOString();
+    storage.saveSession(currentSession);
 }
 
 export default {
