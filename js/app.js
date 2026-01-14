@@ -9,6 +9,9 @@ import { initNavigation, setActiveNavItem, updateStreakDisplay } from './compone
 import dashboard from './modules/dashboard.js';
 import preflopTrainer from './modules/preflopTrainer.js';
 import postflopTrainer from './modules/postflopTrainer.js';
+import multistreetTrainer from './modules/multistreetTrainer.js';
+import equityCalculator from './modules/equityCalculator.js';
+import handReplayer from './modules/handReplayer.js';
 import rangeVisualizer from './modules/rangeVisualizer.js';
 import charts from './modules/charts.js';
 import scenarios from './modules/scenarios.js';
@@ -38,6 +41,9 @@ function init() {
     router.register(MODULES.DASHBOARD, dashboard.render);
     router.register(MODULES.PREFLOP_TRAINER, preflopTrainer.render);
     router.register(MODULES.POSTFLOP_TRAINER, postflopTrainer.render);
+    router.register(MODULES.MULTISTREET_TRAINER, multistreetTrainer.render);
+    router.register(MODULES.EQUITY_CALCULATOR, equityCalculator.render);
+    router.register(MODULES.HAND_REPLAYER, handReplayer.render);
     router.register(MODULES.RANGE_VISUALIZER, rangeVisualizer.render);
     router.register(MODULES.CHARTS, charts.render);
     router.register(MODULES.SCENARIOS, scenarios.render);

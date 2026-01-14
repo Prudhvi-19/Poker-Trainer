@@ -58,7 +58,17 @@ class Storage {
 
     saveSession(session) {
         const sessions = this.getSessions();
-        sessions.unshift(session); // Add to beginning
+
+        // Check if session already exists (by ID)
+        const existingIndex = sessions.findIndex(s => s.id === session.id);
+        if (existingIndex !== -1) {
+            // Update existing session
+            sessions[existingIndex] = session;
+        } else {
+            // Add new session to beginning
+            sessions.unshift(session);
+        }
+
         // Keep only last 100 sessions
         if (sessions.length > 100) {
             sessions.length = 100;

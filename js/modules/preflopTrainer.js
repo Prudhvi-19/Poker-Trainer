@@ -88,6 +88,7 @@ function createTypeSelector() {
     label.style.marginRight = '1rem';
 
     const select = document.createElement('select');
+    select.id = 'trainer-type-select';
     select.style.padding = '0.5rem 1rem';
     select.style.fontSize = '1rem';
 
@@ -106,6 +107,9 @@ function createTypeSelector() {
         option.textContent = type.label;
         select.appendChild(option);
     });
+
+    // Set initial value to RFI
+    select.value = TRAINER_TYPES.RFI;
 
     select.addEventListener('change', (e) => {
         startNewSession(e.target.value);
