@@ -14,10 +14,27 @@ A comprehensive, single-page web application for learning and practicing Game Th
 ### 🎯 Preflop Trainer
 - **RFI (Raise First In)**: Practice opening ranges for all positions
 - **3-Bet Trainer**: Learn optimal 3-betting strategy
+- **4-Bet Trainer**: Master 4-bet vs 3-bet decisions (4-bet, call, or fold)
+- **Cold Call Trainer**: Practice calling facing raises in multiway scenarios
+- **Squeeze Trainer**: Learn squeeze play (raise vs call + caller scenarios)
 - **BB Defense**: Master big blind defense vs all positions
 - Real-time feedback with explanations
 - Session statistics and accuracy tracking
 - Auto-save progress to localStorage
+- Full keyboard shortcut support (R/C/F/Space)
+
+### 🎲 Postflop Trainer
+- **C-Bet Trainer**: Learn when to continuation bet (bet vs check decisions)
+- **Facing C-Bet Trainer**: Master c-bet defense (fold vs call vs raise)
+- **Turn Play Trainer**: Practice turn decisions (barrel vs give up)
+- **River Play Trainer**: Learn river value betting and bluff decisions
+- **Board Texture Quiz**: Train board texture recognition (dry/wet/static/dynamic)
+- Position-aware GTO frequencies (IP vs OOP)
+- Dynamic board generation with all streets (flop, turn, river)
+- Board texture classification algorithm
+- Real-time feedback with board texture analysis
+- Session statistics and accuracy tracking
+- Full keyboard shortcut support
 
 ### 🎨 Hand Range Visualizer
 - Interactive 13×13 hand grid
@@ -125,7 +142,7 @@ Poker-Trainer/
 │   └── modules/
 │       ├── dashboard.js       # Dashboard module
 │       ├── preflopTrainer.js  # Preflop training
-│       ├── postflopTrainer.js # Postflop training (coming soon)
+│       ├── postflopTrainer.js # Postflop training (c-bet, turn, river)
 │       ├── rangeVisualizer.js # Range visualizer
 │       ├── charts.js          # Charts reference
 │       ├── scenarios.js       # Scenarios library
@@ -202,13 +219,15 @@ All data is stored in your browser's localStorage:
 
 ## 🚀 Future Enhancements
 
-- [ ] Postflop trainer with c-bet, turn, and river modules
+- [ ] Advanced multi-street scenarios (flop → turn → river practice)
 - [ ] Hand replayer for analyzing played hands
-- [ ] Equity calculator
+- [ ] Equity calculator with range vs range
 - [ ] GTO bot to play against
 - [ ] Achievement system and badges
-- [ ] Study plan generator
+- [ ] Study plan generator based on weaknesses
 - [ ] Spaced repetition system for weak areas
+- [ ] Range vs range equity visualization
+- [ ] Custom scenario builder
 - [ ] Multi-language support
 
 ## 🤝 Contributing
@@ -220,7 +239,9 @@ This is an open-source project. Contributions are welcome!
 - More detailed theory content
 - Bug fixes and optimizations
 - UI/UX improvements
-- Postflop trainer implementation
+- Advanced multi-street scenario trainer
+- Equity calculator implementation
+- Range vs range analysis tools
 
 ## 📝 License
 
