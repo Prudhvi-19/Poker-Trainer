@@ -8,6 +8,7 @@ class Router {
         this.routes = {};
         this.currentModule = null;
         this.container = null;
+        this.hashChangeHandler = null;
     }
 
     /**
@@ -23,9 +24,9 @@ class Router {
         }
 
         // Listen for hash changes
-        window.addEventListener('hashchange', () => {
-            this.handleRoute();
-        });
+        // Store handler reference for potential cleanup
+        this.hashChangeHandler = () => this.handleRoute();
+        window.addEventListener('hashchange', this.hashChangeHandler);
 
         // Handle initial route
         this.handleRoute();
@@ -115,6 +116,15 @@ class Router {
      */
     refresh() {
         this.handleRoute();
+    }
+
+    /**
+     * Cleanup router (remove event listeners)
+     */
+    cleanup() {
+        if (this.hashChangeHandler) {
+            window.removeEventListener('hashchange', this.hashChangeHandler);
+        }
     }
 }
 

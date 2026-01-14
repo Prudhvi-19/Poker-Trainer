@@ -325,3 +325,41 @@ export function scrollToTop(smooth = true) {
         behavior: smooth ? 'smooth' : 'auto'
     });
 }
+
+// Parse card string to rank and suit (robust parsing)
+export function parseCard(cardString) {
+    if (!cardString || typeof cardString !== 'string') {
+        return null;
+    }
+
+    // Card format: ${rank}${suit} where rank is 1 char, suit is 1 unicode char
+    const rank = cardString.slice(0, -1);
+    const suit = cardString.slice(-1);
+
+    // Validate rank
+    if (!RANKS.includes(rank)) {
+        return null;
+    }
+
+    // Validate suit
+    const validSuits = Object.values(SUITS);
+    if (!validSuits.includes(suit)) {
+        return null;
+    }
+
+    return { rank, suit };
+}
+
+// Format card from rank and suit to string
+export function formatCard(rank, suit) {
+    return `${rank}${suit}`;
+}
+
+// Parse array of card strings
+export function parseCards(cardStrings) {
+    if (!Array.isArray(cardStrings)) {
+        return [];
+    }
+
+    return cardStrings.map(parseCard).filter(card => card !== null);
+}

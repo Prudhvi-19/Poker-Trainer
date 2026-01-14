@@ -169,7 +169,39 @@ function createCardSelect(id) {
         });
     });
 
+    // Add change listener for real-time duplicate detection
+    select.addEventListener('change', updateCardAvailability);
+
     return select;
+}
+
+function updateCardAvailability() {
+    const usedCards = getUsedCards();
+    const allSelects = [
+        'hand1-card1', 'hand1-card2', 'hand2-card1', 'hand2-card2',
+        'board-card1', 'board-card2', 'board-card3', 'board-card4', 'board-card5'
+    ];
+
+    allSelects.forEach(selectId => {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+
+        const currentValue = select.value;
+
+        // Re-enable all options first
+        Array.from(select.options).forEach(option => {
+            if (option.value === '') return; // Skip empty option
+
+            // Disable if used by another dropdown (but not this one)
+            if (usedCards.has(option.value) && option.value !== currentValue) {
+                option.disabled = true;
+                option.style.color = '#999';
+            } else {
+                option.disabled = false;
+                option.style.color = '';
+            }
+        });
+    });
 }
 
 function setRandomHand(handId) {
@@ -250,7 +282,7 @@ function calculateEquity() {
     // Show loading
     resultsEl.innerHTML = '<div style="text-align: center; padding: 2rem;"><div class="text-muted">Calculating equity (running 10,000 simulations)...</div></div>';
 
-    // Run Monte Carlo simulation (async to not block UI)
+    // Run Monte Carlo simulation with brief delay to show loading state
     setTimeout(() => {
         const result = runMonteCarloSimulation(
             [hand1Card1, hand1Card2],

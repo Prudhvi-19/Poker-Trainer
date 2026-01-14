@@ -25,6 +25,19 @@ import settings from './modules/settings.js';
 function init() {
     console.log('🃏 GTO Poker Trainer - Initializing...');
 
+    // Global error handler for uncaught errors
+    window.addEventListener('error', (event) => {
+        console.error('Global error caught:', event.error);
+        // Don't show error UI for every error, router handles module errors
+        // This is just a safety net for unexpected errors
+    });
+
+    // Handle unhandled promise rejections
+    window.addEventListener('unhandledrejection', (event) => {
+        console.error('Unhandled promise rejection:', event.reason);
+        event.preventDefault(); // Prevent console spam
+    });
+
     // Initialize streak tracking
     const streak = storage.updateStreak();
     updateStreakDisplay(streak.current);
@@ -34,7 +47,7 @@ function init() {
         router.navigate(moduleId);
     });
 
-    // Initialize router
+    // Initialize router (adds hashchange listener for route handling)
     router.init('view-container');
 
     // Register all routes
@@ -52,6 +65,7 @@ function init() {
     router.register(MODULES.SETTINGS, settings.render);
 
     // Update navigation active state on route change
+    // NOTE: This listener persists for app lifetime (intentional, not a memory leak)
     window.addEventListener('hashchange', () => {
         const hash = window.location.hash.slice(1) || MODULES.DASHBOARD;
         setActiveNavItem(hash);
