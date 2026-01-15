@@ -65,24 +65,79 @@ function createPresetsSection() {
     presets.className = 'range-presets';
 
     const rangePresets = [
-        { label: 'UTG RFI (~15%)', range: ranges.RFI_RANGES.UTG },
-        { label: 'HJ RFI (~18%)', range: ranges.RFI_RANGES.HJ },
-        { label: 'CO RFI (~28%)', range: ranges.RFI_RANGES.CO },
-        { label: 'BTN RFI (~48%)', range: ranges.RFI_RANGES.BTN },
-        { label: 'SB RFI (~45%)', range: ranges.RFI_RANGES.SB },
-        { label: '3-Bet vs UTG', range: ranges.THREE_BET_RANGES.vsUTG },
-        { label: '3-Bet vs BTN', range: ranges.THREE_BET_RANGES.vsBTN },
-        { label: 'BB vs UTG', range: ranges.BB_DEFENSE_RANGES.vsUTG },
-        { label: 'BB vs BTN', range: ranges.BB_DEFENSE_RANGES.vsBTN },
-        { label: 'BB vs SB', range: ranges.BB_DEFENSE_RANGES.vsSB }
+        // RFI Ranges
+        { label: 'UTG RFI (~15%)', range: ranges.RFI_RANGES.UTG, category: 'RFI' },
+        { label: 'HJ RFI (~18%)', range: ranges.RFI_RANGES.HJ, category: 'RFI' },
+        { label: 'CO RFI (~28%)', range: ranges.RFI_RANGES.CO, category: 'RFI' },
+        { label: 'BTN RFI (~48%)', range: ranges.RFI_RANGES.BTN, category: 'RFI' },
+        { label: 'SB RFI (~45%)', range: ranges.RFI_RANGES.SB, category: 'RFI' },
+
+        // 3-Bet Ranges (comprehensive!)
+        { label: '3-Bet vs UTG', range: ranges.THREE_BET_RANGES.vsUTG, category: '3-Bet' },
+        { label: '3-Bet vs HJ', range: ranges.THREE_BET_RANGES.vsHJ, category: '3-Bet' },
+        { label: '3-Bet vs CO', range: ranges.THREE_BET_RANGES.vsCO, category: '3-Bet' },
+        { label: '3-Bet vs BTN', range: ranges.THREE_BET_RANGES.vsBTN, category: '3-Bet' },
+        { label: '3-Bet vs SB', range: ranges.THREE_BET_RANGES.vsSB, category: '3-Bet' },
+
+        // BB Defense Ranges (comprehensive!)
+        { label: 'BB vs UTG', range: ranges.BB_DEFENSE_RANGES.vsUTG, category: 'BB Defense' },
+        { label: 'BB vs HJ', range: ranges.BB_DEFENSE_RANGES.vsHJ, category: 'BB Defense' },
+        { label: 'BB vs CO', range: ranges.BB_DEFENSE_RANGES.vsCO, category: 'BB Defense' },  // USER REQUESTED!
+        { label: 'BB vs BTN', range: ranges.BB_DEFENSE_RANGES.vsBTN, category: 'BB Defense' },
+        { label: 'BB vs SB', range: ranges.BB_DEFENSE_RANGES.vsSB, category: 'BB Defense' },
+
+        // 4-Bet Ranges
+        { label: '4-Bet vs UTG', range: ranges.FOUR_BET_RANGES.vsUTG, category: '4-Bet' },
+        { label: '4-Bet vs HJ', range: ranges.FOUR_BET_RANGES.vsHJ, category: '4-Bet' },
+        { label: '4-Bet vs CO', range: ranges.FOUR_BET_RANGES.vsCO, category: '4-Bet' },
+        { label: '4-Bet vs BTN', range: ranges.FOUR_BET_RANGES.vsBTN, category: '4-Bet' },
+
+        // Cold Call Ranges
+        { label: 'Cold Call vs UTG', range: ranges.COLD_CALL_RANGES.vsUTG, category: 'Cold Call' },
+        { label: 'Cold Call vs HJ', range: ranges.COLD_CALL_RANGES.vsHJ, category: 'Cold Call' },
+        { label: 'Cold Call vs CO', range: ranges.COLD_CALL_RANGES.vsCO, category: 'Cold Call' },
+        { label: 'Cold Call vs BTN', range: ranges.COLD_CALL_RANGES.vsBTN, category: 'Cold Call' },
+
+        // Squeeze Ranges
+        { label: 'Squeeze vs UTG', range: ranges.SQUEEZE_RANGES.vsUTG, category: 'Squeeze' },
+        { label: 'Squeeze vs HJ', range: ranges.SQUEEZE_RANGES.vsHJ, category: 'Squeeze' },
+        { label: 'Squeeze vs CO', range: ranges.SQUEEZE_RANGES.vsCO, category: 'Squeeze' },
+        { label: 'Squeeze vs BTN', range: ranges.SQUEEZE_RANGES.vsBTN, category: 'Squeeze' }
     ];
 
-    rangePresets.forEach(preset => {
-        const btn = document.createElement('button');
-        btn.className = 'preset-button';
-        btn.textContent = preset.label;
-        btn.addEventListener('click', () => loadRange(preset.range));
-        presets.appendChild(btn);
+    // Group presets by category
+    const categories = ['RFI', '3-Bet', 'BB Defense', '4-Bet', 'Cold Call', 'Squeeze'];
+
+    categories.forEach(category => {
+        const categoryPresets = rangePresets.filter(p => p.category === category);
+        if (categoryPresets.length === 0) return;
+
+        // Category header
+        const categoryHeader = document.createElement('div');
+        categoryHeader.style.marginTop = category === 'RFI' ? '0' : '1.5rem';
+        categoryHeader.style.marginBottom = '0.5rem';
+        categoryHeader.style.fontWeight = '600';
+        categoryHeader.style.fontSize = '0.875rem';
+        categoryHeader.style.textTransform = 'uppercase';
+        categoryHeader.style.color = 'var(--color-text-secondary)';
+        categoryHeader.textContent = category;
+        presets.appendChild(categoryHeader);
+
+        // Category buttons
+        const categoryRow = document.createElement('div');
+        categoryRow.style.display = 'flex';
+        categoryRow.style.gap = '0.5rem';
+        categoryRow.style.flexWrap = 'wrap';
+
+        categoryPresets.forEach(preset => {
+            const btn = document.createElement('button');
+            btn.className = 'preset-button';
+            btn.textContent = preset.label;
+            btn.addEventListener('click', () => loadRange(preset.range));
+            categoryRow.appendChild(btn);
+        });
+
+        presets.appendChild(categoryRow);
     });
 
     section.appendChild(presets);

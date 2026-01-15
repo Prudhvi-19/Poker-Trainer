@@ -311,9 +311,9 @@ function runMonteCarloSimulation(hand1, hand2, board, iterations) {
             usedCards.add(card);
         }
 
-        // Evaluate both hands
-        const eval1 = evaluateHand([...hand1, ...fullBoard]);
-        const eval2 = evaluateHand([...hand2, ...fullBoard]);
+        // Evaluate both hands - find best 5-card hand from 7 cards (2 hole + 5 board)
+        const eval1 = evaluateBest5CardHand([...hand1, ...fullBoard]);
+        const eval2 = evaluateBest5CardHand([...hand2, ...fullBoard]);
 
         if (eval1.rank > eval2.rank) {
             hand1Wins++;
@@ -367,6 +367,44 @@ function getRandomCard(usedCards) {
     } while (usedCards.has(card));
 
     return card;
+}
+
+// Evaluate best 5-card hand from 7 cards (proper poker evaluation)
+function evaluateBest5CardHand(sevenCards) {
+    if (sevenCards.length === 5) {
+        return evaluateHand(sevenCards);
+    }
+
+    if (sevenCards.length !== 7) {
+        // Fallback for unexpected input
+        return evaluateHand(sevenCards.slice(0, 5));
+    }
+
+    // Generate all combinations of 5 cards from 7
+    const combinations = [];
+    for (let i = 0; i < 7; i++) {
+        for (let j = i + 1; j < 7; j++) {
+            for (let k = j + 1; k < 7; k++) {
+                for (let l = k + 1; l < 7; l++) {
+                    for (let m = l + 1; m < 7; m++) {
+                        combinations.push([sevenCards[i], sevenCards[j], sevenCards[k], sevenCards[l], sevenCards[m]]);
+                    }
+                }
+            }
+        }
+    }
+
+    // Evaluate all combinations and find the best
+    let bestEval = null;
+    for (const combo of combinations) {
+        const evaluation = evaluateHand(combo);
+        if (!bestEval || evaluation.rank > bestEval.rank ||
+            (evaluation.rank === bestEval.rank && compareKickers(evaluation.kickers, bestEval.kickers) > 0)) {
+            bestEval = evaluation;
+        }
+    }
+
+    return bestEval;
 }
 
 function evaluateHand(cards) {

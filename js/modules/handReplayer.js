@@ -77,11 +77,26 @@ function createSessionSelector() {
 
         const date = new Date(session.startTime);
         const moduleLabel = session.module || 'Unknown';
-        const accuracy = session.results && session.results.length > 0
-            ? formatPercentage(session.results.filter(r => r.isCorrect).length / session.results.length, 0)
-            : '0%';
 
-        option.textContent = `${date.toLocaleDateString()} ${date.toLocaleTimeString()} - ${moduleLabel} - ${session.results?.length || 0} hands - ${accuracy} accuracy`;
+        // Handle both formats
+        const handCount = session.results?.length || session.hands?.length || 0;
+        let accuracy = '0%';
+
+        if (session.results && session.results.length > 0) {
+            accuracy = formatPercentage(session.results.filter(r => r.isCorrect).length / session.results.length, 0);
+        } else if (session.hands && session.hands.length > 0) {
+            let totalDecisions = 0;
+            let correctDecisions = 0;
+            session.hands.forEach(hand => {
+                if (hand.decisions) {
+                    totalDecisions += hand.decisions.length;
+                    correctDecisions += hand.decisions.filter(d => d.isCorrect).length;
+                }
+            });
+            accuracy = totalDecisions > 0 ? formatPercentage(correctDecisions / totalDecisions, 0) : '0%';
+        }
+
+        option.textContent = `${date.toLocaleDateString()} ${date.toLocaleTimeString()} - ${moduleLabel} - ${handCount} hands - ${accuracy} accuracy`;
         select.appendChild(option);
     });
 
@@ -103,13 +118,16 @@ function showSession() {
 
     const session = allSessions[currentSessionIndex];
 
-    if (!session.results || session.results.length === 0) {
+    // Handle both multistreet (uses 'hands') and regular trainers (use 'results')
+    const sessionHands = session.results || session.hands || [];
+
+    if (sessionHands.length === 0) {
         replayArea.innerHTML = '<div class="card text-center"><p class="text-muted">No hands in this session</p></div>';
         return;
     }
 
     // Session summary
-    const summary = createSessionSummary(session);
+    const summary = createSessionSummary(session, sessionHands);
     replayArea.appendChild(summary);
 
     // Hands list
@@ -121,15 +139,15 @@ function showSession() {
     handsHeader.style.marginBottom = '1.5rem';
     handsCard.appendChild(handsHeader);
 
-    session.results.forEach((result, index) => {
-        const handItem = createHandItem(result, index);
+    sessionHands.forEach((result, index) => {
+        const handItem = createHandItem(result, index, session.module);
         handsCard.appendChild(handItem);
     });
 
     replayArea.appendChild(handsCard);
 }
 
-function createSessionSummary(session) {
+function createSessionSummary(session, sessionHands) {
     const card = document.createElement('div');
     card.className = 'card mb-lg';
 
@@ -141,8 +159,22 @@ function createSessionSummary(session) {
     const statsGrid = document.createElement('div');
     statsGrid.className = 'session-stats';
 
-    const totalHands = session.results.length;
-    const correct = session.results.filter(r => r.isCorrect).length;
+    // Handle both formats: results (preflop/postflop) or hands (multistreet)
+    const totalHands = sessionHands.length;
+    let correct = 0;
+
+    if (session.results) {
+        // Preflop/Postflop format
+        correct = sessionHands.filter(r => r.isCorrect).length;
+    } else if (session.hands) {
+        // Multistreet format - count correct decisions
+        sessionHands.forEach(hand => {
+            if (hand.decisions) {
+                correct += hand.decisions.filter(d => d.isCorrect).length;
+            }
+        });
+    }
+
     const accuracy = totalHands > 0 ? correct / totalHands : 0;
 
     const handsBox = createStatBox(totalHands, 'Total Hands');
