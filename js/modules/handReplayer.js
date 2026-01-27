@@ -8,6 +8,8 @@ import { formatPercentage } from '../utils/helpers.js';
 let allSessions = [];
 let currentSessionIndex = null;
 let currentHandIndex = null;
+let currentFilter = 'all'; // 'all', 'correct', 'incorrect'
+let filteredHands = []; // Stores hands after filtering
 
 function render() {
     const container = document.createElement('div');
@@ -134,17 +136,35 @@ function showSession() {
     const handsCard = document.createElement('div');
     handsCard.className = 'card';
 
+    // Hands header with filter buttons
+    const handsHeaderSection = document.createElement('div');
+    handsHeaderSection.style.display = 'flex';
+    handsHeaderSection.style.justifyContent = 'space-between';
+    handsHeaderSection.style.alignItems = 'center';
+    handsHeaderSection.style.marginBottom = '1.5rem';
+    handsHeaderSection.style.flexWrap = 'wrap';
+    handsHeaderSection.style.gap = '1rem';
+
     const handsHeader = document.createElement('h2');
     handsHeader.textContent = 'Hands';
-    handsHeader.style.marginBottom = '1.5rem';
-    handsCard.appendChild(handsHeader);
+    handsHeader.style.marginBottom = '0';
+    handsHeaderSection.appendChild(handsHeader);
 
-    sessionHands.forEach((result, index) => {
-        const handItem = createHandItem(result, index, session.module);
-        handsCard.appendChild(handItem);
-    });
+    // Filter buttons
+    const filterButtons = createFilterButtons(sessionHands);
+    handsHeaderSection.appendChild(filterButtons);
+
+    handsCard.appendChild(handsHeaderSection);
+
+    // Hands container
+    const handsContainer = document.createElement('div');
+    handsContainer.id = 'hands-container';
+    handsCard.appendChild(handsContainer);
 
     replayArea.appendChild(handsCard);
+
+    // Apply initial filter
+    applyFilter(sessionHands);
 }
 
 function createSessionSummary(session, sessionHands) {
@@ -210,7 +230,74 @@ function createStatBox(value, label) {
     return box;
 }
 
-function createHandItem(result, index) {
+function createFilterButtons(sessionHands) {
+    const container = document.createElement('div');
+    container.style.display = 'flex';
+    container.style.gap = '0.5rem';
+
+    const filters = [
+        { value: 'all', label: 'All', icon: '📋' },
+        { value: 'correct', label: 'Correct', icon: '✅' },
+        { value: 'incorrect', label: 'Incorrect', icon: '❌' }
+    ];
+
+    filters.forEach(filter => {
+        const btn = document.createElement('button');
+        btn.className = `btn ${currentFilter === filter.value ? 'btn-primary' : 'btn-secondary'}`;
+        btn.style.fontSize = '0.875rem';
+        btn.style.padding = '0.5rem 1rem';
+        btn.textContent = `${filter.icon} ${filter.label}`;
+        btn.dataset.filter = filter.value;
+
+        btn.addEventListener('click', () => {
+            currentFilter = filter.value;
+            applyFilter(sessionHands);
+
+            // Update button styles
+            container.querySelectorAll('.btn').forEach(b => {
+                b.className = b.dataset.filter === currentFilter ? 'btn btn-primary' : 'btn btn-secondary';
+            });
+        });
+
+        container.appendChild(btn);
+    });
+
+    return container;
+}
+
+function applyFilter(sessionHands) {
+    const handsContainer = document.getElementById('hands-container');
+    if (!handsContainer) return;
+
+    handsContainer.innerHTML = '';
+
+    // Filter hands based on current filter
+    filteredHands = sessionHands.filter(result => {
+        if (currentFilter === 'all') return true;
+        if (currentFilter === 'correct') return result.isCorrect;
+        if (currentFilter === 'incorrect') return !result.isCorrect;
+        return true;
+    });
+
+    if (filteredHands.length === 0) {
+        const emptyMsg = document.createElement('div');
+        emptyMsg.style.textAlign = 'center';
+        emptyMsg.style.padding = '2rem';
+        emptyMsg.style.color = 'var(--color-text-muted)';
+        emptyMsg.textContent = `No ${currentFilter} hands found`;
+        handsContainer.appendChild(emptyMsg);
+        return;
+    }
+
+    // Display filtered hands
+    filteredHands.forEach((result, filteredIndex) => {
+        const originalIndex = sessionHands.indexOf(result);
+        const handItem = createHandItem(result, originalIndex, filteredIndex);
+        handsContainer.appendChild(handItem);
+    });
+}
+
+function createHandItem(result, originalIndex, filteredIndex) {
     const item = document.createElement('div');
     item.style.padding = '1rem';
     item.style.marginBottom = '1rem';
@@ -229,8 +316,8 @@ function createHandItem(result, index) {
     });
 
     item.addEventListener('click', () => {
-        currentHandIndex = index;
-        showHandDetails(result, index);
+        currentHandIndex = filteredIndex;
+        showHandDetails(filteredIndex);
     });
 
     // Header row
@@ -241,7 +328,7 @@ function createHandItem(result, index) {
     headerRow.style.marginBottom = '0.75rem';
 
     const handNumber = document.createElement('div');
-    handNumber.textContent = `Hand #${index + 1}`;
+    handNumber.textContent = `Hand #${originalIndex + 1}`;
     handNumber.style.fontWeight = '600';
     headerRow.appendChild(handNumber);
 
@@ -286,9 +373,13 @@ function createHandItem(result, index) {
     return item;
 }
 
-function showHandDetails(result, index) {
+function showHandDetails(filteredIndex) {
+    const result = filteredHands[filteredIndex];
+    const totalHands = filteredHands.length;
+
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
+    modal.id = 'hand-details-modal';
     modal.style.position = 'fixed';
     modal.style.top = '0';
     modal.style.left = '0';
@@ -301,35 +392,108 @@ function showHandDetails(result, index) {
     modal.style.zIndex = '1000';
     modal.style.padding = '2rem';
 
+    const closeModal = () => {
+        document.body.removeChild(modal);
+        document.removeEventListener('keydown', keyHandler);
+    };
+
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
-            document.body.removeChild(modal);
+            closeModal();
         }
     });
 
     const modalCard = document.createElement('div');
     modalCard.className = 'scenario-card';
-    modalCard.style.maxWidth = '600px';
+    modalCard.style.maxWidth = '700px';
     modalCard.style.width = '100%';
-    modalCard.style.maxHeight = '80vh';
+    modalCard.style.maxHeight = '85vh';
     modalCard.style.overflow = 'auto';
+    modalCard.style.position = 'relative';
 
-    // Header
+    // Navigation arrows (outside card for better UX)
+    const navigationContainer = document.createElement('div');
+    navigationContainer.style.display = 'flex';
+    navigationContainer.style.alignItems = 'center';
+    navigationContainer.style.gap = '1rem';
+
+    // Previous button
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'btn btn-secondary';
+    prevBtn.style.fontSize = '1.5rem';
+    prevBtn.style.padding = '0.75rem 1.25rem';
+    prevBtn.style.minWidth = '60px';
+    prevBtn.innerHTML = '←';
+    prevBtn.disabled = filteredIndex === 0;
+    prevBtn.addEventListener('click', () => {
+        closeModal();
+        showHandDetails(filteredIndex - 1);
+    });
+    if (filteredIndex === 0) {
+        prevBtn.style.opacity = '0.3';
+        prevBtn.style.cursor = 'not-allowed';
+    }
+
+    // Next button
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'btn btn-secondary';
+    nextBtn.style.fontSize = '1.5rem';
+    nextBtn.style.padding = '0.75rem 1.25rem';
+    nextBtn.style.minWidth = '60px';
+    nextBtn.innerHTML = '→';
+    nextBtn.disabled = filteredIndex === totalHands - 1;
+    nextBtn.addEventListener('click', () => {
+        closeModal();
+        showHandDetails(filteredIndex + 1);
+    });
+    if (filteredIndex === totalHands - 1) {
+        nextBtn.style.opacity = '0.3';
+        nextBtn.style.cursor = 'not-allowed';
+    }
+
+    // Keyboard navigation
+    const keyHandler = (e) => {
+        if (e.key === 'ArrowLeft' && filteredIndex > 0) {
+            closeModal();
+            showHandDetails(filteredIndex - 1);
+        } else if (e.key === 'ArrowRight' && filteredIndex < totalHands - 1) {
+            closeModal();
+            showHandDetails(filteredIndex + 1);
+        } else if (e.key === 'Escape') {
+            closeModal();
+        }
+    };
+    document.addEventListener('keydown', keyHandler);
+
+    // Header with navigation
     const header = document.createElement('div');
     header.style.display = 'flex';
     header.style.justifyContent = 'space-between';
     header.style.alignItems = 'center';
     header.style.marginBottom = '1.5rem';
 
+    const titleSection = document.createElement('div');
+
     const title = document.createElement('h2');
-    title.textContent = `Hand #${index + 1}`;
-    header.appendChild(title);
+    title.textContent = `Hand Details`;
+    title.style.marginBottom = '0.25rem';
+    titleSection.appendChild(title);
+
+    const handCounter = document.createElement('div');
+    handCounter.style.fontSize = '0.875rem';
+    handCounter.style.color = 'var(--color-text-muted)';
+    handCounter.innerHTML = `<kbd>←</kbd> <kbd>→</kbd> ${filteredIndex + 1} of ${totalHands} ${currentFilter !== 'all' ? `(${currentFilter})` : ''}`;
+    titleSection.appendChild(handCounter);
+
+    header.appendChild(titleSection);
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'btn btn-secondary';
-    closeBtn.textContent = '✕ Close';
+    closeBtn.textContent = '✕';
+    closeBtn.style.fontSize = '1.25rem';
+    closeBtn.style.padding = '0.5rem 1rem';
     closeBtn.addEventListener('click', () => {
-        document.body.removeChild(modal);
+        closeModal();
     });
     header.appendChild(closeBtn);
 
@@ -431,6 +595,45 @@ function showHandDetails(result, index) {
     actionsDiv.appendChild(correctActionDiv);
 
     modalCard.appendChild(actionsDiv);
+
+    // Navigation buttons at bottom
+    const navFooter = document.createElement('div');
+    navFooter.style.display = 'flex';
+    navFooter.style.justifyContent = 'space-between';
+    navFooter.style.alignItems = 'center';
+    navFooter.style.marginTop = '1.5rem';
+    navFooter.style.paddingTop = '1.5rem';
+    navFooter.style.borderTop = '1px solid var(--color-border)';
+
+    const prevBtnFooter = document.createElement('button');
+    prevBtnFooter.className = 'btn btn-secondary';
+    prevBtnFooter.innerHTML = '← Previous';
+    prevBtnFooter.disabled = filteredIndex === 0;
+    prevBtnFooter.addEventListener('click', () => {
+        closeModal();
+        showHandDetails(filteredIndex - 1);
+    });
+    if (filteredIndex === 0) {
+        prevBtnFooter.style.opacity = '0.5';
+        prevBtnFooter.style.cursor = 'not-allowed';
+    }
+
+    const nextBtnFooter = document.createElement('button');
+    nextBtnFooter.className = 'btn btn-secondary';
+    nextBtnFooter.innerHTML = 'Next →';
+    nextBtnFooter.disabled = filteredIndex === totalHands - 1;
+    nextBtnFooter.addEventListener('click', () => {
+        closeModal();
+        showHandDetails(filteredIndex + 1);
+    });
+    if (filteredIndex === totalHands - 1) {
+        nextBtnFooter.style.opacity = '0.5';
+        nextBtnFooter.style.cursor = 'not-allowed';
+    }
+
+    navFooter.appendChild(prevBtnFooter);
+    navFooter.appendChild(nextBtnFooter);
+    modalCard.appendChild(navFooter);
 
     modal.appendChild(modalCard);
     document.body.appendChild(modal);
