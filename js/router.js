@@ -39,6 +39,7 @@ class Router {
      */
     register(module, handler) {
         this.routes[module] = handler;
+        console.log(`✅ Registered route: ${module}`);
     }
 
     /**
@@ -56,12 +57,17 @@ class Router {
         const hash = window.location.hash.slice(1); // Remove '#'
         const module = hash || MODULES.DASHBOARD; // Default to dashboard
 
+        console.log(`🔍 Looking for route: "${module}"`);
+        console.log(`📋 Available routes:`, Object.keys(this.routes));
+
         // Check if route exists
         if (!this.routes[module]) {
-            console.warn(`Route not found: ${module}`);
+            console.warn(`❌ Route not found: ${module}`);
             this.navigate(MODULES.DASHBOARD);
             return;
         }
+
+        console.log(`✅ Route found: ${module}`);
 
         // Call the route handler
         try {
