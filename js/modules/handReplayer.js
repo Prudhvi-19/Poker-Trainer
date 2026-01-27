@@ -373,12 +373,18 @@ function createHandItem(result, originalIndex, filteredIndex) {
     return item;
 }
 
+// Global variable to track current keyboard handler
+let currentKeyHandler = null;
+
 function showHandDetails(filteredIndex) {
+    const result = filteredHands[filteredIndex];
+    const totalHands = filteredHands.length;
+
     // Check if modal already exists
     let modal = document.getElementById('hand-details-modal');
-    let isNewModal = false;
+    const isNewModal = !modal;
 
-    if (!modal) {
+    if (isNewModal) {
         // Create modal if it doesn't exist
         modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -394,61 +400,46 @@ function showHandDetails(filteredIndex) {
         modal.style.justifyContent = 'center';
         modal.style.zIndex = '1000';
         modal.style.padding = '2rem';
-        isNewModal = true;
-    }
 
-    const result = filteredHands[filteredIndex];
-    const totalHands = filteredHands.length;
-
-    const closeModal = () => {
-        if (modal && modal.parentNode) {
-            document.body.removeChild(modal);
-        }
-        document.removeEventListener('keydown', keyHandler);
-    };
-
-    const navigateToHand = (newIndex) => {
-        // Fade out
-        const modalCard = modal.querySelector('.scenario-card');
-        if (modalCard) {
-            modalCard.style.transition = 'opacity 0.15s ease';
-            modalCard.style.opacity = '0';
-        }
-
-        // Update content after brief delay
-        setTimeout(() => {
-            showHandDetails(newIndex);
-            // Fade in
-            const newModalCard = modal.querySelector('.scenario-card');
-            if (newModalCard) {
-                newModalCard.style.opacity = '1';
-            }
-        }, 150);
-    };
-
-    // Keyboard navigation
-    const keyHandler = (e) => {
-        if (e.key === 'ArrowLeft' && filteredIndex > 0) {
-            e.preventDefault();
-            navigateToHand(filteredIndex - 1);
-        } else if (e.key === 'ArrowRight' && filteredIndex < totalHands - 1) {
-            e.preventDefault();
-            navigateToHand(filteredIndex + 1);
-        } else if (e.key === 'Escape') {
-            closeModal();
-        }
-    };
-
-    if (isNewModal) {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
                 closeModal();
             }
         });
-        document.addEventListener('keydown', keyHandler);
     }
 
-    // Clear existing content if modal exists
+    const closeModal = () => {
+        if (modal && modal.parentNode) {
+            document.body.removeChild(modal);
+        }
+        if (currentKeyHandler) {
+            document.removeEventListener('keydown', currentKeyHandler);
+            currentKeyHandler = null;
+        }
+    };
+
+    // Remove old keyboard handler if exists
+    if (currentKeyHandler) {
+        document.removeEventListener('keydown', currentKeyHandler);
+    }
+
+    // Create new keyboard handler with current filteredIndex
+    currentKeyHandler = (e) => {
+        if (e.key === 'ArrowLeft' && filteredIndex > 0) {
+            e.preventDefault();
+            showHandDetails(filteredIndex - 1);
+        } else if (e.key === 'ArrowRight' && filteredIndex < totalHands - 1) {
+            e.preventDefault();
+            showHandDetails(filteredIndex + 1);
+        } else if (e.key === 'Escape') {
+            closeModal();
+        }
+    };
+
+    // Add new keyboard handler
+    document.addEventListener('keydown', currentKeyHandler);
+
+    // Clear existing content
     modal.innerHTML = '';
 
     const modalCard = document.createElement('div');
@@ -458,8 +449,6 @@ function showHandDetails(filteredIndex) {
     modalCard.style.maxHeight = '85vh';
     modalCard.style.overflow = 'auto';
     modalCard.style.position = 'relative';
-    modalCard.style.transition = 'opacity 0.15s ease';
-    modalCard.style.opacity = '1';
 
     // Header with navigation
     const header = document.createElement('div');
@@ -606,7 +595,9 @@ function showHandDetails(filteredIndex) {
     prevBtnFooter.innerHTML = '← Previous';
     prevBtnFooter.disabled = filteredIndex === 0;
     prevBtnFooter.addEventListener('click', () => {
-        navigateToHand(filteredIndex - 1);
+        if (filteredIndex > 0) {
+            showHandDetails(filteredIndex - 1);
+        }
     });
     if (filteredIndex === 0) {
         prevBtnFooter.style.opacity = '0.5';
@@ -618,7 +609,9 @@ function showHandDetails(filteredIndex) {
     nextBtnFooter.innerHTML = 'Next →';
     nextBtnFooter.disabled = filteredIndex === totalHands - 1;
     nextBtnFooter.addEventListener('click', () => {
-        navigateToHand(filteredIndex + 1);
+        if (filteredIndex < totalHands - 1) {
+            showHandDetails(filteredIndex + 1);
+        }
     });
     if (filteredIndex === totalHands - 1) {
         nextBtnFooter.style.opacity = '0.5';
@@ -631,11 +624,19 @@ function showHandDetails(filteredIndex) {
 
     modal.appendChild(modalCard);
 
-    // Only append to body if it's a new modal
+    // Append to body if it's a new modal
     if (isNewModal) {
         document.body.appendChild(modal);
     }
 }
+
+// Clean up on module unload
+window.addEventListener('hashchange', () => {
+    if (currentKeyHandler) {
+        document.removeEventListener('keydown', currentKeyHandler);
+        currentKeyHandler = null;
+    }
+});
 
 export default {
     render
