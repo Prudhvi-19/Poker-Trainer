@@ -172,11 +172,17 @@ function createStatBox(value, label) {
     return box;
 }
 
+// Track when scenario is shown for response time measurement
+let scenarioStartTime = null;
+
 function showNextScenario() {
     const scenarioEl = document.getElementById('scenario-container');
     if (!scenarioEl) return;
 
     scenarioEl.innerHTML = '';
+
+    // Start timer when scenario is shown
+    scenarioStartTime = Date.now();
 
     const scenario = generateScenario(currentSession.trainerType);
 
@@ -261,7 +267,14 @@ function generate3BetScenario() {
     const hand = randomHand();
 
     const posKey = `vs${villainPos}`;
-    const correctAction = ranges.isInRange(hand.display, ranges.THREE_BET_RANGES[posKey]) ? ACTIONS.RAISE : ACTIONS.FOLD;
+
+    // Determine correct action: 3-bet, call (cold call), or fold
+    let correctAction = ACTIONS.FOLD;
+    if (ranges.isInRange(hand.display, ranges.THREE_BET_RANGES[posKey])) {
+        correctAction = ACTIONS.RAISE;
+    } else if (ranges.isInRange(hand.display, ranges.COLD_CALL_RANGES[posKey])) {
+        correctAction = ACTIONS.CALL;
+    }
 
     return {
         type: TRAINER_TYPES.THREE_BET,
@@ -279,7 +292,14 @@ function generateBBDefenseScenario() {
     const hand = randomHand();
 
     const posKey = `vs${villainPos}`;
-    const correctAction = ranges.isInRange(hand.display, ranges.BB_DEFENSE_RANGES[posKey]) ? ACTIONS.CALL : ACTIONS.FOLD;
+
+    // Check 3-bet range first (premiums), then call range
+    let correctAction = ACTIONS.FOLD;
+    if (ranges.BB_3BET_RANGES && ranges.isInRange(hand.display, ranges.BB_3BET_RANGES[posKey])) {
+        correctAction = ACTIONS.RAISE;
+    } else if (ranges.isInRange(hand.display, ranges.BB_DEFENSE_RANGES[posKey])) {
+        correctAction = ACTIONS.CALL;
+    }
 
     return {
         type: TRAINER_TYPES.BB_DEFENSE,
@@ -287,7 +307,7 @@ function generateBBDefenseScenario() {
         villainPosition: villainPos,
         hand,
         description: `You are BB. ${villainPos} raises to 2.5bb. What do you do?`,
-        options: [ACTIONS.CALL, ACTIONS.RAISE, ACTIONS.FOLD],
+        options: [ACTIONS.RAISE, ACTIONS.CALL, ACTIONS.FOLD],
         correctAction
     };
 }
@@ -346,11 +366,29 @@ function generateColdCallScenario() {
 }
 
 function generateSqueezeScenario() {
-    const raiserPos = randomItem(['UTG', 'HJ', 'CO', 'BTN', 'SB']);
-    const callerPos = randomItem(POSITIONS.filter(p => POSITIONS.indexOf(p) > POSITIONS.indexOf(raiserPos)));
-    const heroPos = randomItem(POSITIONS.filter(p => POSITIONS.indexOf(p) > POSITIONS.indexOf(callerPos)));
-    const hand = randomHand();
+    // Raiser can be UTG through CO (not BTN/SB - need room for caller and hero)
+    const raiserPos = randomItem(['UTG', 'HJ', 'CO']);
+    // Caller must be after raiser, but leave room for hero
+    const validCallers = POSITIONS.filter(p =>
+        POSITIONS.indexOf(p) > POSITIONS.indexOf(raiserPos) &&
+        POSITIONS.indexOf(p) < POSITIONS.length - 1
+    );
+    if (validCallers.length === 0) {
+        // Fallback if no valid callers
+        return generateSqueezeScenario();
+    }
+    const callerPos = randomItem(validCallers);
 
+    // Hero must be after caller
+    const validHeroPositions = POSITIONS.filter(p =>
+        POSITIONS.indexOf(p) > POSITIONS.indexOf(callerPos)
+    );
+    if (validHeroPositions.length === 0) {
+        return generateSqueezeScenario();
+    }
+    const heroPos = randomItem(validHeroPositions);
+
+    const hand = randomHand();
     const posKey = `vs${raiserPos}`;
     const correctAction = ranges.isInRange(hand.display, ranges.SQUEEZE_RANGES[posKey]) ? ACTIONS.RAISE : ACTIONS.FOLD;
 
@@ -366,7 +404,8 @@ function generateSqueezeScenario() {
 }
 
 function handleAnswer(scenario, userAnswer) {
-    const startTime = Date.now();
+    // Calculate response time from when scenario was shown
+    const responseTimeMs = scenarioStartTime ? Date.now() - scenarioStartTime : 0;
 
     const isCorrect = userAnswer === scenario.correctAction;
 
@@ -377,7 +416,7 @@ function handleAnswer(scenario, userAnswer) {
         userAnswer,
         correctAnswer: scenario.correctAction,
         isCorrect,
-        responseTimeMs: Date.now() - startTime
+        responseTimeMs
     };
 
     currentSession.results.push(result);
