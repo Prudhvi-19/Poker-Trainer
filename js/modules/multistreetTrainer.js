@@ -311,12 +311,16 @@ function generatePreflopDecision() {
             ]
         };
     } else {
-        // Hero faces a raise (BB defense for simplicity)
+        // Hero faces a raise - check for 3-bet or call/fold
         const posKey = `vs${currentHand.villainPosition}`;
-        const correctAction = ranges.isInRange(
-            currentHand.heroHand.display,
-            ranges.BB_DEFENSE_RANGES[posKey]
-        ) ? ACTIONS.CALL : ACTIONS.FOLD;
+
+        // Determine correct action: 3-bet, call, or fold
+        let correctAction = ACTIONS.FOLD;
+        if (ranges.isInRange(currentHand.heroHand.display, ranges.THREE_BET_RANGES[posKey])) {
+            correctAction = ACTIONS.RAISE;
+        } else if (ranges.isInRange(currentHand.heroHand.display, ranges.BB_DEFENSE_RANGES[posKey])) {
+            correctAction = ACTIONS.CALL;
+        }
 
         return {
             street: STREET.PREFLOP,
@@ -400,7 +404,7 @@ function updatePotAndStack(action, scenario) {
         currentHand.actions.push(`${currentHand.heroPosition} raises ${raiseSize}bb`);
     } else if (action === ACTIONS.CALL) {
         const callSize = currentHand.currentStreet === STREET.PREFLOP ? 2.5 : currentHand.pot * 0.67;
-        currentHand.pot += callSize;
+        currentHand.pot += callSize * 2; // Add both villain's bet and hero's call
         currentHand.heroStack -= callSize;
         currentHand.actions.push(`${currentHand.heroPosition} calls`);
     } else if (action === ACTIONS.BET) {

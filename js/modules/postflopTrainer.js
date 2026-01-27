@@ -344,7 +344,7 @@ function generateFacingCBetScenario() {
         board,
         texture,
         heroHand,
-        pot: pot + cBetSize * 2,
+        pot: pot + cBetSize, // Current pot hero sees (original pot + villain's bet)
         effectiveStack,
         description: `Villain raised preflop, you called. ${position === 'IP' ? 'You have position' : 'You are out of position'}. Villain bets ${cBetSize}bb (50% pot). What do you do?`,
         options: [
@@ -493,7 +493,7 @@ function classifyBoardTexture(board) {
         return 'STATIC';
     } else if (hasFlushDraw && hasStraightDraw) {
         return 'DYNAMIC';
-    } else if (!hasFlushDraw && !hasStraightDraw && spread > 4) {
+    } else if (!hasFlushDraw && !hasStraightDraw) {
         return 'DRY';
     } else {
         return 'WET';
