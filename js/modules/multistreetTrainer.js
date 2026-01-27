@@ -555,13 +555,29 @@ function showDecisionFeedback(scenario, userAction, isCorrect) {
     const explanation = document.createElement('div');
     explanation.className = 'feedback-explanation';
 
+    // Format hand strength for explanation
+    const strengthLabels = {
+        'MONSTER': 'Monster hand (Set/Top Two)',
+        'STRONG': 'Strong hand (Overpair)',
+        'MEDIUM_STRONG': 'Top pair',
+        'MEDIUM': 'Medium hand (Second pair)',
+        'WEAK_PAIR': 'Weak pair',
+        'OVERCARDS': 'Overcards only',
+        'AIR': 'No made hand'
+    };
+    const strengthLabel = scenario.handStrength ? strengthLabels[scenario.handStrength] || scenario.handStrength : null;
+
     if (!isCorrect) {
         explanation.innerHTML = `
             <p>Your action: <strong>${userAction.toUpperCase()}</strong></p>
             <p>GTO action: <strong>${scenario.correctAction.toUpperCase()}</strong></p>
+            ${strengthLabel ? `<p style="margin-top: 0.5rem; color: var(--color-text-secondary);">Hand strength: ${strengthLabel}</p>` : ''}
         `;
     } else {
-        explanation.textContent = 'Good decision! Continuing to next street...';
+        explanation.innerHTML = `
+            <p>Good decision! Continuing to next street...</p>
+            ${strengthLabel ? `<p style="margin-top: 0.5rem; color: var(--color-text-secondary);">Hand strength: ${strengthLabel}</p>` : ''}
+        `;
     }
 
     feedback.appendChild(title);

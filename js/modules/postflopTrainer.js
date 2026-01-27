@@ -773,6 +773,19 @@ function showFeedback(scenario, userAnswer, isCorrect) {
     const explanation = document.createElement('div');
     explanation.className = 'feedback-explanation';
 
+    // Format hand strength for display
+    const strengthLabels = {
+        'MONSTER': 'Monster (Set/Top Two)',
+        'STRONG': 'Strong (Overpair/Top Pair Top Kicker)',
+        'MEDIUM_STRONG': 'Medium-Strong (Top Pair)',
+        'MEDIUM': 'Medium (Second Pair/Weak Top Pair)',
+        'STRONG_DRAW': 'Strong Draw (Flush + Straight)',
+        'DRAW': 'Draw (Flush/Straight)',
+        'OVERCARDS': 'Overcards',
+        'AIR': 'Air (No pair, no draw)'
+    };
+    const handStrengthLabel = scenario.handStrength ? strengthLabels[scenario.handStrength] || scenario.handStrength : null;
+
     if (!isCorrect) {
         let correctLabel = scenario.correctAction.toUpperCase();
         if (scenario.type === TRAINER_TYPES.BOARD_TEXTURE) {
@@ -782,11 +795,13 @@ function showFeedback(scenario, userAnswer, isCorrect) {
         explanation.innerHTML = `
             <p>Your answer: <strong>${userAnswer.toUpperCase()}</strong></p>
             <p>Correct answer: <strong>${correctLabel}</strong></p>
+            ${handStrengthLabel ? `<p>Your hand strength: <strong>${handStrengthLabel}</strong></p>` : ''}
             ${scenario.texture ? `<p>Board texture: <strong>${scenario.texture}</strong></p>` : ''}
         `;
     } else {
         explanation.innerHTML = `
             <p>Great job! Keep going!</p>
+            ${handStrengthLabel ? `<p>Your hand strength: <strong>${handStrengthLabel}</strong></p>` : ''}
             ${scenario.texture ? `<p>Board texture: <strong>${scenario.texture}</strong></p>` : ''}
         `;
     }

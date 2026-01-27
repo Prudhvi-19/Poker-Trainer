@@ -449,13 +449,56 @@ function showFeedback(scenario, userAnswer, isCorrect) {
     const explanation = document.createElement('div');
     explanation.className = 'feedback-explanation';
 
+    // Generate explanation based on scenario type
+    const getExplanation = () => {
+        const hand = scenario.hand.display;
+        const pos = scenario.position;
+        const villainPos = scenario.villainPosition;
+        const action = scenario.correctAction.toUpperCase();
+
+        switch (scenario.type) {
+            case TRAINER_TYPES.RFI:
+                if (action === 'RAISE') {
+                    return `${hand} is in your RFI range from ${pos}. Always raise for value/stealing.`;
+                }
+                return `${hand} is too weak to open from ${pos}. Fold and wait for better spots.`;
+
+            case TRAINER_TYPES.BB_DEFENSE:
+                if (action === 'RAISE') {
+                    return `${hand} is strong enough to 3-bet vs ${villainPos} for value. Build the pot!`;
+                }
+                if (action === 'CALL') {
+                    return `${hand} has good playability vs ${villainPos}'s range. Call and see a flop.`;
+                }
+                return `${hand} doesn't have enough equity vs ${villainPos}'s tight opening range.`;
+
+            case TRAINER_TYPES.THREE_BET:
+                if (action === 'RAISE') {
+                    return `${hand} is a 3-bet for value or as a bluff with blockers vs ${villainPos}.`;
+                }
+                if (action === 'CALL') {
+                    return `${hand} plays well multiway. Cold call to see a flop in position.`;
+                }
+                return `${hand} is not strong enough to continue vs ${villainPos}'s opening range.`;
+
+            default:
+                return action === 'RAISE' ? 'This hand is in your raising range.' :
+                       action === 'CALL' ? 'This hand has enough equity to call.' :
+                       'This hand should be folded.';
+        }
+    };
+
     if (!isCorrect) {
         explanation.innerHTML = `
             <p>Your answer: <strong>${userAnswer.toUpperCase()}</strong></p>
             <p>Correct answer: <strong>${scenario.correctAction.toUpperCase()}</strong></p>
+            <p style="margin-top: 0.5rem; color: var(--color-text-secondary);">${getExplanation()}</p>
         `;
     } else {
-        explanation.textContent = 'Great job! Keep going!';
+        explanation.innerHTML = `
+            <p>Great job! Keep going!</p>
+            <p style="margin-top: 0.5rem; color: var(--color-text-secondary);">${getExplanation()}</p>
+        `;
     }
 
     // Add next button
