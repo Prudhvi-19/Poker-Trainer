@@ -341,17 +341,20 @@ function generatePreflopDecision() {
 }
 
 function generatePostflopDecision() {
-    // Simplified postflop: c-bet or check/call decisions
     const heroHasPosition = isInPosition(currentHand.heroPosition, currentHand.villainPosition);
 
+    // Evaluate hand strength on current board
+    const handStrength = evaluateHandStrength(currentHand.heroHand, currentHand.board);
+    const boardTexture = classifyTexture(currentHand.board);
+
     if (currentHand.heroIsAggressor) {
-        // Should we c-bet?
-        const shouldBet = Math.random() < 0.6; // 60% c-bet frequency
-        const correctAction = shouldBet ? ACTIONS.BET : ACTIONS.CHECK;
+        // Should we bet/c-bet?
+        const correctAction = determineBettingAction(handStrength, boardTexture, heroHasPosition);
 
         return {
             street: currentHand.currentStreet,
             correctAction,
+            handStrength,
             description: `You raised preflop and villain called. ${heroHasPosition ? 'You have position' : 'You are OOP'}. What do you do?`,
             options: [
                 { action: ACTIONS.BET, label: `Bet ${(currentHand.pot * 0.67).toFixed(1)}bb` },
@@ -360,14 +363,13 @@ function generatePostflopDecision() {
         };
     } else {
         // Facing a bet
-        const shouldCall = Math.random() < 0.5;
-        const correctAction = shouldCall ? ACTIONS.CALL : ACTIONS.FOLD;
-
         const betSize = (currentHand.pot * 0.67).toFixed(1);
+        const correctAction = determineDefenseAction(handStrength, boardTexture, heroHasPosition);
 
         return {
             street: currentHand.currentStreet,
             correctAction,
+            handStrength,
             description: `Villain bets ${betSize}bb. What do you do?`,
             options: [
                 { action: ACTIONS.CALL, label: `Call ${betSize}bb` },
@@ -376,6 +378,106 @@ function generatePostflopDecision() {
             ]
         };
     }
+}
+
+// Evaluate hand strength relative to board
+function evaluateHandStrength(hand, board) {
+    if (!board || board.length === 0) return 'UNKNOWN';
+
+    const boardRanks = board.map(c => c.slice(0, -1));
+    const r1 = hand.rank1;
+    const r2 = hand.rank2;
+    const isPair = r1 === r2;
+
+    // Check for made hands
+    const hasPairOnBoard = boardRanks.includes(r1) || boardRanks.includes(r2);
+    const hasSet = isPair && boardRanks.includes(r1);
+
+    const rankValues = (rank) => RANKS.indexOf(rank);
+    const boardMinRank = Math.min(...boardRanks.map(rankValues));
+
+    const hasOverpair = isPair && rankValues(r1) < boardMinRank;
+    const hasTopPair = boardRanks.includes(r1) && rankValues(r1) === boardMinRank;
+    const hasSecondPair = !hasTopPair && hasPairOnBoard;
+    const hasOvercards = rankValues(r1) < boardMinRank && rankValues(r2) < boardMinRank && !hasPairOnBoard;
+
+    // Categorize
+    if (hasSet) return 'MONSTER';
+    if (hasOverpair) return 'STRONG';
+    if (hasTopPair) return 'MEDIUM_STRONG';
+    if (hasSecondPair) return 'MEDIUM';
+    if (hasOvercards) return 'OVERCARDS';
+    if (hasPairOnBoard) return 'WEAK_PAIR';
+    return 'AIR';
+}
+
+// Classify board texture
+function classifyTexture(board) {
+    if (!board || board.length < 3) return 'UNKNOWN';
+
+    const ranks = board.slice(0, 3).map(c => c.slice(0, -1));
+    const suits = board.slice(0, 3).map(c => c.slice(-1));
+
+    const suitCounts = {};
+    suits.forEach(s => suitCounts[s] = (suitCounts[s] || 0) + 1);
+    const maxSuit = Math.max(...Object.values(suitCounts));
+
+    const rankVals = ranks.map(r => RANKS.indexOf(r));
+    const spread = Math.max(...rankVals) - Math.min(...rankVals);
+
+    const rankCounts = {};
+    ranks.forEach(r => rankCounts[r] = (rankCounts[r] || 0) + 1);
+    const hasPair = Object.values(rankCounts).some(c => c >= 2);
+
+    if (hasPair && maxSuit < 3 && spread > 5) return 'STATIC';
+    if (maxSuit >= 3 || (maxSuit === 2 && spread <= 4)) return 'DYNAMIC';
+    if (spread <= 4 || maxSuit === 2) return 'WET';
+    return 'DRY';
+}
+
+// Determine betting action based on hand strength
+function determineBettingAction(strength, texture, hasPosition) {
+    // Value hands always bet
+    if (['MONSTER', 'STRONG', 'MEDIUM_STRONG'].includes(strength)) {
+        return ACTIONS.BET;
+    }
+
+    // Medium hands: bet on dry boards, check on wet
+    if (strength === 'MEDIUM') {
+        return texture === 'DRY' || texture === 'STATIC' ? ACTIONS.BET : ACTIONS.CHECK;
+    }
+
+    // Draws and overcards: semi-bluff sometimes
+    if (strength === 'OVERCARDS') {
+        return hasPosition && (texture === 'DRY' || texture === 'STATIC') ? ACTIONS.BET : ACTIONS.CHECK;
+    }
+
+    // Air: bluff on good textures with position
+    if (strength === 'AIR') {
+        return hasPosition && texture === 'DRY' ? ACTIONS.BET : ACTIONS.CHECK;
+    }
+
+    return ACTIONS.CHECK;
+}
+
+// Determine defense action when facing a bet
+function determineDefenseAction(strength, texture, hasPosition) {
+    // Strong hands raise for value
+    if (strength === 'MONSTER') return ACTIONS.RAISE;
+    if (strength === 'STRONG') return hasPosition ? ACTIONS.RAISE : ACTIONS.CALL;
+
+    // Medium-strong hands call
+    if (['MEDIUM_STRONG', 'MEDIUM', 'WEAK_PAIR'].includes(strength)) {
+        return ACTIONS.CALL;
+    }
+
+    // Overcards with equity can call on dry boards
+    if (strength === 'OVERCARDS') {
+        return texture === 'DRY' && hasPosition ? ACTIONS.CALL : ACTIONS.FOLD;
+    }
+
+    // Air folds
+    return ACTIONS.FOLD;
 }
 
 function handleDecision(scenario, userAction) {
@@ -402,22 +504,30 @@ function handleDecision(scenario, userAction) {
 
 function updatePotAndStack(action, scenario) {
     if (action === ACTIONS.RAISE && currentHand.currentStreet === STREET.PREFLOP) {
+        // Hero raises, villain will call (simplified)
         const raiseSize = 2.5;
-        currentHand.pot += raiseSize * 2;
+        currentHand.pot += raiseSize; // Hero's raise goes to pot
         currentHand.heroStack -= raiseSize;
+        // Villain calls (add their call later when they respond)
+        currentHand.pot += raiseSize; // Villain calls
         currentHand.villainStack -= raiseSize;
-        currentHand.actions.push(`${currentHand.heroPosition} raises ${raiseSize}bb`);
+        currentHand.actions.push(`${currentHand.heroPosition} raises ${raiseSize}bb, Villain calls`);
     } else if (action === ACTIONS.CALL) {
+        // Hero calls a bet that's already been made
         const callSize = currentHand.currentStreet === STREET.PREFLOP ? 2.5 : currentHand.pot * 0.67;
-        currentHand.pot += callSize * 2; // Add both villain's bet and hero's call
+        // Only add hero's call - villain's bet was already added when they bet
+        currentHand.pot += callSize;
         currentHand.heroStack -= callSize;
-        currentHand.actions.push(`${currentHand.heroPosition} calls`);
+        currentHand.actions.push(`${currentHand.heroPosition} calls ${callSize.toFixed(1)}bb`);
     } else if (action === ACTIONS.BET) {
+        // Hero bets, villain will call (simplified for training)
         const betSize = currentHand.pot * 0.67;
-        currentHand.pot += betSize * 2;
+        currentHand.pot += betSize; // Hero's bet
         currentHand.heroStack -= betSize;
+        // Villain calls
+        currentHand.pot += betSize;
         currentHand.villainStack -= betSize;
-        currentHand.actions.push(`${currentHand.heroPosition} bets ${betSize.toFixed(1)}bb`);
+        currentHand.actions.push(`${currentHand.heroPosition} bets ${betSize.toFixed(1)}bb, Villain calls`);
     } else if (action === ACTIONS.CHECK) {
         currentHand.actions.push(`${currentHand.heroPosition} checks`);
     }
