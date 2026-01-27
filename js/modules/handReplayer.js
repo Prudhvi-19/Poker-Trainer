@@ -347,9 +347,11 @@ function createHandItem(result, originalIndex, filteredIndex) {
     detailsRow.style.fontSize = '0.875rem';
     detailsRow.style.color = 'var(--color-text-secondary)';
 
-    if (result.scenario?.hand) {
+    // Check both 'hand' (preflop) and 'heroHand' (postflop)
+    const heroHand = result.scenario?.hand || result.scenario?.heroHand;
+    if (heroHand) {
         const handDisplay = document.createElement('div');
-        handDisplay.textContent = `Hand: ${result.scenario.hand.display}`;
+        handDisplay.textContent = `Hand: ${heroHand.display}`;
         handDisplay.style.fontWeight = '600';
         handDisplay.style.color = 'var(--color-text-primary)';
         detailsRow.appendChild(handDisplay);
@@ -548,8 +550,9 @@ function showHandDetails(filteredIndex) {
             modalCard.appendChild(boardDisplay);
         }
 
-        // Hero hand
-        if (scenario.hand) {
+        // Hero hand - check both 'hand' (preflop) and 'heroHand' (postflop)
+        const heroHand = scenario.hand || scenario.heroHand;
+        if (heroHand) {
             const handLabel = document.createElement('div');
             handLabel.textContent = 'Your Hand:';
             handLabel.style.fontWeight = '600';
@@ -557,7 +560,7 @@ function showHandDetails(filteredIndex) {
             handLabel.style.marginBottom = '0.5rem';
             modalCard.appendChild(handLabel);
 
-            const handDisplay = createHandDisplay(scenario.hand, true);
+            const handDisplay = createHandDisplay(heroHand, true);
             handDisplay.style.marginBottom = '1rem';
             modalCard.appendChild(handDisplay);
         }
