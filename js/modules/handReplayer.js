@@ -374,34 +374,82 @@ function createHandItem(result, originalIndex, filteredIndex) {
 }
 
 function showHandDetails(filteredIndex) {
+    // Check if modal already exists
+    let modal = document.getElementById('hand-details-modal');
+    let isNewModal = false;
+
+    if (!modal) {
+        // Create modal if it doesn't exist
+        modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'hand-details-modal';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.right = '0';
+        modal.style.bottom = '0';
+        modal.style.background = 'rgba(0, 0, 0, 0.8)';
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.style.zIndex = '1000';
+        modal.style.padding = '2rem';
+        isNewModal = true;
+    }
+
     const result = filteredHands[filteredIndex];
     const totalHands = filteredHands.length;
 
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.id = 'hand-details-modal';
-    modal.style.position = 'fixed';
-    modal.style.top = '0';
-    modal.style.left = '0';
-    modal.style.right = '0';
-    modal.style.bottom = '0';
-    modal.style.background = 'rgba(0, 0, 0, 0.8)';
-    modal.style.display = 'flex';
-    modal.style.alignItems = 'center';
-    modal.style.justifyContent = 'center';
-    modal.style.zIndex = '1000';
-    modal.style.padding = '2rem';
-
     const closeModal = () => {
-        document.body.removeChild(modal);
+        if (modal && modal.parentNode) {
+            document.body.removeChild(modal);
+        }
         document.removeEventListener('keydown', keyHandler);
     };
 
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
+    const navigateToHand = (newIndex) => {
+        // Fade out
+        const modalCard = modal.querySelector('.scenario-card');
+        if (modalCard) {
+            modalCard.style.transition = 'opacity 0.15s ease';
+            modalCard.style.opacity = '0';
+        }
+
+        // Update content after brief delay
+        setTimeout(() => {
+            showHandDetails(newIndex);
+            // Fade in
+            const newModalCard = modal.querySelector('.scenario-card');
+            if (newModalCard) {
+                newModalCard.style.opacity = '1';
+            }
+        }, 150);
+    };
+
+    // Keyboard navigation
+    const keyHandler = (e) => {
+        if (e.key === 'ArrowLeft' && filteredIndex > 0) {
+            e.preventDefault();
+            navigateToHand(filteredIndex - 1);
+        } else if (e.key === 'ArrowRight' && filteredIndex < totalHands - 1) {
+            e.preventDefault();
+            navigateToHand(filteredIndex + 1);
+        } else if (e.key === 'Escape') {
             closeModal();
         }
-    });
+    };
+
+    if (isNewModal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+        document.addEventListener('keydown', keyHandler);
+    }
+
+    // Clear existing content if modal exists
+    modal.innerHTML = '';
 
     const modalCard = document.createElement('div');
     modalCard.className = 'scenario-card';
@@ -410,60 +458,8 @@ function showHandDetails(filteredIndex) {
     modalCard.style.maxHeight = '85vh';
     modalCard.style.overflow = 'auto';
     modalCard.style.position = 'relative';
-
-    // Navigation arrows (outside card for better UX)
-    const navigationContainer = document.createElement('div');
-    navigationContainer.style.display = 'flex';
-    navigationContainer.style.alignItems = 'center';
-    navigationContainer.style.gap = '1rem';
-
-    // Previous button
-    const prevBtn = document.createElement('button');
-    prevBtn.className = 'btn btn-secondary';
-    prevBtn.style.fontSize = '1.5rem';
-    prevBtn.style.padding = '0.75rem 1.25rem';
-    prevBtn.style.minWidth = '60px';
-    prevBtn.innerHTML = '←';
-    prevBtn.disabled = filteredIndex === 0;
-    prevBtn.addEventListener('click', () => {
-        closeModal();
-        showHandDetails(filteredIndex - 1);
-    });
-    if (filteredIndex === 0) {
-        prevBtn.style.opacity = '0.3';
-        prevBtn.style.cursor = 'not-allowed';
-    }
-
-    // Next button
-    const nextBtn = document.createElement('button');
-    nextBtn.className = 'btn btn-secondary';
-    nextBtn.style.fontSize = '1.5rem';
-    nextBtn.style.padding = '0.75rem 1.25rem';
-    nextBtn.style.minWidth = '60px';
-    nextBtn.innerHTML = '→';
-    nextBtn.disabled = filteredIndex === totalHands - 1;
-    nextBtn.addEventListener('click', () => {
-        closeModal();
-        showHandDetails(filteredIndex + 1);
-    });
-    if (filteredIndex === totalHands - 1) {
-        nextBtn.style.opacity = '0.3';
-        nextBtn.style.cursor = 'not-allowed';
-    }
-
-    // Keyboard navigation
-    const keyHandler = (e) => {
-        if (e.key === 'ArrowLeft' && filteredIndex > 0) {
-            closeModal();
-            showHandDetails(filteredIndex - 1);
-        } else if (e.key === 'ArrowRight' && filteredIndex < totalHands - 1) {
-            closeModal();
-            showHandDetails(filteredIndex + 1);
-        } else if (e.key === 'Escape') {
-            closeModal();
-        }
-    };
-    document.addEventListener('keydown', keyHandler);
+    modalCard.style.transition = 'opacity 0.15s ease';
+    modalCard.style.opacity = '1';
 
     // Header with navigation
     const header = document.createElement('div');
@@ -610,8 +606,7 @@ function showHandDetails(filteredIndex) {
     prevBtnFooter.innerHTML = '← Previous';
     prevBtnFooter.disabled = filteredIndex === 0;
     prevBtnFooter.addEventListener('click', () => {
-        closeModal();
-        showHandDetails(filteredIndex - 1);
+        navigateToHand(filteredIndex - 1);
     });
     if (filteredIndex === 0) {
         prevBtnFooter.style.opacity = '0.5';
@@ -623,8 +618,7 @@ function showHandDetails(filteredIndex) {
     nextBtnFooter.innerHTML = 'Next →';
     nextBtnFooter.disabled = filteredIndex === totalHands - 1;
     nextBtnFooter.addEventListener('click', () => {
-        closeModal();
-        showHandDetails(filteredIndex + 1);
+        navigateToHand(filteredIndex + 1);
     });
     if (filteredIndex === totalHands - 1) {
         nextBtnFooter.style.opacity = '0.5';
@@ -636,7 +630,11 @@ function showHandDetails(filteredIndex) {
     modalCard.appendChild(navFooter);
 
     modal.appendChild(modalCard);
-    document.body.appendChild(modal);
+
+    // Only append to body if it's a new modal
+    if (isNewModal) {
+        document.body.appendChild(modal);
+    }
 }
 
 export default {

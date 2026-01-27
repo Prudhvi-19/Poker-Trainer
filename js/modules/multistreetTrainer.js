@@ -316,9 +316,14 @@ function generatePreflopDecision() {
 
         // Determine correct action: 3-bet, call, or fold
         let correctAction = ACTIONS.FOLD;
-        if (ranges.isInRange(currentHand.heroHand.display, ranges.THREE_BET_RANGES[posKey])) {
+
+        // Check if ranges exist for this position matchup
+        const threeBetRange = ranges.THREE_BET_RANGES[posKey];
+        const defenseRange = ranges.BB_DEFENSE_RANGES[posKey];
+
+        if (threeBetRange && ranges.isInRange(currentHand.heroHand.display, threeBetRange)) {
             correctAction = ACTIONS.RAISE;
-        } else if (ranges.isInRange(currentHand.heroHand.display, ranges.BB_DEFENSE_RANGES[posKey])) {
+        } else if (defenseRange && ranges.isInRange(currentHand.heroHand.display, defenseRange)) {
             correctAction = ACTIONS.CALL;
         }
 
