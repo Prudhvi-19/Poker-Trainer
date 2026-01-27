@@ -70,7 +70,7 @@ export const RFI_RANGES = {
         ...MED_SUITED_BROADWAY,
         ...SUITED_CONNECTORS,
         ...SUITED_ONE_GAPPERS,
-        '54s', '43s',
+        '43s', // 54s already in SUITED_CONNECTORS
         ...SUITED_ACES,
         'K9s', 'K8s', 'K7s',
         'Q9s', 'Q8s',
@@ -146,12 +146,12 @@ export const THREE_BET_RANGES = {
     ],
     vsCO: [ // ~8%
         'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88',
-        'AKs', 'AQs', 'AJs', 'ATs', 'A9s',
+        'AKs', 'AQs', 'AJs', 'ATs',
         'KQs', 'KJs', 'KTs',
         'QJs', 'QTs',
         'JTs',
         'AKo', 'AQo', 'AJo',
-        ...SUITED_ACES, // More suited aces
+        ...SUITED_ACES, // All suited aces (A9s through A2s)
         '87s', '76s', '65s', '54s',
         'T9s'
     ],
@@ -179,47 +179,45 @@ export const THREE_BET_RANGES = {
     ]
 };
 
-// BB Defense Ranges (Call or 3-bet)
+// BB Defense Ranges - CALLING only (3-bet hands are in BB_3BET_RANGES)
 export const BB_DEFENSE_RANGES = {
-    vsUTG: [ // ~15% total
-        // 3-bet hands (from THREE_BET_RANGES.vsUTG)
-        // Plus calling hands:
+    vsUTG: [ // ~15% call range (excludes 3-bet hands)
         'TT', '99', '88', '77', '66', '55', '44', '33', '22',
-        'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s',
+        'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s',
         'KQs', 'KJs', 'KTs',
         'QJs', 'QTs', 'Q9s',
         'JTs', 'J9s',
         'T9s', 'T8s',
         '98s', '87s', '76s', '65s',
-        'AKo', 'AQo', 'AJo',
+        'AQo', 'AJo',
         'KQo'
     ],
-    vsHJ: [ // ~20%
-        '99', '88', '77', '66', '55', '44', '33', '22',
-        'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s',
+    vsHJ: [ // ~20% call range
+        'TT', '99', '88', '77', '66', '55', '44', '33', '22',
+        'ATs', 'A9s', 'A8s', 'A7s', 'A6s',
         'KQs', 'KJs', 'KTs', 'K9s',
         'QJs', 'QTs', 'Q9s',
         'JTs', 'J9s', 'J8s',
         'T9s', 'T8s', 'T7s',
         '98s', '87s', '76s', '65s', '54s',
-        'AKo', 'AQo', 'AJo', 'ATo',
+        'AQo', 'AJo', 'ATo',
         'KQo', 'KJo'
     ],
-    vsCO: [ // ~27%
-        ...SMALL_PAIRS,
-        'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s',
+    vsCO: [ // ~27% call range
+        'TT', '99', '88', ...SMALL_PAIRS,
+        'ATs', 'A9s', 'A8s', 'A7s', 'A6s',
         'KQs', 'KJs', 'KTs', 'K9s', 'K8s',
         'QJs', 'QTs', 'Q9s', 'Q8s',
         'JTs', 'J9s', 'J8s',
         'T9s', 'T8s', 'T7s',
         '98s', '87s', '76s', '65s', '54s', '43s',
         '97s', '86s',
-        'AKo', 'AQo', 'AJo', 'ATo', 'A9o',
+        'AQo', 'AJo', 'ATo', 'A9o',
         'KQo', 'KJo', 'KTo',
         'QJo', 'QTo'
     ],
-    vsBTN: [ // ~40% - very wide defense
-        ...SMALL_PAIRS,
+    vsBTN: [ // ~40% call range - very wide defense
+        '99', '88', '77', ...SMALL_PAIRS,
         ...SUITED_ACES,
         'KQs', 'KJs', 'KTs', 'K9s', 'K8s', 'K7s', 'K6s',
         'QJs', 'QTs', 'Q9s', 'Q8s', 'Q7s',
@@ -227,14 +225,14 @@ export const BB_DEFENSE_RANGES = {
         'T9s', 'T8s', 'T7s',
         '98s', '87s', '76s', '65s', '54s', '43s', '32s',
         '97s', '86s', '75s', '64s',
-        'AKo', 'AQo', 'AJo', 'ATo', 'A9o', 'A8o', 'A7o', 'A6o', 'A5o',
+        'AQo', 'AJo', 'ATo', 'A9o', 'A8o', 'A7o', 'A6o', 'A5o',
         'KQo', 'KJo', 'KTo', 'K9o',
         'QJo', 'QTo', 'Q9o',
         'JTo', 'J9o',
         'T9o'
     ],
-    vsSB: [ // ~55% - widest defense
-        ...SMALL_PAIRS,
+    vsSB: [ // ~55% call range - widest defense
+        '99', '88', '77', ...SMALL_PAIRS,
         ...SUITED_ACES,
         ...LOW_SUITED_KINGS,
         ...LOW_SUITED_QUEENS,
@@ -257,6 +255,54 @@ export const BB_DEFENSE_RANGES = {
         'JTo', 'J9o', 'J8o',
         'T9o', 'T8o',
         '98o', '87o'
+    ]
+};
+
+// BB 3-Bet Ranges vs each position (for BB Defense trainer)
+export const BB_3BET_RANGES = {
+    vsUTG: [ // Tight 3-bet range vs UTG, ~5%
+        'AA', 'KK', 'QQ', 'JJ',
+        'AKs', 'AQs', 'AJs',
+        'AKo',
+        'A5s', 'A4s' // Bluffs with blockers
+    ],
+    vsHJ: [ // ~6%
+        'AA', 'KK', 'QQ', 'JJ', 'TT',
+        'AKs', 'AQs', 'AJs', 'ATs',
+        'KQs',
+        'AKo', 'AQo',
+        'A5s', 'A4s', 'A3s' // Bluffs
+    ],
+    vsCO: [ // ~8%
+        'AA', 'KK', 'QQ', 'JJ', 'TT', '99',
+        'AKs', 'AQs', 'AJs', 'ATs', 'A9s',
+        'KQs', 'KJs',
+        'QJs',
+        'AKo', 'AQo', 'AJo',
+        'A5s', 'A4s', 'A3s', 'A2s', // Suited ace bluffs
+        '76s', '65s' // Suited connector bluffs
+    ],
+    vsBTN: [ // ~11% - wider defense vs BTN
+        'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88',
+        'AKs', 'AQs', 'AJs', 'ATs', 'A9s', 'A8s',
+        'KQs', 'KJs', 'KTs',
+        'QJs', 'QTs',
+        'JTs',
+        'AKo', 'AQo', 'AJo', 'ATo',
+        'KQo',
+        'A5s', 'A4s', 'A3s', 'A2s',
+        '87s', '76s', '65s', '54s'
+    ],
+    vsSB: [ // ~14% - widest 3-bet (blind vs blind)
+        'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77', '66',
+        'AKs', 'AQs', 'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s',
+        'KQs', 'KJs', 'KTs', 'K9s',
+        'QJs', 'QTs', 'Q9s',
+        'JTs', 'J9s',
+        'T9s',
+        '98s', '87s', '76s', '65s', '54s',
+        'AKo', 'AQo', 'AJo', 'ATo', 'A9o',
+        'KQo', 'KJo'
     ]
 };
 
@@ -402,7 +448,14 @@ export function getRecommendedAction(hand, position, action = 'rfi') {
             return isInRange(handString, THREE_BET_RANGES[posKey]) ? 'raise' : 'fold';
 
         case 'bb-defense':
-            return isInRange(handString, BB_DEFENSE_RANGES[`vs${position}`]) ? 'call' : 'fold';
+            const bbKey = `vs${position}`;
+            // Check 3-bet range first, then call range
+            if (isInRange(handString, BB_3BET_RANGES[bbKey])) {
+                return 'raise';
+            } else if (isInRange(handString, BB_DEFENSE_RANGES[bbKey])) {
+                return 'call';
+            }
+            return 'fold';
 
         default:
             return null;
@@ -413,6 +466,7 @@ export default {
     RFI_RANGES,
     THREE_BET_RANGES,
     BB_DEFENSE_RANGES,
+    BB_3BET_RANGES,
     CALL_3BET_RANGES,
     FOUR_BET_RANGES,
     COLD_CALL_RANGES,

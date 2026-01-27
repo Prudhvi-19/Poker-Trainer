@@ -116,11 +116,22 @@ export function randomCard() {
     return { rank, suit };
 }
 
-// Generate random hand
+// Generate random hand with realistic poker probabilities
 export function randomHand() {
     const rank1 = randomItem(RANKS);
     const rank2 = randomItem(RANKS);
-    const suited = Math.random() > 0.5;
+
+    // CRITICAL: Pairs CANNOT be suited - there are only 6 combos (same rank, different suits)
+    // Non-pairs: 4 suited combos (same suit) vs 12 offsuit combos (different suits)
+    // So suited probability for non-pairs is 4/16 = 25%
+    let suited;
+    if (rank1 === rank2) {
+        // Pairs are NEVER suited
+        suited = false;
+    } else {
+        // Non-pairs: 25% chance of being suited (4 suited combos vs 12 offsuit = 4/16)
+        suited = Math.random() < 0.25;
+    }
 
     return {
         rank1,

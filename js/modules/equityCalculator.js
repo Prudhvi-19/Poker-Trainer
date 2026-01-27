@@ -408,7 +408,7 @@ function evaluateBest5CardHand(sevenCards) {
 }
 
 function evaluateHand(cards) {
-    // Simple 5-card evaluator
+    // 5-card evaluator with proper kicker ordering
     const ranks = cards.map(c => RANKS.indexOf(c[0]));
     const suits = cards.map(c => c.slice(-1));
 
@@ -417,22 +417,39 @@ function evaluateHand(cards) {
         rankCounts[r] = (rankCounts[r] || 0) + 1;
     });
 
-    const counts = Object.values(rankCounts).sort((a, b) => b - a);
-    const uniqueRanks = Object.keys(rankCounts).map(Number).sort((a, b) => b - a);
+    // Get ranks sorted by count first, then by rank value (for kicker comparison)
+    const ranksWithCounts = Object.entries(rankCounts)
+        .map(([rank, count]) => ({ rank: Number(rank), count }))
+        .sort((a, b) => {
+            // First sort by count (descending)
+            if (b.count !== a.count) return b.count - a.count;
+            // Then by rank value (lower index = higher rank in RANKS array)
+            return a.rank - b.rank;
+        });
+
+    const counts = ranksWithCounts.map(x => x.count);
+    const orderedRanks = ranksWithCounts.map(x => x.rank);
+
+    // uniqueRanks sorted by rank value only (for straights/flushes)
+    const uniqueRanks = Object.keys(rankCounts).map(Number).sort((a, b) => a - b);
 
     const isFlush = suits.every(s => s === suits[0]);
     const isStraight = checkStraight(uniqueRanks);
 
     if (isStraight && isFlush) {
-        return { rank: HAND_RANKS.STRAIGHT_FLUSH, kickers: [uniqueRanks[0]] };
+        // For wheel straight flush, highest card is 5 (index 9)
+        const isWheel = uniqueRanks.includes(0) && uniqueRanks.includes(12);
+        return { rank: HAND_RANKS.STRAIGHT_FLUSH, kickers: isWheel ? [9] : [uniqueRanks[0]] };
     }
 
     if (counts[0] === 4) {
-        return { rank: HAND_RANKS.FOUR_OF_A_KIND, kickers: uniqueRanks };
+        // Four of a kind: quads rank first, then kicker
+        return { rank: HAND_RANKS.FOUR_OF_A_KIND, kickers: orderedRanks };
     }
 
     if (counts[0] === 3 && counts[1] === 2) {
-        return { rank: HAND_RANKS.FULL_HOUSE, kickers: uniqueRanks };
+        // Full house: trips rank first, then pair rank
+        return { rank: HAND_RANKS.FULL_HOUSE, kickers: orderedRanks };
     }
 
     if (isFlush) {
@@ -440,19 +457,23 @@ function evaluateHand(cards) {
     }
 
     if (isStraight) {
-        return { rank: HAND_RANKS.STRAIGHT, kickers: [uniqueRanks[0]] };
+        const isWheel = uniqueRanks.includes(0) && uniqueRanks.includes(12);
+        return { rank: HAND_RANKS.STRAIGHT, kickers: isWheel ? [9] : [uniqueRanks[0]] };
     }
 
     if (counts[0] === 3) {
-        return { rank: HAND_RANKS.THREE_OF_A_KIND, kickers: uniqueRanks };
+        // Three of a kind: trips rank first, then kickers
+        return { rank: HAND_RANKS.THREE_OF_A_KIND, kickers: orderedRanks };
     }
 
     if (counts[0] === 2 && counts[1] === 2) {
-        return { rank: HAND_RANKS.TWO_PAIR, kickers: uniqueRanks };
+        // Two pair: higher pair first, lower pair second, then kicker
+        return { rank: HAND_RANKS.TWO_PAIR, kickers: orderedRanks };
     }
 
     if (counts[0] === 2) {
-        return { rank: HAND_RANKS.PAIR, kickers: uniqueRanks };
+        // Pair: pair rank first, then kickers
+        return { rank: HAND_RANKS.PAIR, kickers: orderedRanks };
     }
 
     return { rank: HAND_RANKS.HIGH_CARD, kickers: uniqueRanks };

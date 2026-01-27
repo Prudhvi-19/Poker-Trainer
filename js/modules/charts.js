@@ -80,7 +80,8 @@ function create3BetCharts() {
         { name: 'vs UTG', range: ranges.THREE_BET_RANGES.vsUTG, percentage: '~5%' },
         { name: 'vs HJ', range: ranges.THREE_BET_RANGES.vsHJ, percentage: '~6%' },
         { name: 'vs CO', range: ranges.THREE_BET_RANGES.vsCO, percentage: '~8%' },
-        { name: 'vs BTN', range: ranges.THREE_BET_RANGES.vsBTN, percentage: '~11%' }
+        { name: 'vs BTN', range: ranges.THREE_BET_RANGES.vsBTN, percentage: '~11%' },
+        { name: 'vs SB (BB)', range: ranges.THREE_BET_RANGES.vsSB, percentage: '~14%' }
     ];
 
     ranges3bet.forEach(r => {

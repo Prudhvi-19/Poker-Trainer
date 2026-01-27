@@ -170,11 +170,17 @@ function createStatBox(value, label) {
     return box;
 }
 
+// Track when scenario is shown for response time measurement
+let scenarioStartTime = null;
+
 function showNextScenario() {
     const scenarioEl = document.getElementById('scenario-container');
     if (!scenarioEl) return;
 
     scenarioEl.innerHTML = '';
+
+    // Start timer when scenario is shown
+    scenarioStartTime = Date.now();
 
     const scenario = generateScenario(currentSession.trainerType);
 
@@ -289,14 +295,14 @@ function generateCBetScenario() {
     const pot = 6; // Standard single raised pot
     const effectiveStack = 100;
 
-    const frequency = CBET_FREQUENCIES[position][texture];
-    const shouldCBet = Math.random() < frequency;
-
     // Generate a reasonable hand for the preflop raiser
     const heroHand = generatePreflopRaiserHand();
 
-    // Simplify: just bet or check
-    const correctAction = shouldCBet ? ACTIONS.BET : ACTIONS.CHECK;
+    // Evaluate hand strength on this board
+    const handStrength = evaluateHandBoardInteraction(heroHand, board);
+
+    // GTO c-betting decision based on hand strength and board texture
+    const correctAction = determineCBetAction(handStrength, texture, position);
 
     return {
         type: TRAINER_TYPES.CBET,
@@ -304,6 +310,7 @@ function generateCBetScenario() {
         board,
         texture,
         heroHand,
+        handStrength,
         pot,
         effectiveStack,
         description: `You raised preflop and ${position === 'IP' ? 'have position' : 'are out of position'}. Villain calls. What do you do on the flop?`,
@@ -325,18 +332,9 @@ function generateFacingCBetScenario() {
 
     const heroHand = generatePreflopCallerHand();
 
-    const frequencies = DEFENSE_FREQUENCIES[position][texture];
-
-    // Determine correct action based on frequencies
-    const rand = Math.random();
-    let correctAction;
-    if (rand < frequencies.fold) {
-        correctAction = ACTIONS.FOLD;
-    } else if (rand < frequencies.fold + frequencies.call) {
-        correctAction = ACTIONS.CALL;
-    } else {
-        correctAction = ACTIONS.RAISE;
-    }
+    // Evaluate hand strength and determine GTO action
+    const handStrength = evaluateHandBoardInteraction(heroHand, board);
+    const correctAction = determineDefenseAction(handStrength, texture, position);
 
     return {
         type: TRAINER_TYPES.FACING_CBET,
@@ -344,6 +342,7 @@ function generateFacingCBetScenario() {
         board,
         texture,
         heroHand,
+        handStrength,
         pot: pot + cBetSize, // Current pot hero sees (original pot + villain's bet)
         effectiveStack,
         description: `Villain raised preflop, you called. ${position === 'IP' ? 'You have position' : 'You are out of position'}. Villain bets ${cBetSize}bb (50% pot). What do you do?`,
@@ -365,10 +364,9 @@ function generateTurnScenario() {
 
     const heroHand = generatePreflopRaiserHand();
 
-    // Simplified: if we c-bet flop and got called, should we barrel turn?
-    const shouldBarrel = Math.random() < 0.45; // Barrel ~45% of the time
-
-    const correctAction = shouldBarrel ? ACTIONS.BET : ACTIONS.CHECK;
+    // Evaluate hand strength on full board and determine GTO action
+    const handStrength = evaluateHandBoardInteraction(heroHand, board);
+    const correctAction = determineTurnAction(handStrength, texture);
 
     return {
         type: TRAINER_TYPES.TURN_PLAY,
@@ -376,6 +374,7 @@ function generateTurnScenario() {
         board,
         texture,
         heroHand,
+        handStrength,
         pot,
         effectiveStack,
         description: `You raised preflop, c-bet the flop, and villain called. ${position === 'IP' ? 'You have position' : 'You are out of position'}. What do you do on the turn?`,
@@ -396,10 +395,9 @@ function generateRiverScenario() {
 
     const heroHand = generatePreflopRaiserHand();
 
-    // Simplified: river betting is complex, so we'll use simplified heuristic
-    const shouldBet = Math.random() < 0.40; // Bet river ~40% when checked to
-
-    const correctAction = shouldBet ? ACTIONS.BET : ACTIONS.CHECK;
+    // Evaluate hand strength on full board and determine GTO action
+    const handStrength = evaluateHandBoardInteraction(heroHand, board);
+    const correctAction = determineRiverAction(handStrength, texture);
 
     return {
         type: TRAINER_TYPES.RIVER_PLAY,
@@ -407,6 +405,7 @@ function generateRiverScenario() {
         board,
         texture,
         heroHand,
+        handStrength,
         pot,
         effectiveStack,
         description: `Multi-street action. ${position === 'IP' ? 'You have position' : 'You are out of position'}. Both players check the turn. What do you do on the river?`,
@@ -461,43 +460,78 @@ function generateBoard(numCards) {
 }
 
 function classifyBoardTexture(board) {
-    // Simplified texture classification
+    // Improved texture classification
     const ranks = board.map(card => card.slice(0, -1));
     const suits = board.map(card => card.slice(-1));
 
-    // Check for flush draws
+    // Check for monotone (flush possible) or two-tone (flush draw)
     const suitCounts = {};
     suits.forEach(suit => {
         suitCounts[suit] = (suitCounts[suit] || 0) + 1;
     });
-    const hasFlushDraw = Object.values(suitCounts).some(count => count >= 2);
+    const maxSuitCount = Math.max(...Object.values(suitCounts));
+    const isMonotone = maxSuitCount >= 3; // All same suit (flush possible on board)
+    const hasTwoTone = maxSuitCount === 2; // Two of same suit (flush draw possible)
 
-    // Check for straight draws (simplified)
+    // Check for straight possibilities
     const rankValues = ranks.map(rank => {
         const index = RANKS.indexOf(rank);
-        return index !== -1 ? (12 - index) : 0;
+        return 12 - index; // A=12, K=11, ..., 2=0
     });
-    rankValues.sort((a, b) => b - a);
-    const spread = rankValues[0] - rankValues[rankValues.length - 1];
-    const hasStraightDraw = spread <= 4;
 
-    // Check for pairs
+    // Sort and check connectivity
+    const sortedRanks = [...rankValues].sort((a, b) => b - a);
+    const spread = sortedRanks[0] - sortedRanks[sortedRanks.length - 1];
+
+    // Count connected cards (within 1-2 of each other)
+    let connectedCount = 0;
+    for (let i = 0; i < sortedRanks.length - 1; i++) {
+        const gap = sortedRanks[i] - sortedRanks[i + 1];
+        if (gap <= 2) connectedCount++;
+    }
+
+    const isConnected = connectedCount >= 2 || spread <= 4;
+    const hasStraightDraw = spread <= 5 && connectedCount >= 1;
+
+    // Check for pairs on board
     const rankCounts = {};
     ranks.forEach(rank => {
         rankCounts[rank] = (rankCounts[rank] || 0) + 1;
     });
     const hasPair = Object.values(rankCounts).some(count => count >= 2);
 
-    // Classify
-    if (hasPair && !hasFlushDraw && !hasStraightDraw) {
+    // High card check (broadway-heavy boards)
+    const highCards = ranks.filter(r => ['A', 'K', 'Q', 'J', 'T'].includes(r));
+    const isBroadwayHeavy = highCards.length >= 2;
+
+    // Classify texture
+    // STATIC: Paired boards with no draws
+    if (hasPair && !isMonotone && !isConnected) {
         return 'STATIC';
-    } else if (hasFlushDraw && hasStraightDraw) {
+    }
+
+    // DYNAMIC: Very connected + flush draws, equity shifts dramatically
+    if ((isMonotone || hasTwoTone) && isConnected) {
         return 'DYNAMIC';
-    } else if (!hasFlushDraw && !hasStraightDraw) {
-        return 'DRY';
-    } else {
+    }
+
+    // WET: Has draws (flush or straight potential)
+    if (isMonotone || (hasTwoTone && hasStraightDraw) || (isConnected && !hasPair)) {
         return 'WET';
     }
+
+    // DRY: Disconnected, rainbow, no real draws
+    // Examples: K72r, A94r, Q82r
+    if (!hasTwoTone && !isConnected && spread > 5) {
+        return 'DRY';
+    }
+
+    // Default to WET for borderline cases
+    if (hasTwoTone || hasStraightDraw) {
+        return 'WET';
+    }
+
+    return 'DRY';
 }
 
 function generatePreflopRaiserHand() {
@@ -546,8 +580,156 @@ function generatePreflopCallerHand() {
     return { ...hand, display };
 }
 
+// Evaluate hand strength relative to the board
+function evaluateHandBoardInteraction(hand, board) {
+    const boardRanks = board.map(c => c.slice(0, -1));
+    const boardSuits = board.map(c => c.slice(-1));
+
+    const r1 = hand.rank1;
+    const r2 = hand.rank2;
+    const isPair = r1 === r2;
+
+    // Check for made hands
+    const hasPairOnBoard = boardRanks.includes(r1) || boardRanks.includes(r2);
+    const hasOverpair = isPair && RANKS.indexOf(r1) < Math.min(...boardRanks.map(r => RANKS.indexOf(r)));
+    const hasTopPair = boardRanks.includes(r1) && RANKS.indexOf(r1) === Math.min(...boardRanks.map(r => RANKS.indexOf(r)));
+    const hasSecondPair = !hasTopPair && hasPairOnBoard;
+    const hasSet = isPair && boardRanks.includes(r1);
+
+    // Check for draws
+    const hasFlushDraw = hand.suited && boardSuits.filter(s => s === getHandSuit(hand)).length >= 2;
+    const hasStraightDraw = checkStraightDraw(r1, r2, boardRanks);
+    const hasOvercards = RANKS.indexOf(r1) < Math.min(...boardRanks.map(r => RANKS.indexOf(r))) &&
+                         RANKS.indexOf(r2) < Math.min(...boardRanks.map(r => RANKS.indexOf(r)));
+
+    // Categorize hand strength
+    if (hasSet) return 'MONSTER';
+    if (hasOverpair) return 'STRONG';
+    if (hasTopPair) return 'MEDIUM_STRONG';
+    if (hasSecondPair) return 'MEDIUM';
+    if (hasFlushDraw && hasStraightDraw) return 'STRONG_DRAW';
+    if (hasFlushDraw || hasStraightDraw) return 'DRAW';
+    if (hasOvercards) return 'OVERCARDS';
+    return 'AIR';
+}
+
+function getHandSuit(hand) {
+    // For suited hands, return a consistent suit (we don't track actual suits in hand objects)
+    return '♠';
+}
+
+function checkStraightDraw(r1, r2, boardRanks) {
+    const allRanks = [r1, r2, ...boardRanks];
+    const rankValues = allRanks.map(r => RANKS.indexOf(r)).sort((a, b) => a - b);
+    const unique = [...new Set(rankValues)];
+
+    // Check for 4-card straight (open-ended or gutshot)
+    for (let i = 0; i <= unique.length - 4; i++) {
+        const span = unique[i + 3] - unique[i];
+        if (span <= 4) return true;
+    }
+    return false;
+}
+
+// Determine c-bet action based on hand strength and texture
+function determineCBetAction(handStrength, texture, position) {
+    // GTO c-betting: bet value hands and some draws/air for balance
+    // Check strong hands sometimes for deception, weak hands on bad textures
+
+    const strengthMap = {
+        'MONSTER': { betFreq: 0.85, checkFreq: 0.15 },    // Slow-play sometimes
+        'STRONG': { betFreq: 0.90, checkFreq: 0.10 },
+        'MEDIUM_STRONG': { betFreq: 0.80, checkFreq: 0.20 },
+        'MEDIUM': { betFreq: 0.50, checkFreq: 0.50 },
+        'STRONG_DRAW': { betFreq: 0.75, checkFreq: 0.25 },
+        'DRAW': { betFreq: 0.55, checkFreq: 0.45 },
+        'OVERCARDS': { betFreq: 0.45, checkFreq: 0.55 },
+        'AIR': { betFreq: 0.30, checkFreq: 0.70 }
+    };
+
+    // Adjust for texture
+    let betFreq = strengthMap[handStrength]?.betFreq || 0.50;
+
+    // Wet boards: check more (opponent has more draws/made hands)
+    if (texture === 'WET' || texture === 'DYNAMIC') {
+        betFreq *= 0.85;
+    }
+    // Dry boards: bet more (easier to deny equity)
+    if (texture === 'DRY' || texture === 'STATIC') {
+        betFreq *= 1.10;
+    }
+    // OOP: bet less
+    if (position === 'OOP') {
+        betFreq *= 0.85;
+    }
+
+    betFreq = Math.min(1, Math.max(0, betFreq));
+
+    // Deterministic decision based on hand strength tier for training
+    // We want consistent answers, so use threshold rather than random
+    return betFreq >= 0.50 ? ACTIONS.BET : ACTIONS.CHECK;
+}
+
+// Evaluate defense action when facing c-bet
+function determineDefenseAction(handStrength, texture, position) {
+    // GTO defense: call with draws and made hands, raise strong hands/draws, fold weak
+
+    if (handStrength === 'MONSTER' || handStrength === 'STRONG') {
+        return ACTIONS.RAISE; // Value raise
+    }
+    if (handStrength === 'STRONG_DRAW') {
+        return Math.random() < 0.4 ? ACTIONS.RAISE : ACTIONS.CALL; // Mix raises
+    }
+    if (handStrength === 'MEDIUM_STRONG' || handStrength === 'MEDIUM' || handStrength === 'DRAW') {
+        return ACTIONS.CALL;
+    }
+    if (handStrength === 'OVERCARDS') {
+        // Call with backdoor equity sometimes
+        return texture === 'DRY' ? ACTIONS.CALL : ACTIONS.FOLD;
+    }
+    return ACTIONS.FOLD;
+}
+
+// Determine turn barrel action
+function determineTurnAction(handStrength, texture) {
+    if (handStrength === 'MONSTER' || handStrength === 'STRONG') {
+        return ACTIONS.BET; // Keep building pot
+    }
+    if (handStrength === 'MEDIUM_STRONG') {
+        return ACTIONS.BET; // Value/protection
+    }
+    if (handStrength === 'STRONG_DRAW') {
+        return ACTIONS.BET; // Semi-bluff
+    }
+    if (handStrength === 'MEDIUM' || handStrength === 'DRAW') {
+        // Check-call or small bet
+        return texture === 'DRY' ? ACTIONS.BET : ACTIONS.CHECK;
+    }
+    // Overcards and air - give up or occasional bluff
+    return ACTIONS.CHECK;
+}
+
+// Determine river action
+function determineRiverAction(handStrength, texture) {
+    if (handStrength === 'MONSTER' || handStrength === 'STRONG') {
+        return ACTIONS.BET; // Value bet
+    }
+    if (handStrength === 'MEDIUM_STRONG') {
+        return ACTIONS.BET; // Thin value
+    }
+    if (handStrength === 'MEDIUM') {
+        return ACTIONS.CHECK; // Showdown value
+    }
+    // Bluff some air on river for balance
+    if (handStrength === 'AIR' && texture === 'DRY') {
+        return ACTIONS.BET; // Bluff on scary runouts
+    }
+    return ACTIONS.CHECK;
+}
+
 function handleAnswer(scenario, userAnswer) {
-    const startTime = Date.now();
+    // Calculate response time from when scenario was shown
+    const responseTimeMs = scenarioStartTime ? Date.now() - scenarioStartTime : 0;
 
     const isCorrect = userAnswer === scenario.correctAction;
 
@@ -558,7 +740,7 @@ function handleAnswer(scenario, userAnswer) {
         userAnswer,
         correctAnswer: scenario.correctAction,
         isCorrect,
-        responseTimeMs: Date.now() - startTime
+        responseTimeMs
     };
 
     currentSession.results.push(result);
@@ -591,6 +773,19 @@ function showFeedback(scenario, userAnswer, isCorrect) {
     const explanation = document.createElement('div');
     explanation.className = 'feedback-explanation';
 
+    // Format hand strength for display
+    const strengthLabels = {
+        'MONSTER': 'Monster (Set/Top Two)',
+        'STRONG': 'Strong (Overpair/Top Pair Top Kicker)',
+        'MEDIUM_STRONG': 'Medium-Strong (Top Pair)',
+        'MEDIUM': 'Medium (Second Pair/Weak Top Pair)',
+        'STRONG_DRAW': 'Strong Draw (Flush + Straight)',
+        'DRAW': 'Draw (Flush/Straight)',
+        'OVERCARDS': 'Overcards',
+        'AIR': 'Air (No pair, no draw)'
+    };
+    const handStrengthLabel = scenario.handStrength ? strengthLabels[scenario.handStrength] || scenario.handStrength : null;
+
     if (!isCorrect) {
         let correctLabel = scenario.correctAction.toUpperCase();
         if (scenario.type === TRAINER_TYPES.BOARD_TEXTURE) {
@@ -600,11 +795,13 @@ function showFeedback(scenario, userAnswer, isCorrect) {
         explanation.innerHTML = `
             <p>Your answer: <strong>${userAnswer.toUpperCase()}</strong></p>
             <p>Correct answer: <strong>${correctLabel}</strong></p>
+            ${handStrengthLabel ? `<p>Your hand strength: <strong>${handStrengthLabel}</strong></p>` : ''}
             ${scenario.texture ? `<p>Board texture: <strong>${scenario.texture}</strong></p>` : ''}
         `;
     } else {
         explanation.innerHTML = `
             <p>Great job! Keep going!</p>
+            ${handStrengthLabel ? `<p>Your hand strength: <strong>${handStrengthLabel}</strong></p>` : ''}
             ${scenario.texture ? `<p>Board texture: <strong>${scenario.texture}</strong></p>` : ''}
         `;
     }

@@ -30,18 +30,22 @@ export const CBET_FREQUENCIES = {
 };
 
 // Facing c-bet defense frequencies (fold vs call vs raise)
+// Based on GTO MDF (Minimum Defense Frequency)
+// Against 50% pot bet, MDF = 1 - (bet / (pot + bet)) = 1 - (0.5 / 1.5) = ~67% defend
+// Against 67% pot bet, MDF = 1 - (0.67 / 1.67) = ~60% defend
+// Against 100% pot bet, MDF = 1 - (1 / 2) = 50% defend
 export const DEFENSE_FREQUENCIES = {
-    IP: {
-        DRY: { fold: 0.55, call: 0.35, raise: 0.10 },
-        WET: { fold: 0.40, call: 0.45, raise: 0.15 },
-        STATIC: { fold: 0.60, call: 0.30, raise: 0.10 },
-        DYNAMIC: { fold: 0.45, call: 0.40, raise: 0.15 }
+    IP: { // In position can defend wider
+        DRY: { fold: 0.30, call: 0.55, raise: 0.15 },    // ~70% defend
+        WET: { fold: 0.35, call: 0.50, raise: 0.15 },    // ~65% defend
+        STATIC: { fold: 0.35, call: 0.55, raise: 0.10 }, // ~65% defend
+        DYNAMIC: { fold: 0.40, call: 0.45, raise: 0.15 } // ~60% defend
     },
-    OOP: {
-        DRY: { fold: 0.60, call: 0.30, raise: 0.10 },
-        WET: { fold: 0.50, call: 0.35, raise: 0.15 },
-        STATIC: { fold: 0.65, call: 0.25, raise: 0.10 },
-        DYNAMIC: { fold: 0.55, call: 0.30, raise: 0.15 }
+    OOP: { // Out of position defends tighter
+        DRY: { fold: 0.40, call: 0.48, raise: 0.12 },    // ~60% defend
+        WET: { fold: 0.45, call: 0.42, raise: 0.13 },    // ~55% defend
+        STATIC: { fold: 0.42, call: 0.48, raise: 0.10 }, // ~58% defend
+        DYNAMIC: { fold: 0.48, call: 0.38, raise: 0.14 } // ~52% defend
     }
 };
 
