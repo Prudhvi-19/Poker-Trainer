@@ -48,7 +48,7 @@ export const RFI_RANGES = {
         'KTs', 'QTs', 'JTs', 'T9s',
         '98s', '87s', '76s', '65s', // Added 65s
         'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s', // All suited aces
-        'KQo', 'AJo' // Added AJo
+        'AQo', 'AJo', 'KQo' // AQo is stronger than AJo
     ],
     HJ: [ // ~21% of hands (standard GTO 19-22%)
         ...PREMIUMS,
