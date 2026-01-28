@@ -1,15 +1,38 @@
 // 13x13 Hand Range Grid Component
+// Supports multi-color display for different actions (raise, call, fold)
 
 import { RANKS } from '../utils/constants.js';
 
 /**
- * Create a 13x13 hand grid for range selection
- * @param {Array} selectedHands - Array of selected hand strings (e.g., ['AA', 'AKs', 'KQo'])
- * @param {Function} onHandClick - Callback when hand is clicked
- * @param {boolean} interactive - Whether the grid is interactive
+ * Create a 13x13 hand grid for range visualization
+ * Supports both legacy format and new multi-action format
+ *
+ * Legacy: createHandGrid(selectedHands, onHandClick, interactive)
+ * New: createHandGrid({ raiseHands, callHands, onHandClick, interactive })
+ *
+ * @param {Object|Array} options - Configuration options or legacy selectedHands array
  * @returns {HTMLElement} Hand grid element
  */
-export function createHandGrid(selectedHands = [], onHandClick = null, interactive = true) {
+export function createHandGrid(options = {}, legacyOnHandClick = null, legacyInteractive = true) {
+    // Support legacy format: createHandGrid(selectedHands, onHandClick, interactive)
+    let raiseHands = [];
+    let callHands = [];
+    let onHandClick = null;
+    let interactive = true;
+
+    if (Array.isArray(options)) {
+        // Legacy format
+        raiseHands = options || [];
+        onHandClick = legacyOnHandClick;
+        interactive = legacyInteractive !== false;
+    } else {
+        // New format
+        raiseHands = options.raiseHands || options.selectedHands || [];
+        callHands = options.callHands || [];
+        onHandClick = options.onHandClick || null;
+        interactive = options.interactive !== false;
+    }
+
     const grid = document.createElement('div');
     grid.className = 'hand-grid';
 
@@ -41,13 +64,21 @@ export function createHandGrid(selectedHands = [], onHandClick = null, interacti
                 cellType = 'offsuit';
             }
 
-            const cell = createHandCell(handString, cellType, selectedHands.includes(handString));
+            // Determine action type
+            let actionType = 'fold'; // default
+            if (raiseHands.includes(handString)) {
+                actionType = 'raise';
+            } else if (callHands.includes(handString)) {
+                actionType = 'call';
+            }
+
+            const cell = createHandCell(handString, cellType, actionType);
 
             if (interactive && onHandClick) {
                 cell.style.cursor = 'pointer';
                 cell.addEventListener('click', () => {
-                    const isSelected = cell.classList.contains('selected');
-                    onHandClick(handString, !isSelected, cell);
+                    const currentAction = cell.dataset.action;
+                    onHandClick(handString, currentAction !== 'fold', cell);
                 });
             }
 
@@ -59,57 +90,120 @@ export function createHandGrid(selectedHands = [], onHandClick = null, interacti
 }
 
 /**
- * Create a single hand cell
+ * Create a single hand cell with action coloring
  * @param {string} handString - Hand notation (e.g., 'AKs')
  * @param {string} cellType - Type: 'pair', 'suited', or 'offsuit'
- * @param {boolean} selected - Whether the cell is selected
+ * @param {string} actionType - Action: 'raise', 'call', or 'fold'
  * @returns {HTMLElement} Hand cell element
  */
-function createHandCell(handString, cellType, selected = false) {
+function createHandCell(handString, cellType, actionType = 'fold') {
     const cell = document.createElement('div');
     cell.className = `hand-cell ${cellType}`;
     cell.dataset.hand = handString;
+    cell.dataset.action = actionType;
+
+    // Apply action-specific styling
+    if (actionType === 'raise') {
+        cell.classList.add('action-raise');
+    } else if (actionType === 'call') {
+        cell.classList.add('action-call');
+    }
 
     // Display text (remove 's' and 'o' suffix for cleaner look in grid)
     let displayText = handString.replace(/[so]$/, '');
     cell.textContent = displayText;
 
-    if (selected) {
-        cell.classList.add('selected');
-    }
-
-    // Add tooltip
-    cell.title = handString;
+    // Add tooltip with full hand notation and action
+    const actionLabel = actionType === 'fold' ? 'Fold' : actionType.charAt(0).toUpperCase() + actionType.slice(1);
+    cell.title = `${handString} - ${actionLabel}`;
 
     return cell;
 }
 
 /**
- * Update grid selection
- * @param {HTMLElement} grid - The grid element
- * @param {Array} selectedHands - Array of selected hand strings
+ * Create a multi-action hand grid with raise and call colors
+ * @param {Array} raiseHands - Hands to 3-bet/raise (green)
+ * @param {Array} callHands - Hands to call (amber)
+ * @param {boolean} interactive - Whether clickable
+ * @returns {HTMLElement} Hand grid element
  */
-export function updateGridSelection(grid, selectedHands) {
+export function createMultiActionGrid(raiseHands = [], callHands = [], interactive = false) {
+    return createHandGrid({
+        raiseHands,
+        callHands,
+        interactive
+    });
+}
+
+/**
+ * Update grid with new hand selections
+ * @param {HTMLElement} grid - The grid element
+ * @param {Array} raiseHands - Hands to mark as raise
+ * @param {Array} callHands - Hands to mark as call
+ */
+export function updateGridActions(grid, raiseHands = [], callHands = []) {
     const cells = grid.querySelectorAll('.hand-cell');
 
     cells.forEach(cell => {
         const handString = cell.dataset.hand;
-        if (selectedHands.includes(handString)) {
-            cell.classList.add('selected');
+
+        // Remove existing action classes
+        cell.classList.remove('action-raise', 'action-call', 'selected');
+
+        // Apply new action
+        if (raiseHands.includes(handString)) {
+            cell.classList.add('action-raise');
+            cell.dataset.action = 'raise';
+        } else if (callHands.includes(handString)) {
+            cell.classList.add('action-call');
+            cell.dataset.action = 'call';
         } else {
-            cell.classList.remove('selected');
+            cell.dataset.action = 'fold';
         }
     });
 }
 
 /**
+ * Update grid selection (legacy support)
+ * @param {HTMLElement} grid - The grid element
+ * @param {Array} selectedHands - Array of selected hand strings
+ */
+export function updateGridSelection(grid, selectedHands) {
+    updateGridActions(grid, selectedHands, []);
+}
+
+/**
  * Get all selected hands from grid
  * @param {HTMLElement} grid - The grid element
- * @returns {Array} Array of selected hand strings
+ * @returns {Array} Array of selected hand strings (for legacy compatibility)
  */
 export function getSelectedHands(grid) {
-    const selectedCells = grid.querySelectorAll('.hand-cell.selected');
+    const selectedCells = grid.querySelectorAll('.hand-cell.action-raise, .hand-cell.action-call, .hand-cell.selected');
     return Array.from(selectedCells).map(cell => cell.dataset.hand);
+}
+
+/**
+ * Get hands by action type
+ * @param {HTMLElement} grid - The grid element
+ * @returns {Object} Object with raiseHands and callHands arrays
+ */
+export function getHandsByAction(grid) {
+    const raiseHands = [];
+    const callHands = [];
+
+    const cells = grid.querySelectorAll('.hand-cell');
+    cells.forEach(cell => {
+        const hand = cell.dataset.hand;
+        const action = cell.dataset.action;
+
+        if (action === 'raise') {
+            raiseHands.push(hand);
+        } else if (action === 'call') {
+            callHands.push(hand);
+        }
+    });
+
+    return { raiseHands, callHands };
 }
 
 /**
@@ -117,17 +211,23 @@ export function getSelectedHands(grid) {
  * @param {HTMLElement} grid - The grid element
  */
 export function clearSelection(grid) {
-    const cells = grid.querySelectorAll('.hand-cell.selected');
-    cells.forEach(cell => cell.classList.remove('selected'));
+    const cells = grid.querySelectorAll('.hand-cell');
+    cells.forEach(cell => {
+        cell.classList.remove('action-raise', 'action-call', 'selected');
+        cell.dataset.action = 'fold';
+    });
 }
 
 /**
- * Select all hands in grid
+ * Select all hands in grid as raise
  * @param {HTMLElement} grid - The grid element
  */
 export function selectAll(grid) {
     const cells = grid.querySelectorAll('.hand-cell');
-    cells.forEach(cell => cell.classList.add('selected'));
+    cells.forEach(cell => {
+        cell.classList.add('action-raise');
+        cell.dataset.action = 'raise';
+    });
 }
 
 /**
@@ -138,7 +238,13 @@ export function selectAll(grid) {
 export function toggleHand(grid, handString) {
     const cell = grid.querySelector(`[data-hand="${handString}"]`);
     if (cell) {
-        cell.classList.toggle('selected');
+        if (cell.dataset.action === 'fold') {
+            cell.classList.add('action-raise');
+            cell.dataset.action = 'raise';
+        } else {
+            cell.classList.remove('action-raise', 'action-call', 'selected');
+            cell.dataset.action = 'fold';
+        }
     }
 }
 
@@ -186,13 +292,51 @@ export function getHandInfo(handString) {
     };
 }
 
+/**
+ * Calculate range statistics
+ * @param {Array} raiseHands - Raise hands
+ * @param {Array} callHands - Call hands
+ * @returns {Object} Statistics
+ */
+export function calculateRangeStats(raiseHands = [], callHands = []) {
+    const calcCombos = (hands) => {
+        let total = 0;
+        hands.forEach(hand => {
+            if (hand.length === 2) total += 6; // Pair
+            else if (hand.endsWith('s')) total += 4; // Suited
+            else total += 12; // Offsuit
+        });
+        return total;
+    };
+
+    const raiseCombos = calcCombos(raiseHands);
+    const callCombos = calcCombos(callHands);
+    const totalCombos = raiseCombos + callCombos;
+    const totalPossible = 1326;
+
+    return {
+        raiseHands: raiseHands.length,
+        callHands: callHands.length,
+        raiseCombos,
+        callCombos,
+        totalCombos,
+        raisePercent: ((raiseCombos / totalPossible) * 100).toFixed(1),
+        callPercent: ((callCombos / totalPossible) * 100).toFixed(1),
+        totalPercent: ((totalCombos / totalPossible) * 100).toFixed(1)
+    };
+}
+
 export default {
     createHandGrid,
+    createMultiActionGrid,
+    updateGridActions,
     updateGridSelection,
     getSelectedHands,
+    getHandsByAction,
     clearSelection,
     selectAll,
     toggleHand,
     createRangeDisplay,
-    getHandInfo
+    getHandInfo,
+    calculateRangeStats
 };
