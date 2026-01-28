@@ -47,10 +47,10 @@ function createRFICharts() {
     grid.className = 'charts-grid';
 
     const positions = [
-        { name: 'UTG', range: ranges.RFI_RANGES.UTG, percentage: '~15%' },
-        { name: 'HJ', range: ranges.RFI_RANGES.HJ, percentage: '~18%' },
+        { name: 'UTG', range: ranges.RFI_RANGES.UTG, percentage: '~16%' },
+        { name: 'HJ', range: ranges.RFI_RANGES.HJ, percentage: '~21%' },
         { name: 'CO', range: ranges.RFI_RANGES.CO, percentage: '~28%' },
-        { name: 'BTN', range: ranges.RFI_RANGES.BTN, percentage: '~48%' },
+        { name: 'BTN', range: ranges.RFI_RANGES.BTN, percentage: '~50%' },
         { name: 'SB', range: ranges.RFI_RANGES.SB, percentage: '~45%' }
     ];
 
@@ -99,23 +99,46 @@ function createBBDefenseCharts() {
     section.className = 'chart-section';
 
     const header = document.createElement('h2');
-    header.textContent = 'BB Defense Ranges';
+    header.textContent = 'BB Defense Ranges (3-Bet + Call)';
     header.style.marginBottom = '1.5rem';
     section.appendChild(header);
 
     const grid = document.createElement('div');
     grid.className = 'charts-grid';
 
+    // Combine 3-bet and call ranges for complete BB defense
     const bbRanges = [
-        { name: 'vs UTG', range: ranges.BB_DEFENSE_RANGES.vsUTG, percentage: '~15%' },
-        { name: 'vs HJ', range: ranges.BB_DEFENSE_RANGES.vsHJ, percentage: '~20%' },
-        { name: 'vs CO', range: ranges.BB_DEFENSE_RANGES.vsCO, percentage: '~27%' },
-        { name: 'vs BTN', range: ranges.BB_DEFENSE_RANGES.vsBTN, percentage: '~40%' },
-        { name: 'vs SB', range: ranges.BB_DEFENSE_RANGES.vsSB, percentage: '~55%' }
+        {
+            name: 'vs UTG',
+            range: [...(ranges.BB_3BET_RANGES?.vsUTG || []), ...ranges.BB_DEFENSE_RANGES.vsUTG],
+            percentage: '~25%'
+        },
+        {
+            name: 'vs HJ',
+            range: [...(ranges.BB_3BET_RANGES?.vsHJ || []), ...ranges.BB_DEFENSE_RANGES.vsHJ],
+            percentage: '~31%'
+        },
+        {
+            name: 'vs CO',
+            range: [...(ranges.BB_3BET_RANGES?.vsCO || []), ...ranges.BB_DEFENSE_RANGES.vsCO],
+            percentage: '~38%'
+        },
+        {
+            name: 'vs BTN',
+            range: [...(ranges.BB_3BET_RANGES?.vsBTN || []), ...ranges.BB_DEFENSE_RANGES.vsBTN],
+            percentage: '~51%'
+        },
+        {
+            name: 'vs SB',
+            range: [...(ranges.BB_3BET_RANGES?.vsSB || []), ...ranges.BB_DEFENSE_RANGES.vsSB],
+            percentage: '~69%'
+        }
     ];
 
     bbRanges.forEach(r => {
-        const card = createRangeChart(`BB ${r.name}`, r.range, r.percentage);
+        // Remove duplicates (some hands might be in both ranges)
+        const uniqueRange = [...new Set(r.range)];
+        const card = createRangeChart(`BB ${r.name}`, uniqueRange, r.percentage);
         grid.appendChild(card);
     });
 
