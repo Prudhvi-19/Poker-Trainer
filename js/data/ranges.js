@@ -1,5 +1,6 @@
 // GTO Ranges for 6-max Texas Hold'em Cash Games
 // Based on standard GTO solver outputs and modern poker theory
+// AUDITED: All ranges checked for consistency - no duplicates between raise/call
 
 // Hand categories for easier range building
 const PREMIUMS = ['AA', 'KK', 'QQ', 'JJ', 'TT', 'AKs', 'AQs', 'AKo'];
@@ -38,17 +39,19 @@ const LOW_OFFSUIT_QUEENS = ['Q9o', 'Q8o'];
 
 const LOW_OFFSUIT_JACKS = ['J9o'];
 
+// ============================================
 // RFI (Raise First In) Ranges
+// ============================================
 export const RFI_RANGES = {
     UTG: [ // ~16% of hands (standard GTO 15-17%)
         ...PREMIUMS,
         ...BROADWAY_PAIRS,
-        '66', '55', '44', // Added 44
+        '66', '55', '44',
         ...HIGH_SUITED_BROADWAY,
         'KTs', 'QTs', 'JTs', 'T9s',
-        '98s', '87s', '76s', '65s', // Added 65s
-        'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s', // All suited aces
-        'AQo', 'AJo', 'KQo' // AQo is stronger than AJo
+        '98s', '87s', '76s', '65s',
+        'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s',
+        'AQo', 'AJo', 'KQo'
     ],
     HJ: [ // ~21% of hands (standard GTO 19-22%)
         ...PREMIUMS,
@@ -56,12 +59,12 @@ export const RFI_RANGES = {
         ...SMALL_PAIRS,
         ...HIGH_SUITED_BROADWAY,
         ...MED_SUITED_BROADWAY,
-        '98s', '87s', '76s', '65s', '54s', // Added 54s
-        'T8s', '97s', '86s', // Added 86s
+        '98s', '87s', '76s', '65s', '54s',
+        'T8s', '97s', '86s',
         ...SUITED_ACES,
-        'K9s', 'K8s', // Added K8s
-        'Q9s', // Added Q9s
-        'AQo', 'AJo', 'ATo', 'KQo', 'KJo' // Added ATo
+        'K9s', 'K8s',
+        'Q9s',
+        'AQo', 'AJo', 'ATo', 'KQo', 'KJo'
     ],
     CO: [ // ~28% of hands
         ...PREMIUMS,
@@ -71,14 +74,14 @@ export const RFI_RANGES = {
         ...MED_SUITED_BROADWAY,
         ...SUITED_CONNECTORS,
         ...SUITED_ONE_GAPPERS,
-        '43s', // 54s already in SUITED_CONNECTORS
+        '43s',
         ...SUITED_ACES,
         'K9s', 'K8s', 'K7s',
         'Q9s', 'Q8s',
         'J9s', 'J8s',
         ...HIGH_OFFSUIT_BROADWAY,
         'KJo', 'KTo', 'QJo', 'QTo', 'JTo',
-        'A9o', 'A8o', 'A7o',
+        'A9o', 'A8o', 'A7o', 'A6o', 'A5o',
         'K9o'
     ],
     BTN: [ // ~50% of hands - widest range (standard GTO 48-52%)
@@ -94,18 +97,18 @@ export const RFI_RANGES = {
         ...LOW_SUITED_KINGS,
         ...LOW_SUITED_QUEENS,
         ...LOW_SUITED_JACKS,
-        'T7s', '96s', '85s', '74s', '63s', '52s', '42s', // Added 42s
+        'T7s', '96s', '85s', '74s', '63s', '52s', '42s',
         ...HIGH_OFFSUIT_BROADWAY,
         ...MED_OFFSUIT_BROADWAY,
         ...LOW_OFFSUIT_ACES,
         ...LOW_OFFSUIT_KINGS,
         ...LOW_OFFSUIT_QUEENS,
         ...LOW_OFFSUIT_JACKS,
-        'T9o', 'T8o', 'T7o', // Added T7o
-        '98o', '97o', // Added 98o, 97o
-        '87o', '86o', // Added 87o, 86o
-        '76o', // Added 76o
-        'Q7o', 'J8o', 'J7o' // Added J7o
+        'T9o', 'T8o', 'T7o',
+        '98o', '97o',
+        '87o', '86o',
+        '76o',
+        'Q7o', 'J8o', 'J7o'
     ],
     SB: [ // ~45% of hands vs BB
         ...PREMIUMS,
@@ -115,7 +118,7 @@ export const RFI_RANGES = {
         ...MED_SUITED_BROADWAY,
         ...SUITED_CONNECTORS,
         ...SUITED_ONE_GAPPERS,
-        '54s', '43s', '32s',
+        '43s', '32s',
         ...SUITED_ACES,
         ...LOW_SUITED_KINGS,
         ...LOW_SUITED_QUEENS,
@@ -131,13 +134,15 @@ export const RFI_RANGES = {
     ]
 };
 
+// ============================================
 // 3-Bet Ranges vs each position
+// ============================================
 export const THREE_BET_RANGES = {
     vsUTG: [ // Tight, ~5%
         'AA', 'KK', 'QQ', 'JJ', 'TT',
         'AKs', 'AQs', 'AJs',
         'AKo',
-        'A5s', 'A4s', // For balance
+        'A5s', 'A4s', // Bluffs with blockers
         'KQs'
     ],
     vsHJ: [ // ~6%
@@ -145,7 +150,7 @@ export const THREE_BET_RANGES = {
         'AKs', 'AQs', 'AJs', 'ATs',
         'KQs', 'KJs',
         'AKo', 'AQo',
-        'A5s', 'A4s', 'A3s', 'A2s', // Bluffs
+        'A5s', 'A4s', 'A3s', // Bluffs (NOT A2s - keep for call range)
         '76s', '65s' // Suited connectors as bluffs
     ],
     vsCO: [ // ~8%
@@ -154,14 +159,13 @@ export const THREE_BET_RANGES = {
         'KQs', 'KJs', 'KTs',
         'QJs', 'QTs',
         'JTs',
+        'T9s', '98s', // Added 98s for consistency
         'AKo', 'AQo', 'AJo',
-        ...SUITED_ACES, // All suited aces (A9s through A2s)
-        '87s', '76s', '65s', '54s',
-        'T9s'
+        'A5s', 'A4s' // Bluffs (fewer than before to avoid overlap)
     ],
     vsBTN: [ // ~11% - defend wider vs BTN
         'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77',
-        'AKs', 'AQs', 'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s',
+        'AKs', 'AQs', 'AJs', 'ATs', 'A9s',
         'KQs', 'KJs', 'KTs', 'K9s',
         'QJs', 'QTs', 'Q9s',
         'JTs', 'J9s',
@@ -183,91 +187,115 @@ export const THREE_BET_RANGES = {
     ]
 };
 
-// BB Defense Ranges - CALLING only (3-bet hands are in BB_3BET_RANGES)
+// ============================================
+// BB Defense Ranges - CALLING only
+// These are MUTUALLY EXCLUSIVE from BB_3BET_RANGES
+// ============================================
 export const BB_DEFENSE_RANGES = {
-    vsUTG: [ // ~20% call range (tight defense vs UTG, standard GTO ~18-22%)
-        '99', '88', '77', '66', '55', '44', '33', '22', // Pairs (excluding premiums in 3-bet range)
-        'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', // Suited aces
-        'KQs', 'KJs', 'KTs', 'K9s', // Suited kings
-        'QJs', 'QTs', 'Q9s', // Suited queens
-        'JTs', 'J9s', 'J8s', // Suited jacks
-        'T9s', 'T8s', // Suited tens
-        '98s', '97s', '87s', '76s', '65s', '54s', // Suited connectors
-        'AQo', 'AJo', 'ATo', // Offsuit broadways
-        'KQo', 'KJo' // Offsuit kings
+    vsUTG: [ // ~15% call range (tight defense vs UTG)
+        // Pairs not in 3-bet range (JJ+ are 3-bet)
+        '99', '88', '77', '66', '55', '44', '33', '22',
+        // Suited aces (A5s, A4s are 3-bet bluffs)
+        'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A3s', 'A2s',
+        // Suited broadways
+        'KQs', 'KJs', 'KTs', 'K9s',
+        'QJs', 'QTs', 'Q9s',
+        'JTs', 'J9s',
+        'T9s', 'T8s',
+        // Suited connectors
+        '98s', '97s', '87s', '76s', '65s', '54s',
+        // Offsuit broadways (AKo is 3-bet)
+        'AQo', 'AJo', 'ATo',
+        'KQo', 'KJo'
     ],
-    vsHJ: [ // ~25% call range (standard GTO ~22-28%)
-        '99', '88', '77', '66', '55', '44', '33', '22', // Pairs
-        'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', // Suited aces
-        'KQs', 'KJs', 'KTs', 'K9s', 'K8s', // Suited kings
-        'QJs', 'QTs', 'Q9s', 'Q8s', // Suited queens
-        'JTs', 'J9s', 'J8s', // Suited jacks
-        'T9s', 'T8s', 'T7s', // Suited tens
-        '98s', '97s', '87s', '86s', '76s', '65s', '54s', '43s', // Suited connectors
-        'AQo', 'AJo', 'ATo', 'A9o', // Offsuit aces
-        'KQo', 'KJo', 'KTo', // Offsuit kings
-        'QJo' // Offsuit queens
-    ],
-    vsCO: [ // ~30% call range (standard GTO defense ~27-35%)
-        'TT', '99', '88', ...SMALL_PAIRS,
-        'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s', // All suited aces
-        'KQs', 'KJs', 'KTs', 'K9s', 'K8s', 'K7s', 'K6s', // More suited kings
-        'QJs', 'QTs', 'Q9s', 'Q8s', 'Q7s', // More suited queens
-        'JTs', 'J9s', 'J8s', 'J7s', // More suited jacks
+    vsHJ: [ // ~20% call range
+        // Pairs (TT+ are 3-bet)
+        '99', '88', '77', '66', '55', '44', '33', '22',
+        // Suited aces (A5s-A3s are 3-bet bluffs)
+        'A9s', 'A8s', 'A7s', 'A6s', 'A2s',
+        // Suited broadways
+        'KTs', 'K9s', 'K8s',
+        'QTs', 'Q9s', 'Q8s',
+        'JTs', 'J9s', 'J8s',
         'T9s', 'T8s', 'T7s',
-        '98s', '97s', '87s', '86s', '76s', '75s', '65s', '64s', '54s', '43s', // More suited connectors/gappers
-        'AQo', 'AJo', 'ATo', 'A9o', 'A8o', 'A7o', 'A6o', 'A5o', // More offsuit aces
-        'KQo', 'KJo', 'KTo', 'K9o', // More offsuit kings
-        'QJo', 'QTo', 'Q9o', // More offsuit queens
-        'JTo', 'J9o', // Added offsuit jacks
-        'T9o' // Added T9o
+        // Suited connectors (76s, 65s are 3-bet bluffs)
+        '98s', '97s', '87s', '86s', '54s', '43s',
+        // Offsuit (AKo, AQo are 3-bet)
+        'AJo', 'ATo', 'A9o',
+        'KQo', 'KJo', 'KTo',
+        'QJo'
     ],
-    vsBTN: [ // ~40% call range - very wide defense
+    vsCO: [ // ~25% call range
+        // Pairs (TT+ are 3-bet)
         '99', '88', '77', ...SMALL_PAIRS,
-        ...SUITED_ACES,
-        'KQs', 'KJs', 'KTs', 'K9s', 'K8s', 'K7s', 'K6s',
-        'QJs', 'QTs', 'Q9s', 'Q8s', 'Q7s',
-        'JTs', 'J9s', 'J8s', 'J7s',
-        'T9s', 'T8s', 'T7s',
-        '98s', '87s', '76s', '65s', '54s', '43s', '32s',
-        '97s', '86s', '75s', '64s',
-        'AQo', 'AJo', 'ATo', 'A9o', 'A8o', 'A7o', 'A6o', 'A5o',
+        // Suited aces (A5s, A4s are 3-bet)
+        'A9s', 'A8s', 'A7s', 'A6s', 'A3s', 'A2s',
+        // Suited broadways (KQs, KJs, QJs are 3-bet)
+        'KTs', 'K9s', 'K8s', 'K7s', 'K6s',
+        'QTs', 'Q9s', 'Q8s', 'Q7s',
+        'J9s', 'J8s', 'J7s',
+        // Suited tens
+        'T8s', 'T7s',
+        // Suited connectors (T9s, 98s are 3-bet)
+        '97s', '87s', '86s', '76s', '75s', '65s', '64s', '54s', '43s',
+        // Offsuit (AKo, AQo, AJo are 3-bet)
+        'ATo', 'A9o', 'A8o', 'A7o', 'A6o', 'A5o',
         'KQo', 'KJo', 'KTo', 'K9o',
         'QJo', 'QTo', 'Q9o',
         'JTo', 'J9o',
         'T9o'
     ],
-    vsSB: [ // ~55% call range - widest defense
-        '99', '88', '77', ...SMALL_PAIRS,
-        ...SUITED_ACES,
-        ...LOW_SUITED_KINGS,
-        ...LOW_SUITED_QUEENS,
-        ...LOW_SUITED_JACKS,
-        'K4s', 'K3s', 'K2s',
-        'Q6s', 'Q5s', 'Q4s',
-        'J6s',
-        'T9s', 'T8s', 'T7s', 'T6s',
-        '98s', '97s', '96s',
-        '87s', '86s', '85s',
-        '76s', '75s', '74s',
-        '65s', '64s', '63s',
-        '54s', '53s', '52s',
-        '43s', '42s',
-        '32s',
-        ...LOW_OFFSUIT_ACES,
-        'A4o', 'A3o', 'A2o',
-        'KQo', 'KJo', 'KTo', 'K9o', 'K8o', 'K7o',
-        'QJo', 'QTo', 'Q9o', 'Q8o',
-        'JTo', 'J9o', 'J8o',
-        'T9o', 'T8o',
-        '98o', '87o'
+    vsBTN: [ // ~35% call range
+        // Pairs (88+ are 3-bet)
+        '77', '66', '55', '44', '33', '22',
+        // Suited aces (A9s+ are 3-bet)
+        'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s',
+        // Suited kings (K9s+ are 3-bet)
+        'K8s', 'K7s', 'K6s', 'K5s', 'K4s',
+        // Suited queens (Q9s+ are 3-bet)
+        'Q8s', 'Q7s', 'Q6s',
+        // Suited jacks (J9s+ are 3-bet)
+        'J8s', 'J7s', 'J6s',
+        // Suited tens (T8s+ are 3-bet)
+        'T7s', 'T6s',
+        // Suited connectors (98s+ are 3-bet)
+        '97s', '86s', '75s', '64s', '53s', '43s', '32s',
+        // Offsuit (ATo+ are 3-bet)
+        'A9o', 'A8o', 'A7o', 'A6o', 'A5o', 'A4o',
+        // Offsuit kings (KQo is 3-bet)
+        'KJo', 'KTo', 'K9o', 'K8o',
+        'QJo', 'QTo', 'Q9o',
+        'JTo', 'J9o',
+        'T9o', 'T8o'
+    ],
+    vsSB: [ // ~45% call range - widest defense (blind vs blind)
+        // Pairs (55+ are 3-bet)
+        '44', '33', '22',
+        // Most suited hands are 3-bet vs SB, call range is offsuit heavy
+        // Some suited connectors/gappers not in 3-bet range
+        '97s', '86s', '85s', '75s', '74s', '64s', '63s', '53s', '52s', '42s', '32s',
+        // Offsuit aces (A9o+ are 3-bet)
+        'A8o', 'A7o', 'A6o', 'A5o', 'A4o', 'A3o', 'A2o',
+        // Offsuit kings (KJo+ are 3-bet)
+        'KTo', 'K9o', 'K8o', 'K7o', 'K6o',
+        // Offsuit queens
+        'QTo', 'Q9o', 'Q8o', 'Q7o',
+        // Offsuit jacks
+        'JTo', 'J9o', 'J8o', 'J7o',
+        // Offsuit tens
+        'T9o', 'T8o', 'T7o',
+        // Offsuit connectors
+        '98o', '97o', '87o', '86o', '76o', '75o', '65o'
     ]
 };
 
-// BB 3-Bet Ranges vs each position (for BB Defense trainer)
+// ============================================
+// BB 3-Bet Ranges vs each position
+// These are MUTUALLY EXCLUSIVE from BB_DEFENSE_RANGES
+// ============================================
 export const BB_3BET_RANGES = {
     vsUTG: [ // Tight 3-bet range vs UTG, ~5%
-        'AA', 'KK', 'QQ', 'JJ',
+        'AA', 'KK', 'QQ', 'JJ', 'TT',
         'AKs', 'AQs', 'AJs',
         'AKo',
         'A5s', 'A4s' // Bluffs with blockers
@@ -275,62 +303,121 @@ export const BB_3BET_RANGES = {
     vsHJ: [ // ~6%
         'AA', 'KK', 'QQ', 'JJ', 'TT',
         'AKs', 'AQs', 'AJs', 'ATs',
-        'KQs',
-        'AKo', 'AQo',
-        'A5s', 'A4s', 'A3s' // Bluffs
-    ],
-    vsCO: [ // ~8%
-        'AA', 'KK', 'QQ', 'JJ', 'TT', '99',
-        'AKs', 'AQs', 'AJs', 'ATs', 'A9s',
         'KQs', 'KJs',
         'QJs',
-        'AKo', 'AQo', 'AJo',
-        'A5s', 'A4s', 'A3s', 'A2s', // Suited ace bluffs
+        'AKo', 'AQo',
+        'A5s', 'A4s', 'A3s', // Bluffs
         '76s', '65s' // Suited connector bluffs
+    ],
+    vsCO: [ // ~8%
+        'AA', 'KK', 'QQ', 'JJ', 'TT',
+        'AKs', 'AQs', 'AJs', 'ATs',
+        'KQs', 'KJs',
+        'QJs',
+        'T9s', '98s',
+        'AKo', 'AQo', 'AJo',
+        'A5s', 'A4s' // Bluffs
     ],
     vsBTN: [ // ~11% - wider defense vs BTN
         'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88',
-        'AKs', 'AQs', 'AJs', 'ATs', 'A9s', 'A8s',
-        'KQs', 'KJs', 'KTs',
-        'QJs', 'QTs',
-        'JTs',
-        'AKo', 'AQo', 'AJo', 'ATo',
-        'KQo',
-        'A5s', 'A4s', 'A3s', 'A2s',
-        '87s', '76s', '65s', '54s'
-    ],
-    vsSB: [ // ~14% - widest 3-bet (blind vs blind)
-        'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77', '66',
-        'AKs', 'AQs', 'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s',
+        'AKs', 'AQs', 'AJs', 'ATs', 'A9s',
         'KQs', 'KJs', 'KTs', 'K9s',
         'QJs', 'QTs', 'Q9s',
         'JTs', 'J9s',
-        'T9s',
+        'T9s', 'T8s',
         '98s', '87s', '76s', '65s', '54s',
+        'AKo', 'AQo', 'AJo', 'ATo',
+        'KQo'
+    ],
+    vsSB: [ // ~14% - widest 3-bet (blind vs blind)
+        'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77', '66', '55',
+        'AKs', 'AQs', 'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s',
+        'KQs', 'KJs', 'KTs', 'K9s', 'K8s',
+        'QJs', 'QTs', 'Q9s',
+        'JTs', 'J9s', 'J8s',
+        'T9s', 'T8s',
+        '98s', '87s', '76s', '65s', '54s', '43s',
         'AKo', 'AQo', 'AJo', 'ATo', 'A9o',
         'KQo', 'KJo'
     ]
 };
 
-// Calling ranges vs 3-bets (for 4-bet trainer)
-export const CALL_3BET_RANGES = {
-    vsUTG: ['QQ', 'JJ', 'TT', 'AQs', 'AJs', 'KQs'],
-    vsHJ: ['JJ', 'TT', '99', 'AQs', 'AJs', 'ATs', 'KQs', 'QJs', 'AQo'],
-    vsCO: ['TT', '99', '88', 'AJs', 'ATs', 'KQs', 'KJs', 'QJs', 'AQo', 'AJo'],
-    vsBTN: ['99', '88', '77', 'ATs', 'A9s', 'KQs', 'KJs', 'QJs', 'JTs', 'AQo', 'AJo', 'KQo'],
-    vsSB: ['88', '77', '66', 'ATs', 'A9s', 'A8s', 'KJs', 'KTs', 'QJs', 'JTs', 'AJo', 'ATo', 'KQo']
-};
-
-// 4-Bet ranges (for advanced play)
+// ============================================
+// 4-Bet Ranges - when facing a 3-bet after you opened
+// These are MUTUALLY EXCLUSIVE from CALL_3BET_RANGES
+// ============================================
 export const FOUR_BET_RANGES = {
-    vsUTG: ['AA', 'KK', 'QQ', 'AKs', 'AKo'],
-    vsHJ: ['AA', 'KK', 'QQ', 'JJ', 'AKs', 'AKo', 'A5s'], // A5s as bluff
-    vsCO: ['AA', 'KK', 'QQ', 'JJ', 'TT', 'AKs', 'AKo', 'AQs', 'A5s', 'A4s'],
-    vsBTN: ['AA', 'KK', 'QQ', 'JJ', 'TT', '99', 'AKs', 'AKo', 'AQs', 'A5s', 'A4s', 'A3s', 'KQs'],
-    vsSB: ['AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', 'AKs', 'AKo', 'AQs', 'AJs', 'A5s', 'A4s', 'A3s', 'A2s', 'KQs']
+    vsUTG: [ // Very tight - UTG 3-bet is strong
+        'AA', 'KK',
+        'AKs', 'AKo'
+    ],
+    vsHJ: [
+        'AA', 'KK', 'QQ',
+        'AKs', 'AKo',
+        'A5s' // Bluff
+    ],
+    vsCO: [
+        'AA', 'KK', 'QQ', 'JJ',
+        'AKs', 'AKo', 'AQs',
+        'A5s', 'A4s' // Bluffs
+    ],
+    vsBTN: [
+        'AA', 'KK', 'QQ', 'JJ', 'TT',
+        'AKs', 'AKo', 'AQs',
+        'A5s', 'A4s', 'A3s', // Bluffs
+        'KQs'
+    ],
+    vsSB: [
+        'AA', 'KK', 'QQ', 'JJ', 'TT', '99',
+        'AKs', 'AKo', 'AQs', 'AJs',
+        'A5s', 'A4s', 'A3s', 'A2s', // Bluffs
+        'KQs'
+    ]
 };
 
-// Cold calling ranges (facing a raise, not in blinds)
+// ============================================
+// Call 3-Bet Ranges - when facing a 3-bet after you opened
+// These are MUTUALLY EXCLUSIVE from FOUR_BET_RANGES
+// ============================================
+export const CALL_3BET_RANGES = {
+    vsUTG: [ // Tight call range vs UTG 3-bet (AA, KK, AKs/AKo are 4-bet)
+        'QQ', 'JJ', 'TT',
+        'AQs', 'AJs',
+        'KQs'
+    ],
+    vsHJ: [ // QQ+ are 4-bet
+        'JJ', 'TT', '99',
+        'AQs', 'AJs', 'ATs',
+        'KQs', 'KJs',
+        'QJs',
+        'AQo'
+    ],
+    vsCO: [ // JJ+ are 4-bet
+        'TT', '99', '88',
+        'AJs', 'ATs',
+        'KQs', 'KJs',
+        'QJs',
+        'AQo', 'AJo'
+    ],
+    vsBTN: [ // TT+ are 4-bet, KQs is 4-bet
+        '99', '88', '77',
+        'ATs', 'A9s',
+        'KJs', 'KTs',
+        'QJs', 'JTs',
+        'AQo', 'AJo', 'KQo'
+    ],
+    vsSB: [ // 99+ are 4-bet
+        '88', '77', '66',
+        'ATs', 'A9s', 'A8s',
+        'KJs', 'KTs',
+        'QJs', 'JTs',
+        'AJo', 'ATo', 'KQo'
+    ]
+};
+
+// ============================================
+// Cold Calling Ranges - facing a raise, not in blinds
+// ============================================
 export const COLD_CALL_RANGES = {
     vsUTG: [ // Very tight, prefer 3-bet or fold
         'JJ', 'TT', '99', '88', '77',
@@ -362,7 +449,9 @@ export const COLD_CALL_RANGES = {
     ]
 };
 
-// Squeeze ranges (facing raise + call[s])
+// ============================================
+// Squeeze Ranges - facing raise + caller(s)
+// ============================================
 export const SQUEEZE_RANGES = {
     vsUTG: [ // Tight - original raiser is strong
         'AA', 'KK', 'QQ', 'JJ',
@@ -380,19 +469,19 @@ export const SQUEEZE_RANGES = {
         'AKs', 'AQs', 'AJs', 'ATs',
         'KQs', 'KJs',
         'AKo', 'AQo',
-        'A5s', 'A4s', 'A3s', 'A2s',
-        '76s', '65s' // Bluffs
+        'A5s', 'A4s', 'A3s', 'A2s', // Bluffs
+        '76s', '65s'
     ],
-    vsBTN: [ // Wider - BTN likely weak
+    vsBTN: [ // Wider - BTN range is weak
         'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77',
         'AKs', 'AQs', 'AJs', 'ATs', 'A9s',
         'KQs', 'KJs', 'KTs',
         'QJs', 'JTs',
         'AKo', 'AQo', 'AJo',
-        ...SUITED_ACES, // More bluffs
+        'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s', // More bluffs
         '87s', '76s', '65s', '54s'
     ],
-    vsSB: [ // Very wide
+    vsSB: [ // Very wide vs SB
         'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77', '66',
         'AKs', 'AQs', 'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s',
         'KQs', 'KJs', 'KTs', 'K9s',
@@ -404,34 +493,30 @@ export const SQUEEZE_RANGES = {
     ]
 };
 
-// Helper function to check if hand is in range
+// ============================================
+// Helper Functions
+// ============================================
+
+// Check if hand is in range
 export function isInRange(hand, range) {
     if (!hand || !range) return false;
-
     const handString = typeof hand === 'string' ? hand : hand.display;
-
     return range.includes(handString);
 }
 
-// Get range size
+// Get range size in combos
 export function getRangeSize(range) {
     if (!range) return 0;
-
     let combos = 0;
-
     range.forEach(hand => {
         if (hand.length === 2) {
-            // Pair (e.g., 'AA')
-            combos += 6;
+            combos += 6; // Pair (e.g., 'AA')
         } else if (hand.endsWith('s')) {
-            // Suited (e.g., 'AKs')
-            combos += 4;
+            combos += 4; // Suited (e.g., 'AKs')
         } else if (hand.endsWith('o')) {
-            // Offsuit (e.g., 'AKo')
-            combos += 12;
+            combos += 12; // Offsuit (e.g., 'AKo')
         }
     });
-
     return combos;
 }
 
@@ -441,7 +526,7 @@ export function getRangePercentage(range) {
     return (combos / 1326) * 100;
 }
 
-// Get recommended action for a hand in a position
+// Get recommended action for a hand in a situation
 export function getRecommendedAction(hand, position, action = 'rfi') {
     const handString = typeof hand === 'string' ? hand : hand.display;
 
@@ -455,10 +540,18 @@ export function getRecommendedAction(hand, position, action = 'rfi') {
 
         case 'bb-defense':
             const bbKey = `vs${position}`;
-            // Check 3-bet range first, then call range
             if (isInRange(handString, BB_3BET_RANGES[bbKey])) {
                 return 'raise';
             } else if (isInRange(handString, BB_DEFENSE_RANGES[bbKey])) {
+                return 'call';
+            }
+            return 'fold';
+
+        case '4bet':
+            const fourBetKey = `vs${position}`;
+            if (isInRange(handString, FOUR_BET_RANGES[fourBetKey])) {
+                return 'raise';
+            } else if (isInRange(handString, CALL_3BET_RANGES[fourBetKey])) {
                 return 'call';
             }
             return 'fold';
