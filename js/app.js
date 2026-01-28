@@ -19,6 +19,12 @@ import concepts from './modules/concepts.js';
 import sessionHistory from './modules/sessionHistory.js';
 import settings from './modules/settings.js';
 
+// Postflop trainers
+import boardTextureTrainer from './modules/boardTextureTrainer.js';
+import cbetTrainer from './modules/cbetTrainer.js';
+import betSizingTrainer from './modules/betSizingTrainer.js';
+import potOddsTrainer from './modules/potOddsTrainer.js';
+
 /**
  * Initialize the application
  */
@@ -63,6 +69,12 @@ function init() {
     router.register(MODULES.CONCEPTS, concepts.render);
     router.register(MODULES.HISTORY, sessionHistory.render);
     router.register(MODULES.SETTINGS, settings.render);
+
+    // Postflop trainers
+    router.register(MODULES.BOARD_TEXTURE_TRAINER, boardTextureTrainer.render);
+    router.register(MODULES.CBET_TRAINER, cbetTrainer.render);
+    router.register(MODULES.BET_SIZING_TRAINER, betSizingTrainer.render);
+    router.register(MODULES.POT_ODDS_TRAINER, potOddsTrainer.render);
 
     // Update navigation active state on route change
     // NOTE: This listener persists for app lifetime (intentional, not a memory leak)

@@ -58,7 +58,12 @@ export const MODULES = {
     SCENARIOS: 'scenarios',
     CONCEPTS: 'concepts',
     HISTORY: 'history',
-    SETTINGS: 'settings'
+    SETTINGS: 'settings',
+    // Postflop trainers
+    BOARD_TEXTURE_TRAINER: 'board-texture-trainer',
+    CBET_TRAINER: 'cbet-trainer',
+    BET_SIZING_TRAINER: 'bet-sizing-trainer',
+    POT_ODDS_TRAINER: 'pot-odds-trainer'
 };
 
 export const TRAINER_TYPES = {
@@ -150,6 +155,10 @@ export const NAVIGATION_ITEMS = [
     { id: MODULES.PREFLOP_TRAINER, icon: '🎯', label: 'Preflop Trainer' },
     { id: MODULES.POSTFLOP_TRAINER, icon: '🎲', label: 'Postflop Trainer' },
     { id: MODULES.MULTISTREET_TRAINER, icon: '🎰', label: 'Multi-Street Trainer' },
+    { id: MODULES.BOARD_TEXTURE_TRAINER, icon: '🃏', label: 'Board Texture' },
+    { id: MODULES.CBET_TRAINER, icon: '💰', label: 'C-Bet Strategy' },
+    { id: MODULES.BET_SIZING_TRAINER, icon: '📐', label: 'Bet Sizing' },
+    { id: MODULES.POT_ODDS_TRAINER, icon: '🔢', label: 'Pot Odds & MDF' },
     { id: MODULES.EQUITY_CALCULATOR, icon: '🧮', label: 'Equity Calculator' },
     { id: MODULES.HAND_REPLAYER, icon: '🎬', label: 'Hand Replayer' },
     { id: MODULES.RANGE_VISUALIZER, icon: '🎨', label: 'Range Visualizer' },
