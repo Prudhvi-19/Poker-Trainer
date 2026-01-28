@@ -40,27 +40,28 @@ const LOW_OFFSUIT_JACKS = ['J9o'];
 
 // RFI (Raise First In) Ranges
 export const RFI_RANGES = {
-    UTG: [ // ~15% of hands
+    UTG: [ // ~16% of hands (standard GTO 15-17%)
         ...PREMIUMS,
         ...BROADWAY_PAIRS,
-        '66', '55',
+        '66', '55', '44', // Added 44
         ...HIGH_SUITED_BROADWAY,
         'KTs', 'QTs', 'JTs', 'T9s',
-        '98s', '87s', '76s',
-        'A9s', 'A5s', 'A4s',
-        'KQo'
+        '98s', '87s', '76s', '65s', // Added 65s
+        'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s', // All suited aces
+        'KQo', 'AJo' // Added AJo
     ],
-    HJ: [ // ~18% of hands
+    HJ: [ // ~21% of hands (standard GTO 19-22%)
         ...PREMIUMS,
         ...BROADWAY_PAIRS,
         ...SMALL_PAIRS,
         ...HIGH_SUITED_BROADWAY,
         ...MED_SUITED_BROADWAY,
-        '98s', '87s', '76s', '65s',
-        'T8s', '97s',
+        '98s', '87s', '76s', '65s', '54s', // Added 54s
+        'T8s', '97s', '86s', // Added 86s
         ...SUITED_ACES,
-        'K9s',
-        'AQo', 'AJo', 'KQo', 'KJo'
+        'K9s', 'K8s', // Added K8s
+        'Q9s', // Added Q9s
+        'AQo', 'AJo', 'ATo', 'KQo', 'KJo' // Added ATo
     ],
     CO: [ // ~28% of hands
         ...PREMIUMS,
@@ -80,7 +81,7 @@ export const RFI_RANGES = {
         'A9o', 'A8o', 'A7o',
         'K9o'
     ],
-    BTN: [ // ~48% of hands - widest range
+    BTN: [ // ~50% of hands - widest range (standard GTO 48-52%)
         ...PREMIUMS,
         ...BROADWAY_PAIRS,
         ...SMALL_PAIRS,
@@ -93,15 +94,18 @@ export const RFI_RANGES = {
         ...LOW_SUITED_KINGS,
         ...LOW_SUITED_QUEENS,
         ...LOW_SUITED_JACKS,
-        'T7s', '96s', '85s', '74s', '63s', '52s',
+        'T7s', '96s', '85s', '74s', '63s', '52s', '42s', // Added 42s
         ...HIGH_OFFSUIT_BROADWAY,
         ...MED_OFFSUIT_BROADWAY,
         ...LOW_OFFSUIT_ACES,
         ...LOW_OFFSUIT_KINGS,
         ...LOW_OFFSUIT_QUEENS,
         ...LOW_OFFSUIT_JACKS,
-        'T9o', 'T8o',
-        'Q7o', 'J8o'
+        'T9o', 'T8o', 'T7o', // Added T7o
+        '98o', '97o', // Added 98o, 97o
+        '87o', '86o', // Added 87o, 86o
+        '76o', // Added 76o
+        'Q7o', 'J8o', 'J7o' // Added J7o
     ],
     SB: [ // ~45% of hands vs BB
         ...PREMIUMS,
@@ -181,40 +185,42 @@ export const THREE_BET_RANGES = {
 
 // BB Defense Ranges - CALLING only (3-bet hands are in BB_3BET_RANGES)
 export const BB_DEFENSE_RANGES = {
-    vsUTG: [ // ~15% call range (excludes 3-bet hands)
-        'TT', '99', '88', '77', '66', '55', '44', '33', '22',
-        'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s',
-        'KQs', 'KJs', 'KTs',
-        'QJs', 'QTs', 'Q9s',
-        'JTs', 'J9s',
-        'T9s', 'T8s',
-        '98s', '87s', '76s', '65s',
-        'AQo', 'AJo',
-        'KQo'
+    vsUTG: [ // ~20% call range (tight defense vs UTG, standard GTO ~18-22%)
+        '99', '88', '77', '66', '55', '44', '33', '22', // Pairs (excluding premiums in 3-bet range)
+        'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', // Suited aces
+        'KQs', 'KJs', 'KTs', 'K9s', // Suited kings
+        'QJs', 'QTs', 'Q9s', // Suited queens
+        'JTs', 'J9s', 'J8s', // Suited jacks
+        'T9s', 'T8s', // Suited tens
+        '98s', '97s', '87s', '76s', '65s', '54s', // Suited connectors
+        'AQo', 'AJo', 'ATo', // Offsuit broadways
+        'KQo', 'KJo' // Offsuit kings
     ],
-    vsHJ: [ // ~20% call range
-        'TT', '99', '88', '77', '66', '55', '44', '33', '22',
-        'ATs', 'A9s', 'A8s', 'A7s', 'A6s',
-        'KQs', 'KJs', 'KTs', 'K9s',
-        'QJs', 'QTs', 'Q9s',
-        'JTs', 'J9s', 'J8s',
-        'T9s', 'T8s', 'T7s',
-        '98s', '87s', '76s', '65s', '54s',
-        'AQo', 'AJo', 'ATo',
-        'KQo', 'KJo'
+    vsHJ: [ // ~25% call range (standard GTO ~22-28%)
+        '99', '88', '77', '66', '55', '44', '33', '22', // Pairs
+        'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', // Suited aces
+        'KQs', 'KJs', 'KTs', 'K9s', 'K8s', // Suited kings
+        'QJs', 'QTs', 'Q9s', 'Q8s', // Suited queens
+        'JTs', 'J9s', 'J8s', // Suited jacks
+        'T9s', 'T8s', 'T7s', // Suited tens
+        '98s', '97s', '87s', '86s', '76s', '65s', '54s', '43s', // Suited connectors
+        'AQo', 'AJo', 'ATo', 'A9o', // Offsuit aces
+        'KQo', 'KJo', 'KTo', // Offsuit kings
+        'QJo' // Offsuit queens
     ],
-    vsCO: [ // ~27% call range
+    vsCO: [ // ~30% call range (standard GTO defense ~27-35%)
         'TT', '99', '88', ...SMALL_PAIRS,
-        'ATs', 'A9s', 'A8s', 'A7s', 'A6s',
-        'KQs', 'KJs', 'KTs', 'K9s', 'K8s',
-        'QJs', 'QTs', 'Q9s', 'Q8s',
-        'JTs', 'J9s', 'J8s',
+        'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s', // All suited aces
+        'KQs', 'KJs', 'KTs', 'K9s', 'K8s', 'K7s', 'K6s', // More suited kings
+        'QJs', 'QTs', 'Q9s', 'Q8s', 'Q7s', // More suited queens
+        'JTs', 'J9s', 'J8s', 'J7s', // More suited jacks
         'T9s', 'T8s', 'T7s',
-        '98s', '87s', '76s', '65s', '54s', '43s',
-        '97s', '86s',
-        'AQo', 'AJo', 'ATo', 'A9o',
-        'KQo', 'KJo', 'KTo',
-        'QJo', 'QTo'
+        '98s', '97s', '87s', '86s', '76s', '75s', '65s', '64s', '54s', '43s', // More suited connectors/gappers
+        'AQo', 'AJo', 'ATo', 'A9o', 'A8o', 'A7o', 'A6o', 'A5o', // More offsuit aces
+        'KQo', 'KJo', 'KTo', 'K9o', // More offsuit kings
+        'QJo', 'QTo', 'Q9o', // More offsuit queens
+        'JTo', 'J9o', // Added offsuit jacks
+        'T9o' // Added T9o
     ],
     vsBTN: [ // ~40% call range - very wide defense
         '99', '88', '77', ...SMALL_PAIRS,

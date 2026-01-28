@@ -313,10 +313,20 @@ function generateBBDefenseScenario() {
 }
 
 function generate4BetScenario() {
-    const villainPos = randomItem(['UTG', 'HJ', 'CO', 'BTN', 'SB']);
-    const heroPos = randomItem(POSITIONS.filter(p => POSITIONS.indexOf(p) > POSITIONS.indexOf(villainPos)));
+    // Hero opens first (RFI), so hero must be in an EARLIER position than villain
+    // Villain 3-bets from a later position
+    const heroPos = randomItem(['UTG', 'HJ', 'CO', 'BTN']);
+
+    // Villain must be in a later position to 3-bet hero's open
+    const validVillainPositions = POSITIONS.filter(p => POSITIONS.indexOf(p) > POSITIONS.indexOf(heroPos));
+    if (validVillainPositions.length === 0) {
+        return generate4BetScenario(); // Retry if no valid positions
+    }
+    const villainPos = randomItem(validVillainPositions);
+
     const hand = randomHand();
 
+    // posKey represents who 3-bet us (villain's position tells us their 3-bet range)
     const posKey = `vs${villainPos}`;
 
     // Determine correct action: 4-bet, call, or fold

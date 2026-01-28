@@ -10,6 +10,11 @@ import storage from '../utils/storage.js';
 let currentSession = null;
 let currentHand = null;
 
+// Store element references to avoid getElementById timing issues
+let statsEl = null;
+let handInfoEl = null;
+let scenarioEl = null;
+
 function render() {
     const container = document.createElement('div');
     container.className = 'trainer-container';
@@ -20,29 +25,28 @@ function render() {
     header.innerHTML = '<h1>🎰 Multi-Street Trainer</h1><p class="text-muted">Play complete hands from preflop through river. Make GTO decisions on every street.</p>';
     container.appendChild(header);
 
-    // Session stats
-    const statsContainer = document.createElement('div');
-    statsContainer.id = 'multistreet-stats';
-    container.appendChild(statsContainer);
+    // Session stats - store reference directly
+    statsEl = document.createElement('div');
+    statsEl.id = 'multistreet-stats';
+    container.appendChild(statsEl);
 
-    // Hand info
-    const handInfo = document.createElement('div');
-    handInfo.id = 'hand-info';
-    handInfo.className = 'card mb-lg';
-    container.appendChild(handInfo);
+    // Hand info - store reference directly
+    handInfoEl = document.createElement('div');
+    handInfoEl.id = 'hand-info';
+    handInfoEl.className = 'card mb-lg';
+    container.appendChild(handInfoEl);
 
-    // Scenario area
-    const scenarioContainer = document.createElement('div');
-    scenarioContainer.id = 'multistreet-scenario';
-    container.appendChild(scenarioContainer);
+    // Scenario area - store reference directly
+    scenarioEl = document.createElement('div');
+    scenarioEl.id = 'multistreet-scenario';
+    container.appendChild(scenarioEl);
 
-    // Initialize session
+    // Initialize session (now uses stored references)
     startNewSession();
 
     // Add keyboard shortcut listener
     const keyboardHandler = (e) => {
         const action = e.detail.action;
-        const scenarioEl = document.getElementById('multistreet-scenario');
         if (!scenarioEl) return;
 
         // Check if we're in feedback mode
@@ -161,8 +165,7 @@ function generateHeroCards(hand) {
 }
 
 function updateHandInfo() {
-    const infoEl = document.getElementById('hand-info');
-    if (!infoEl) return;
+    if (!handInfoEl) return;
 
     const streetLabels = {
         [STREET.PREFLOP]: 'Preflop',
@@ -171,7 +174,7 @@ function updateHandInfo() {
         [STREET.RIVER]: 'River'
     };
 
-    infoEl.innerHTML = `
+    handInfoEl.innerHTML = `
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
             <div>
                 <div style="color: var(--color-text-secondary); font-size: 0.875rem;">Street</div>
@@ -194,7 +197,6 @@ function updateHandInfo() {
 }
 
 function showCurrentStreet() {
-    const scenarioEl = document.getElementById('multistreet-scenario');
     if (!scenarioEl) return;
 
     scenarioEl.innerHTML = '';
@@ -534,7 +536,6 @@ function updatePotAndStack(action, scenario) {
 }
 
 function showDecisionFeedback(scenario, userAction, isCorrect) {
-    const scenarioEl = document.getElementById('multistreet-scenario');
     if (!scenarioEl) return;
 
     const card = scenarioEl.querySelector('.scenario-card');
@@ -695,7 +696,6 @@ function saveHandToSession() {
 }
 
 function updateStats() {
-    const statsEl = document.getElementById('multistreet-stats');
     if (!statsEl) return;
 
     const accuracy = currentSession.totalDecisions > 0
