@@ -53,7 +53,7 @@ export const RFI_RANGES = {
         'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s',
         'AQo', 'AJo', 'KQo'
     ],
-    HJ: [ // ~21% of hands (standard GTO 19-22%)
+    HJ: [ // ~20% of hands (standard GTO 19-22%)
         ...PREMIUMS,
         ...BROADWAY_PAIRS,
         ...SMALL_PAIRS,
@@ -66,7 +66,7 @@ export const RFI_RANGES = {
         'Q9s',
         'AQo', 'AJo', 'ATo', 'KQo', 'KJo'
     ],
-    CO: [ // ~28% of hands
+    CO: [ // ~29% of hands (standard GTO 27-30%)
         ...PREMIUMS,
         ...BROADWAY_PAIRS,
         ...SMALL_PAIRS,
@@ -74,17 +74,15 @@ export const RFI_RANGES = {
         ...MED_SUITED_BROADWAY,
         ...SUITED_CONNECTORS,
         ...SUITED_ONE_GAPPERS,
-        '43s',
         ...SUITED_ACES,
         'K9s', 'K8s', 'K7s',
         'Q9s', 'Q8s',
         'J9s', 'J8s',
         ...HIGH_OFFSUIT_BROADWAY,
         'KJo', 'KTo', 'QJo', 'QTo', 'JTo',
-        'A9o', 'A8o', 'A7o', 'A6o', 'A5o',
-        'K9o'
+        'A9o', 'A8o', 'A7o', 'A6o'
     ],
-    BTN: [ // ~50% of hands - widest range (standard GTO 48-52%)
+    BTN: [ // ~48% of hands - widest range (standard GTO 48-52%)
         ...PREMIUMS,
         ...BROADWAY_PAIRS,
         ...SMALL_PAIRS,
@@ -97,20 +95,19 @@ export const RFI_RANGES = {
         ...LOW_SUITED_KINGS,
         ...LOW_SUITED_QUEENS,
         ...LOW_SUITED_JACKS,
-        'T7s', '96s', '85s', '74s', '63s', '52s', '42s',
+        'T7s', '96s', '85s', '74s', '63s', '52s',
         ...HIGH_OFFSUIT_BROADWAY,
         ...MED_OFFSUIT_BROADWAY,
         ...LOW_OFFSUIT_ACES,
         ...LOW_OFFSUIT_KINGS,
         ...LOW_OFFSUIT_QUEENS,
         ...LOW_OFFSUIT_JACKS,
-        'T9o', 'T8o', 'T7o',
+        'T9o', 'T8o',
         '98o', '97o',
-        '87o', '86o',
-        '76o',
-        'Q7o', 'J8o', 'J7o'
+        '87o',
+        '76o'
     ],
-    SB: [ // ~45% of hands vs BB
+    SB: [ // ~41% of hands vs BB (standard GTO 36-42%)
         ...PREMIUMS,
         ...BROADWAY_PAIRS,
         ...SMALL_PAIRS,

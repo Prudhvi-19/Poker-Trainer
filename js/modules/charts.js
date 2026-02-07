@@ -520,13 +520,26 @@ function showExpandedChart(title, subtitle, raiseHands, callHands, percentage, b
 
     content.appendChild(handListSection);
 
+    // Shared close function that cleans up escape handler
+    const closeChartModal = () => {
+        document.removeEventListener('keydown', escHandler);
+        if (document.body.contains(modal)) {
+            document.body.removeChild(modal);
+        }
+    };
+
+    // Close on Escape
+    const escHandler = (e) => {
+        if (e.key === 'Escape') {
+            closeChartModal();
+        }
+    };
+
     // Close button
     const closeBtn = document.createElement('button');
     closeBtn.className = 'btn btn-secondary chart-modal-close';
     closeBtn.textContent = 'Close';
-    closeBtn.addEventListener('click', () => {
-        document.body.removeChild(modal);
-    });
+    closeBtn.addEventListener('click', closeChartModal);
     content.appendChild(closeBtn);
 
     modal.appendChild(content);
@@ -534,17 +547,10 @@ function showExpandedChart(title, subtitle, raiseHands, callHands, percentage, b
     // Close on overlay click
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
-            document.body.removeChild(modal);
+            closeChartModal();
         }
     });
 
-    // Close on Escape
-    const escHandler = (e) => {
-        if (e.key === 'Escape') {
-            document.body.removeChild(modal);
-            document.removeEventListener('keydown', escHandler);
-        }
-    };
     document.addEventListener('keydown', escHandler);
 
     document.body.appendChild(modal);
