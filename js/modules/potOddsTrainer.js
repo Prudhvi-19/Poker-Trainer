@@ -251,7 +251,7 @@ function handleAnswer(answer) {
         stats.correct++;
     }
 
-    storage.saveTrainerStats('potOdds', stats);
+    // Stats tracked in-memory for this session
 
     showFeedback(isCorrect, answer);
     updateStats();

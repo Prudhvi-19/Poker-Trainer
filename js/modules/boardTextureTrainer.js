@@ -32,8 +32,8 @@ const CHARACTERISTICS = {
     MIXED: 'mixed'                // Mix of high and low
 };
 
-const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
-const SUITS = ['h', 'd', 'c', 's'];
+const RANKS = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
+const SUITS = ['\u2660', '\u2665', '\u2666', '\u2663']; // ♠ ♥ ♦ ♣
 
 let currentBoard = null;
 let currentQuestion = null;
@@ -216,7 +216,7 @@ function renderQuestion() {
     const boardCards = document.createElement('div');
     boardCards.className = 'board-cards';
     currentBoard.forEach(card => {
-        const cardEl = createCard(card.rank, card.suit);
+        const cardEl = createCard(card);
         cardEl.classList.add('board-card');
         boardCards.appendChild(cardEl);
     });
@@ -319,7 +319,7 @@ function handleAnswer(answer) {
     }
 
     // Save stats
-    storage.saveTrainerStats('boardTexture', stats);
+    // Stats tracked in-memory for this session
 
     // Show feedback
     showFeedback(isCorrect, correctAnswer, explanation);

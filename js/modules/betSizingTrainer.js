@@ -5,8 +5,8 @@ import { createCard } from '../components/Card.js';
 import { showToast } from '../utils/helpers.js';
 import storage from '../utils/storage.js';
 
-const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
-const SUITS = ['h', 'd', 'c', 's'];
+const RANKS = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
+const SUITS = ['\u2660', '\u2665', '\u2666', '\u2663']; // ♠ ♥ ♦ ♣
 
 // Bet sizing categories
 const BET_SIZES = {
@@ -358,7 +358,7 @@ function renderScenario() {
     const handCards = document.createElement('div');
     handCards.className = 'hand-cards';
     currentScenario.heroHand.forEach(card => {
-        const cardEl = createCard(card.rank, card.suit);
+        const cardEl = createCard(card);
         handCards.appendChild(cardEl);
     });
     handSection.appendChild(handCards);
@@ -382,7 +382,7 @@ function renderScenario() {
     const boardCards = document.createElement('div');
     boardCards.className = 'board-cards';
     currentScenario.board.forEach((card, idx) => {
-        const cardEl = createCard(card.rank, card.suit);
+        const cardEl = createCard(card);
         cardEl.classList.add('board-card');
         // Highlight latest card
         if (idx === currentScenario.board.length - 1 && currentScenario.board.length > 3) {
@@ -436,7 +436,7 @@ function handleAnswer(answer) {
         stats.correct++;
     }
 
-    storage.saveTrainerStats('betSizing', stats);
+    // Stats tracked in-memory for this session
 
     showFeedback(isCorrect, answer);
     updateStats();
