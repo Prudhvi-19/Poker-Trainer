@@ -36,14 +36,9 @@ function render() {
         <h3>Key Formulas</h3>
         <div class="formula-grid">
             <div class="formula-item">
-                <h4>Pot Odds</h4>
-                <code>Call / (Pot + Call)</code>
-                <p>Example: 10 into 30 = 10/(30+10) = 25%</p>
-            </div>
-            <div class="formula-item">
-                <h4>Equity Needed</h4>
-                <code>Same as Pot Odds</code>
-                <p>You need at least this equity to break-even call</p>
+                <h4>Equity Needed (Pot Odds)</h4>
+                <code>Call / (Pot + Bet + Call)</code>
+                <p>Pot=20, Bet=10: 10/(20+10+10) = 25%</p>
             </div>
             <div class="formula-item">
                 <h4>MDF (Minimum Defense)</h4>
@@ -55,18 +50,23 @@ function render() {
                 <code>Bet / (Pot + Bet)</code>
                 <p>How often villain should bluff given their bet size</p>
             </div>
+            <div class="formula-item">
+                <h4>Break-Even Bluff</h4>
+                <code>Bet / (Pot + Bet)</code>
+                <p>How often your bluff needs to work to break even</p>
+            </div>
         </div>
         <div class="quick-reference">
             <h4>Quick Reference:</h4>
             <table class="reference-table">
-                <tr><th>Bet Size</th><th>Pot Odds</th><th>MDF</th><th>Bluff %</th></tr>
-                <tr><td>25% pot</td><td>20%</td><td>80%</td><td>20%</td></tr>
-                <tr><td>33% pot</td><td>25%</td><td>75%</td><td>25%</td></tr>
-                <tr><td>50% pot</td><td>33%</td><td>67%</td><td>33%</td></tr>
-                <tr><td>66% pot</td><td>40%</td><td>60%</td><td>40%</td></tr>
-                <tr><td>75% pot</td><td>43%</td><td>57%</td><td>43%</td></tr>
-                <tr><td>100% pot</td><td>50%</td><td>50%</td><td>50%</td></tr>
-                <tr><td>150% pot</td><td>60%</td><td>40%</td><td>60%</td></tr>
+                <tr><th>Bet Size</th><th>Equity Needed</th><th>MDF</th><th>Bluff %</th></tr>
+                <tr><td>25% pot</td><td>17%</td><td>80%</td><td>20%</td></tr>
+                <tr><td>33% pot</td><td>20%</td><td>75%</td><td>25%</td></tr>
+                <tr><td>50% pot</td><td>25%</td><td>67%</td><td>33%</td></tr>
+                <tr><td>66% pot</td><td>28%</td><td>60%</td><td>40%</td></tr>
+                <tr><td>75% pot</td><td>30%</td><td>57%</td><td>43%</td></tr>
+                <tr><td>100% pot</td><td>33%</td><td>50%</td><td>50%</td></tr>
+                <tr><td>150% pot</td><td>38%</td><td>40%</td><td>60%</td></tr>
             </table>
         </div>
     `;

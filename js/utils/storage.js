@@ -58,18 +58,22 @@ class Storage {
     }
 
     clear() {
+        // Only remove poker trainer keys, not ALL localStorage
         try {
-            localStorage.clear();
+            Object.values(STORAGE_KEYS).forEach(key => {
+                localStorage.removeItem(key);
+            });
             return true;
         } catch (error) {
-            console.error('Error clearing localStorage:', error);
+            console.error('Error clearing poker trainer data:', error);
             return false;
         }
     }
 
     // Specific data access methods
     getSettings() {
-        return this.get(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS);
+        // Return a clone of DEFAULT_SETTINGS to prevent mutation of the shared constant
+        return this.get(STORAGE_KEYS.SETTINGS, { ...DEFAULT_SETTINGS });
     }
 
     saveSettings(settings) {
@@ -120,7 +124,15 @@ class Storage {
 
     updateProgress(updates) {
         const progress = this.getProgress();
-        const updatedProgress = { ...progress, ...updates };
+        // Deep merge nested objects instead of shallow spread
+        const updatedProgress = { ...progress };
+        for (const [key, value] of Object.entries(updates)) {
+            if (value && typeof value === 'object' && !Array.isArray(value) && progress[key]) {
+                updatedProgress[key] = { ...progress[key], ...value };
+            } else {
+                updatedProgress[key] = value;
+            }
+        }
         return this.saveProgress(updatedProgress);
     }
 
@@ -159,7 +171,10 @@ class Storage {
             streak.longest = 1;
         } else {
             const lastDate = new Date(lastVisit).toDateString();
-            const yesterday = new Date(Date.now() - 86400000).toDateString();
+            // Compute yesterday using calendar day subtraction (DST-safe)
+            const yesterdayDate = new Date();
+            yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+            const yesterday = yesterdayDate.toDateString();
 
             if (lastDate === today) {
                 // Already visited today, no change

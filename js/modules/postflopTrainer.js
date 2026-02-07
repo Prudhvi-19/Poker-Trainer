@@ -614,8 +614,11 @@ function evaluateHandBoardInteraction(hand, board) {
 }
 
 function getHandSuit(hand) {
-    // For suited hands, return a consistent suit (we don't track actual suits in hand objects)
-    return '♠';
+    // For suited hands, assign a deterministic suit based on the hand ranks
+    // This ensures consistent behavior per hand while varying across different hands
+    const suitValues = Object.values(SUITS);
+    const hash = (hand.rank1.charCodeAt(0) + hand.rank2.charCodeAt(0)) % suitValues.length;
+    return suitValues[hash];
 }
 
 function checkStraightDraw(r1, r2, boardRanks) {
@@ -678,7 +681,8 @@ function determineDefenseAction(handStrength, texture, position) {
         return ACTIONS.RAISE; // Value raise
     }
     if (handStrength === 'STRONG_DRAW') {
-        return Math.random() < 0.4 ? ACTIONS.RAISE : ACTIONS.CALL; // Mix raises
+        // Strong draws: raise for semi-bluff (GTO prefers raising combo draws)
+        return ACTIONS.RAISE;
     }
     if (handStrength === 'MEDIUM_STRONG' || handStrength === 'MEDIUM' || handStrength === 'DRAW') {
         return ACTIONS.CALL;
