@@ -181,7 +181,18 @@ function createRecentSessionsWidget() {
             item.style.padding = '0.5rem 0';
             item.style.borderBottom = '1px solid var(--color-border)';
 
-            const sessionStats = stats.calculateSessionStats(session.results);
+            // Handle both results format (preflop/postflop) and hands format (multistreet)
+            let sessionStats;
+            if (session.results) {
+                sessionStats = stats.calculateSessionStats(session.results);
+            } else {
+                const counts = stats._getSessionCounts(session);
+                sessionStats = {
+                    totalHands: counts.total,
+                    correct: counts.correct,
+                    accuracy: counts.total > 0 ? counts.correct / counts.total : 0
+                };
+            }
 
             item.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center;">
