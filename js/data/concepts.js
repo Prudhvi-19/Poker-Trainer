@@ -62,7 +62,8 @@ You need to win 25% of the time to break even (1/(3+1) = 0.25)
 **The Rule:** Call when your equity > pot odds requirement
 
 **Common Scenarios:**
-- Facing half pot bet: Need 33% equity (2:1 odds)
+- Facing half pot bet: Need 25% equity (3:1 odds)
+- Facing 2/3 pot bet: Need 28.5% equity (2.5:1 odds)
 - Facing pot-sized bet: Need 33% equity (2:1 odds)
 - Facing 2x pot overbet: Need 40% equity (1.5:1 odds)
 

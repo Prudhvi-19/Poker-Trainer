@@ -6,6 +6,9 @@ import { randomItem, generateId, formatPercentage, randomHand, isInPosition } fr
 import { createHandDisplay, createCard } from '../components/Card.js';
 import ranges from '../data/ranges.js';
 import storage from '../utils/storage.js';
+import { createDeck, shuffle } from '../utils/deckManager.js';
+import { analyzeBoard as sharedAnalyzeBoard } from '../utils/boardAnalyzer.js';
+import { evaluateHandBoard } from '../utils/handEvaluator.js';
 
 let currentSession = null;
 let currentHand = null;
@@ -117,18 +120,22 @@ function generateNewHand() {
     // Determine who is preflop aggressor
     const heroIsAggressor = Math.random() > 0.5;
 
+    // Pre-generate full board at hand start to ensure consistency
+    const fullBoard = generateFullBoard(heroCards);
+
     return {
         id: generateId(),
         heroPosition,
         villainPosition,
         heroHand,
-        heroCards, // Store actual cards to prevent duplicates on board
+        heroCards,
         heroIsAggressor,
         currentStreet: STREET.PREFLOP,
         pot: 1.5, // Blinds posted
         heroStack: 100,
         villainStack: 100,
         board: [],
+        fullBoard, // All 5 cards pre-generated, revealed incrementally
         actions: [],
         decisions: []
     };
@@ -306,7 +313,7 @@ function generatePreflopDecision() {
         return {
             street: STREET.PREFLOP,
             correctAction,
-            description: `You are ${currentHand.heroPosition}. First to act. What do you do?`,
+            description: `You are ${currentHand.heroPosition}. Folded to you. What do you do?`,
             options: [
                 { action: ACTIONS.RAISE, label: 'Raise 2.5bb' },
                 { action: ACTIONS.FOLD, label: 'Fold' }
@@ -382,59 +389,34 @@ function generatePostflopDecision() {
     }
 }
 
-// Evaluate hand strength relative to board
+// Evaluate hand strength relative to board using shared evaluator
 function evaluateHandStrength(hand, board) {
     if (!board || board.length === 0) return 'UNKNOWN';
 
-    const boardRanks = board.map(c => c.slice(0, -1));
-    const r1 = hand.rank1;
-    const r2 = hand.rank2;
-    const isPair = r1 === r2;
+    // Use hero's actual cards if available for accurate draw detection
+    const heroCards = currentHand.heroCards
+        ? currentHand.heroCards.map(c => ({ rank: c.slice(0, -1), suit: c.slice(-1) }))
+        : hand; // fallback to abstract hand
 
-    // Check for made hands
-    const hasPairOnBoard = boardRanks.includes(r1) || boardRanks.includes(r2);
-    const hasSet = isPair && boardRanks.includes(r1);
+    const result = evaluateHandBoard(heroCards, board);
 
-    const rankValues = (rank) => RANKS.indexOf(rank);
-    const boardMinRank = Math.min(...boardRanks.map(rankValues));
-
-    const hasOverpair = isPair && rankValues(r1) < boardMinRank;
-    const hasTopPair = boardRanks.includes(r1) && rankValues(r1) === boardMinRank;
-    const hasSecondPair = !hasTopPair && hasPairOnBoard;
-    const hasOvercards = rankValues(r1) < boardMinRank && rankValues(r2) < boardMinRank && !hasPairOnBoard;
-
-    // Categorize
-    if (hasSet) return 'MONSTER';
-    if (hasOverpair) return 'STRONG';
-    if (hasTopPair) return 'MEDIUM_STRONG';
-    if (hasSecondPair) return 'MEDIUM';
-    if (hasOvercards) return 'OVERCARDS';
-    if (hasPairOnBoard) return 'WEAK_PAIR';
+    // Map shared strength to categories used in this module
+    if (result.strength === 'MONSTER') return 'MONSTER';
+    if (result.strength === 'STRONG') return 'STRONG';
+    if (result.strength === 'MEDIUM_STRONG') return 'MEDIUM_STRONG';
+    if (result.strength === 'MEDIUM') return 'MEDIUM';
+    if (result.strength === 'STRONG_DRAW') return 'DRAW';
+    if (result.strength === 'DRAW') return 'DRAW';
+    if (result.strength === 'OVERCARDS') return 'OVERCARDS';
     return 'AIR';
 }
 
-// Classify board texture
+// Classify board texture using shared analyzer (analyzes ALL board cards, not just flop)
 function classifyTexture(board) {
     if (!board || board.length < 3) return 'UNKNOWN';
 
-    const ranks = board.slice(0, 3).map(c => c.slice(0, -1));
-    const suits = board.slice(0, 3).map(c => c.slice(-1));
-
-    const suitCounts = {};
-    suits.forEach(s => suitCounts[s] = (suitCounts[s] || 0) + 1);
-    const maxSuit = Math.max(...Object.values(suitCounts));
-
-    const rankVals = ranks.map(r => RANKS.indexOf(r));
-    const spread = Math.max(...rankVals) - Math.min(...rankVals);
-
-    const rankCounts = {};
-    ranks.forEach(r => rankCounts[r] = (rankCounts[r] || 0) + 1);
-    const hasPair = Object.values(rankCounts).some(c => c >= 2);
-
-    if (hasPair && maxSuit < 3 && spread > 5) return 'STATIC';
-    if (maxSuit >= 3 || (maxSuit === 2 && spread <= 4)) return 'DYNAMIC';
-    if (spread <= 4 || maxSuit === 2) return 'WET';
-    return 'DRY';
+    const analysis = sharedAnalyzeBoard(board);
+    return analysis.texture; // DRY, WET, STATIC, DYNAMIC
 }
 
 // Determine betting action based on hand strength
@@ -449,7 +431,12 @@ function determineBettingAction(strength, texture, hasPosition) {
         return texture === 'DRY' || texture === 'STATIC' ? ACTIONS.BET : ACTIONS.CHECK;
     }
 
-    // Draws and overcards: semi-bluff sometimes
+    // Draws: semi-bluff to build pot and apply pressure
+    if (strength === 'DRAW') {
+        return ACTIONS.BET; // Semi-bluff with draws - bet for equity and fold equity
+    }
+
+    // Overcards: semi-bluff sometimes
     if (strength === 'OVERCARDS') {
         return hasPosition && (texture === 'DRY' || texture === 'STATIC') ? ACTIONS.BET : ACTIONS.CHECK;
     }
@@ -469,7 +456,12 @@ function determineDefenseAction(strength, texture, hasPosition) {
     if (strength === 'STRONG') return hasPosition ? ACTIONS.RAISE : ACTIONS.CALL;
 
     // Medium-strong hands call
-    if (['MEDIUM_STRONG', 'MEDIUM', 'WEAK_PAIR'].includes(strength)) {
+    if (['MEDIUM_STRONG', 'MEDIUM'].includes(strength)) {
+        return ACTIONS.CALL;
+    }
+
+    // Draws: call to realize equity (good pot odds vs 67% pot bet)
+    if (strength === 'DRAW') {
         return ACTIONS.CALL;
     }
 
@@ -510,17 +502,40 @@ function updatePotAndStack(action, scenario) {
         const raiseSize = 2.5;
         currentHand.pot += raiseSize; // Hero's raise goes to pot
         currentHand.heroStack -= raiseSize;
-        // Villain calls (add their call later when they respond)
-        currentHand.pot += raiseSize; // Villain calls
+        // Villain calls
+        currentHand.pot += raiseSize;
         currentHand.villainStack -= raiseSize;
         currentHand.actions.push(`${currentHand.heroPosition} raises ${raiseSize}bb, Villain calls`);
     } else if (action === ACTIONS.CALL) {
-        // Hero calls a bet that's already been made
+        // Hero calls a bet/raise
         const callSize = currentHand.currentStreet === STREET.PREFLOP ? 2.5 : currentHand.pot * 0.67;
-        // Only add hero's call - villain's bet was already added when they bet
+        // Add villain's bet first (it wasn't added when the scenario was generated)
+        if (currentHand.currentStreet !== STREET.PREFLOP) {
+            currentHand.pot += callSize; // Villain's bet
+            currentHand.villainStack -= callSize;
+        } else {
+            // Preflop: villain already raised 2.5, add their raise
+            currentHand.pot += callSize;
+            currentHand.villainStack -= callSize;
+        }
+        // Then add hero's call
         currentHand.pot += callSize;
         currentHand.heroStack -= callSize;
-        currentHand.actions.push(`${currentHand.heroPosition} calls ${callSize.toFixed(1)}bb`);
+        currentHand.actions.push(`Villain bets ${callSize.toFixed(1)}bb, ${currentHand.heroPosition} calls`);
+    } else if (action === ACTIONS.RAISE && currentHand.currentStreet !== STREET.PREFLOP) {
+        // Hero raises villain's bet postflop
+        const villainBet = currentHand.pot * 0.67;
+        // Villain's bet
+        currentHand.pot += villainBet;
+        currentHand.villainStack -= villainBet;
+        // Hero raises (~3x villain's bet)
+        const raiseSize = villainBet * 3;
+        currentHand.pot += raiseSize;
+        currentHand.heroStack -= raiseSize;
+        // Villain calls the raise (simplified)
+        currentHand.pot += (raiseSize - villainBet);
+        currentHand.villainStack -= (raiseSize - villainBet);
+        currentHand.actions.push(`Villain bets ${villainBet.toFixed(1)}bb, ${currentHand.heroPosition} raises to ${raiseSize.toFixed(1)}bb, Villain calls`);
     } else if (action === ACTIONS.BET) {
         // Hero bets, villain will call (simplified for training)
         const betSize = currentHand.pot * 0.67;
@@ -532,6 +547,8 @@ function updatePotAndStack(action, scenario) {
         currentHand.actions.push(`${currentHand.heroPosition} bets ${betSize.toFixed(1)}bb, Villain calls`);
     } else if (action === ACTIONS.CHECK) {
         currentHand.actions.push(`${currentHand.heroPosition} checks`);
+    } else if (action === ACTIONS.FOLD) {
+        currentHand.actions.push(`${currentHand.heroPosition} folds`);
     }
 }
 
@@ -558,11 +575,11 @@ function showDecisionFeedback(scenario, userAction, isCorrect) {
 
     // Format hand strength for explanation
     const strengthLabels = {
-        'MONSTER': 'Monster hand (Set/Top Two)',
+        'MONSTER': 'Monster hand (Set/Two Pair+)',
         'STRONG': 'Strong hand (Overpair)',
         'MEDIUM_STRONG': 'Top pair',
         'MEDIUM': 'Medium hand (Second pair)',
-        'WEAK_PAIR': 'Weak pair',
+        'DRAW': 'Drawing hand (Flush/Straight draw)',
         'OVERCARDS': 'Overcards only',
         'AIR': 'No made hand'
     };
@@ -622,13 +639,13 @@ function advanceStreet() {
     if (currentIndex < streets.length - 1) {
         currentHand.currentStreet = streets[currentIndex + 1];
 
-        // Generate board cards
+        // Reveal pre-generated board cards
         if (currentHand.currentStreet === STREET.FLOP) {
-            currentHand.board = generateBoard(3);
+            currentHand.board = currentHand.fullBoard.slice(0, 3);
         } else if (currentHand.currentStreet === STREET.TURN) {
-            currentHand.board.push(...generateBoard(1));
+            currentHand.board = currentHand.fullBoard.slice(0, 4);
         } else if (currentHand.currentStreet === STREET.RIVER) {
-            currentHand.board.push(...generateBoard(1));
+            currentHand.board = currentHand.fullBoard.slice(0, 5);
         }
 
         updateHandInfo();
@@ -636,27 +653,14 @@ function advanceStreet() {
     }
 }
 
-function generateBoard(numCards) {
-    const cards = [];
-    const usedCards = new Set(currentHand.board);
-
-    // CRITICAL FIX: Exclude hero's actual cards to prevent duplicates
-    if (currentHand.heroCards) {
-        currentHand.heroCards.forEach(card => usedCards.add(card));
-    }
-
-    while (cards.length < numCards) {
-        const rank = randomItem(RANKS);
-        const suit = randomItem(Object.values(SUITS));
-        const card = `${rank}${suit}`;
-
-        if (!usedCards.has(card)) {
-            cards.push(card);
-            usedCards.add(card);
-        }
-    }
-
-    return cards;
+function generateFullBoard(heroCards) {
+    // Pre-generate all 5 board cards at hand start, excluding hero's cards
+    const usedCards = new Set(heroCards);
+    const deck = createDeck()
+        .map(c => `${c.rank}${c.suit}`)
+        .filter(c => !usedCards.has(c));
+    shuffle(deck);
+    return deck.slice(0, 5);
 }
 
 function createBoardDisplay(board) {

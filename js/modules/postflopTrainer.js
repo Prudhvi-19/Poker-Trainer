@@ -5,6 +5,9 @@ import { randomItem, generateId, formatPercentage, showToast } from '../utils/he
 import { createHandDisplay, createCard } from '../components/Card.js';
 import storage from '../utils/storage.js';
 import { BOARD_TEXTURES, CBET_FREQUENCIES, DEFENSE_FREQUENCIES } from '../data/postflopRanges.js';
+import { generateBoard as sharedGenerateBoard, cardToString } from '../utils/deckManager.js';
+import { analyzeBoard as sharedAnalyzeBoard } from '../utils/boardAnalyzer.js';
+import { evaluateHandBoard } from '../utils/handEvaluator.js';
 
 let currentSession = null;
 
@@ -442,96 +445,13 @@ function generateBoardTextureScenario() {
 }
 
 function generateBoard(numCards) {
-    const cards = [];
-    const usedCards = new Set();
-
-    while (cards.length < numCards) {
-        const rank = randomItem(RANKS);
-        const suit = randomItem(Object.values(SUITS));
-        const card = `${rank}${suit}`;
-
-        if (!usedCards.has(card)) {
-            cards.push(card);
-            usedCards.add(card);
-        }
-    }
-
-    return cards;
+    // Use shared deck manager and convert to string format for backward compatibility
+    return sharedGenerateBoard(numCards).map(cardToString);
 }
 
 function classifyBoardTexture(board) {
-    // Improved texture classification
-    const ranks = board.map(card => card.slice(0, -1));
-    const suits = board.map(card => card.slice(-1));
-
-    // Check for monotone (flush possible) or two-tone (flush draw)
-    const suitCounts = {};
-    suits.forEach(suit => {
-        suitCounts[suit] = (suitCounts[suit] || 0) + 1;
-    });
-    const maxSuitCount = Math.max(...Object.values(suitCounts));
-    const isMonotone = maxSuitCount >= 3; // All same suit (flush possible on board)
-    const hasTwoTone = maxSuitCount === 2; // Two of same suit (flush draw possible)
-
-    // Check for straight possibilities
-    const rankValues = ranks.map(rank => {
-        const index = RANKS.indexOf(rank);
-        return 12 - index; // A=12, K=11, ..., 2=0
-    });
-
-    // Sort and check connectivity
-    const sortedRanks = [...rankValues].sort((a, b) => b - a);
-    const spread = sortedRanks[0] - sortedRanks[sortedRanks.length - 1];
-
-    // Count connected cards (within 1-2 of each other)
-    let connectedCount = 0;
-    for (let i = 0; i < sortedRanks.length - 1; i++) {
-        const gap = sortedRanks[i] - sortedRanks[i + 1];
-        if (gap <= 2) connectedCount++;
-    }
-
-    const isConnected = connectedCount >= 2 || spread <= 4;
-    const hasStraightDraw = spread <= 5 && connectedCount >= 1;
-
-    // Check for pairs on board
-    const rankCounts = {};
-    ranks.forEach(rank => {
-        rankCounts[rank] = (rankCounts[rank] || 0) + 1;
-    });
-    const hasPair = Object.values(rankCounts).some(count => count >= 2);
-
-    // High card check (broadway-heavy boards)
-    const highCards = ranks.filter(r => ['A', 'K', 'Q', 'J', 'T'].includes(r));
-    const isBroadwayHeavy = highCards.length >= 2;
-
-    // Classify texture
-    // STATIC: Paired boards with no draws
-    if (hasPair && !isMonotone && !isConnected) {
-        return 'STATIC';
-    }
-
-    // DYNAMIC: Very connected + flush draws, equity shifts dramatically
-    if ((isMonotone || hasTwoTone) && isConnected) {
-        return 'DYNAMIC';
-    }
-
-    // WET: Has draws (flush or straight potential)
-    if (isMonotone || (hasTwoTone && hasStraightDraw) || (isConnected && !hasPair)) {
-        return 'WET';
-    }
-
-    // DRY: Disconnected, rainbow, no real draws
-    // Examples: K72r, A94r, Q82r
-    if (!hasTwoTone && !isConnected && spread > 5) {
-        return 'DRY';
-    }
-
-    // Default to WET for borderline cases
-    if (hasTwoTone || hasStraightDraw) {
-        return 'WET';
-    }
-
-    return 'DRY';
+    // Use shared board analyzer (handles both string and object format)
+    return sharedAnalyzeBoard(board).texture;
 }
 
 function generatePreflopRaiserHand() {
@@ -580,55 +500,10 @@ function generatePreflopCallerHand() {
     return { ...hand, display };
 }
 
-// Evaluate hand strength relative to the board
+// Evaluate hand strength relative to the board using shared evaluator
 function evaluateHandBoardInteraction(hand, board) {
-    const boardRanks = board.map(c => c.slice(0, -1));
-    const boardSuits = board.map(c => c.slice(-1));
-
-    const r1 = hand.rank1;
-    const r2 = hand.rank2;
-    const isPair = r1 === r2;
-
-    // Check for made hands
-    const hasPairOnBoard = boardRanks.includes(r1) || boardRanks.includes(r2);
-    const hasOverpair = isPair && RANKS.indexOf(r1) < Math.min(...boardRanks.map(r => RANKS.indexOf(r)));
-    const hasTopPair = boardRanks.includes(r1) && RANKS.indexOf(r1) === Math.min(...boardRanks.map(r => RANKS.indexOf(r)));
-    const hasSecondPair = !hasTopPair && hasPairOnBoard;
-    const hasSet = isPair && boardRanks.includes(r1);
-
-    // Check for draws
-    const hasFlushDraw = hand.suited && boardSuits.filter(s => s === getHandSuit(hand)).length >= 2;
-    const hasStraightDraw = checkStraightDraw(r1, r2, boardRanks);
-    const hasOvercards = RANKS.indexOf(r1) < Math.min(...boardRanks.map(r => RANKS.indexOf(r))) &&
-                         RANKS.indexOf(r2) < Math.min(...boardRanks.map(r => RANKS.indexOf(r)));
-
-    // Categorize hand strength
-    if (hasSet) return 'MONSTER';
-    if (hasOverpair) return 'STRONG';
-    if (hasTopPair) return 'MEDIUM_STRONG';
-    if (hasSecondPair) return 'MEDIUM';
-    if (hasFlushDraw && hasStraightDraw) return 'STRONG_DRAW';
-    if (hasFlushDraw || hasStraightDraw) return 'DRAW';
-    if (hasOvercards) return 'OVERCARDS';
-    return 'AIR';
-}
-
-function getHandSuit(hand) {
-    // For suited hands, return a consistent suit (we don't track actual suits in hand objects)
-    return '♠';
-}
-
-function checkStraightDraw(r1, r2, boardRanks) {
-    const allRanks = [r1, r2, ...boardRanks];
-    const rankValues = allRanks.map(r => RANKS.indexOf(r)).sort((a, b) => a - b);
-    const unique = [...new Set(rankValues)];
-
-    // Check for 4-card straight (open-ended or gutshot)
-    for (let i = 0; i <= unique.length - 4; i++) {
-        const span = unique[i + 3] - unique[i];
-        if (span <= 4) return true;
-    }
-    return false;
+    // Shared evaluator handles abstract {rank1, rank2, suited} format
+    return evaluateHandBoard(hand, board).strength;
 }
 
 // Determine c-bet action based on hand strength and texture
@@ -678,7 +553,8 @@ function determineDefenseAction(handStrength, texture, position) {
         return ACTIONS.RAISE; // Value raise
     }
     if (handStrength === 'STRONG_DRAW') {
-        return Math.random() < 0.4 ? ACTIONS.RAISE : ACTIONS.CALL; // Mix raises
+        // Strong draws: raise for semi-bluff (GTO prefers raising combo draws)
+        return ACTIONS.RAISE;
     }
     if (handStrength === 'MEDIUM_STRONG' || handStrength === 'MEDIUM' || handStrength === 'DRAW') {
         return ACTIONS.CALL;

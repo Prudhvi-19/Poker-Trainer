@@ -53,10 +53,10 @@ function init() {
         router.navigate(moduleId);
     });
 
-    // Initialize router (adds hashchange listener for route handling)
+    // Initialize router (sets up hashchange listener, but does NOT handle initial route yet)
     router.init('view-container');
 
-    // Register all routes
+    // Register all routes BEFORE starting the router
     router.register(MODULES.DASHBOARD, dashboard.render);
     router.register(MODULES.PREFLOP_TRAINER, preflopTrainer.render);
     router.register(MODULES.POSTFLOP_TRAINER, postflopTrainer.render);
@@ -75,6 +75,9 @@ function init() {
     router.register(MODULES.CBET_TRAINER, cbetTrainer.render);
     router.register(MODULES.BET_SIZING_TRAINER, betSizingTrainer.render);
     router.register(MODULES.POT_ODDS_TRAINER, potOddsTrainer.render);
+
+    // Now start routing (all routes registered, safe to handle initial route)
+    router.start();
 
     // Update navigation active state on route change
     // NOTE: This listener persists for app lifetime (intentional, not a memory leak)
