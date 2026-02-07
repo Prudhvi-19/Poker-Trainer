@@ -10,6 +10,8 @@ import { analyzeBoard as sharedAnalyzeBoard } from '../utils/boardAnalyzer.js';
 import { evaluateHandBoard } from '../utils/handEvaluator.js';
 
 let currentSession = null;
+let statsContainerEl = null;
+let scenarioContainerEl = null;
 
 function render() {
     const container = document.createElement('div');
@@ -26,14 +28,12 @@ function render() {
     container.appendChild(typeSelector);
 
     // Session stats
-    const statsContainer = document.createElement('div');
-    statsContainer.id = 'session-stats';
-    container.appendChild(statsContainer);
+    statsContainerEl = document.createElement('div');
+    container.appendChild(statsContainerEl);
 
     // Scenario area
-    const scenarioContainer = document.createElement('div');
-    scenarioContainer.id = 'scenario-container';
-    container.appendChild(scenarioContainer);
+    scenarioContainerEl = document.createElement('div');
+    container.appendChild(scenarioContainerEl);
 
     // Initialize session
     startNewSession(TRAINER_TYPES.CBET);
@@ -136,23 +136,22 @@ function startNewSession(trainerType) {
 }
 
 function updateStats() {
-    const statsEl = document.getElementById('session-stats');
-    if (!statsEl) return;
+    if (!statsContainerEl) return;
 
     const totalHands = currentSession.results.length;
     const correct = currentSession.results.filter(r => r.isCorrect).length;
     const accuracy = totalHands > 0 ? correct / totalHands : 0;
 
-    statsEl.innerHTML = '';
-    statsEl.className = 'session-stats';
+    statsContainerEl.innerHTML = '';
+    statsContainerEl.className = 'session-stats';
 
     const handsEl = createStatBox(totalHands, 'Hands');
     const correctEl = createStatBox(correct, 'Correct');
     const accuracyEl = createStatBox(formatPercentage(accuracy, 0), 'Accuracy');
 
-    statsEl.appendChild(handsEl);
-    statsEl.appendChild(correctEl);
-    statsEl.appendChild(accuracyEl);
+    statsContainerEl.appendChild(handsEl);
+    statsContainerEl.appendChild(correctEl);
+    statsContainerEl.appendChild(accuracyEl);
 }
 
 function createStatBox(value, label) {
@@ -177,8 +176,8 @@ function createStatBox(value, label) {
 let scenarioStartTime = null;
 
 function showNextScenario() {
-    const scenarioEl = document.getElementById('scenario-container');
-    if (!scenarioEl) return;
+    if (!scenarioContainerEl) return;
+    const scenarioEl = scenarioContainerEl;
 
     scenarioEl.innerHTML = '';
 
@@ -626,8 +625,8 @@ function handleAnswer(scenario, userAnswer) {
 }
 
 function showFeedback(scenario, userAnswer, isCorrect) {
-    const scenarioEl = document.getElementById('scenario-container');
-    if (!scenarioEl) return;
+    if (!scenarioContainerEl) return;
+    const scenarioEl = scenarioContainerEl;
 
     const card = scenarioEl.querySelector('.scenario-card');
     if (!card) return;
