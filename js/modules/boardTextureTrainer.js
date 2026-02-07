@@ -10,6 +10,8 @@ let currentBoard = null;
 let currentQuestion = null;
 let stats = { correct: 0, total: 0 };
 let container = null;
+let mainAreaEl = null;
+let statsBarEl = null;
 
 function render() {
     container = document.createElement('div');
@@ -25,16 +27,14 @@ function render() {
     container.appendChild(header);
 
     // Stats display
-    const statsEl = document.createElement('div');
-    statsEl.id = 'texture-stats';
-    statsEl.className = 'stats-bar';
-    container.appendChild(statsEl);
+    statsBarEl = document.createElement('div');
+    statsBarEl.className = 'stats-bar';
+    container.appendChild(statsBarEl);
 
     // Main training area
-    const mainArea = document.createElement('div');
-    mainArea.className = 'card training-card';
-    mainArea.id = 'texture-main';
-    container.appendChild(mainArea);
+    mainAreaEl = document.createElement('div');
+    mainAreaEl.className = 'card training-card';
+    container.appendChild(mainAreaEl);
 
     // Start first question
     generateQuestion();
@@ -85,10 +85,9 @@ function mapTextureForQuiz(analysis) {
 }
 
 function renderQuestion() {
-    const mainArea = document.getElementById('texture-main');
-    if (!mainArea) return;
+    if (!mainAreaEl) return;
 
-    mainArea.innerHTML = '';
+    mainAreaEl.innerHTML = '';
 
     // Board display
     const boardSection = document.createElement('div');
@@ -108,7 +107,7 @@ function renderQuestion() {
     });
     boardSection.appendChild(boardCards);
 
-    mainArea.appendChild(boardSection);
+    mainAreaEl.appendChild(boardSection);
 
     // Question
     const questionSection = document.createElement('div');
@@ -166,7 +165,7 @@ function renderQuestion() {
     });
 
     questionSection.appendChild(optionsEl);
-    mainArea.appendChild(questionSection);
+    mainAreaEl.appendChild(questionSection);
 }
 
 function handleAnswer(answer) {
@@ -215,11 +214,10 @@ function handleAnswer(answer) {
 }
 
 function showFeedback(isCorrect, correctAnswer, explanation) {
-    const mainArea = document.getElementById('texture-main');
-    if (!mainArea) return;
+    if (!mainAreaEl) return;
 
     // Disable buttons
-    mainArea.querySelectorAll('.option-btn').forEach(btn => {
+    mainAreaEl.querySelectorAll('.option-btn').forEach(btn => {
         btn.disabled = true;
         btn.style.pointerEvents = 'none';
     });
@@ -262,19 +260,18 @@ function showFeedback(isCorrect, correctAnswer, explanation) {
     nextBtn.addEventListener('click', generateQuestion);
     feedback.appendChild(nextBtn);
 
-    mainArea.appendChild(feedback);
+    mainAreaEl.appendChild(feedback);
 
     // Scroll to feedback
     feedback.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function updateStats() {
-    const statsEl = document.getElementById('texture-stats');
-    if (!statsEl) return;
+    if (!statsBarEl) return;
 
     const accuracy = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
 
-    statsEl.innerHTML = `
+    statsBarEl.innerHTML = `
         <div class="stat-item">
             <span class="stat-value">${stats.correct}</span>
             <span class="stat-label">Correct</span>

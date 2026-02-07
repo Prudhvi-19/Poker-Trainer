@@ -18,6 +18,8 @@ const CBET_ACTIONS = {
 let currentScenario = null;
 let stats = { correct: 0, total: 0 };
 let container = null;
+let mainAreaEl = null;
+let statsBarEl = null;
 
 function render() {
     container = document.createElement('div');
@@ -59,16 +61,14 @@ function render() {
     container.appendChild(infoCard);
 
     // Stats display
-    const statsEl = document.createElement('div');
-    statsEl.id = 'cbet-stats';
-    statsEl.className = 'stats-bar';
-    container.appendChild(statsEl);
+    statsBarEl = document.createElement('div');
+    statsBarEl.className = 'stats-bar';
+    container.appendChild(statsBarEl);
 
     // Main training area
-    const mainArea = document.createElement('div');
-    mainArea.className = 'card training-card';
-    mainArea.id = 'cbet-main';
-    container.appendChild(mainArea);
+    mainAreaEl = document.createElement('div');
+    mainAreaEl.className = 'card training-card';
+    container.appendChild(mainAreaEl);
 
     // Start first scenario
     generateScenario();
@@ -249,8 +249,8 @@ function determineCorrectCbet(boardAnalysis, handStrength, position) {
 }
 
 function renderScenario() {
-    const mainArea = document.getElementById('cbet-main');
-    if (!mainArea) return;
+    if (!mainAreaEl) return;
+    const mainArea = mainAreaEl;
 
     mainArea.innerHTML = '';
 
@@ -364,8 +364,8 @@ function handleAnswer(answer) {
 }
 
 function showFeedback(isCorrect, userAnswer) {
-    const mainArea = document.getElementById('cbet-main');
-    if (!mainArea) return;
+    if (!mainAreaEl) return;
+    const mainArea = mainAreaEl;
 
     // Disable buttons
     mainArea.querySelectorAll('.option-btn').forEach(btn => {
@@ -424,12 +424,11 @@ function showFeedback(isCorrect, userAnswer) {
 }
 
 function updateStats() {
-    const statsEl = document.getElementById('cbet-stats');
-    if (!statsEl) return;
+    if (!statsBarEl) return;
 
     const accuracy = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
 
-    statsEl.innerHTML = `
+    statsBarEl.innerHTML = `
         <div class="stat-item">
             <span class="stat-value">${stats.correct}</span>
             <span class="stat-label">Correct</span>
