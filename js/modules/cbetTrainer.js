@@ -3,10 +3,9 @@
 
 import { createCard } from '../components/Card.js';
 import { showToast } from '../utils/helpers.js';
-import storage from '../utils/storage.js';
-
-const RANKS = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
-const SUITS = ['\u2660', '\u2665', '\u2666', '\u2663']; // ♠ ♥ ♦ ♣
+import { generateBoard, generateHeroHand as generateHeroHandFromDeck } from '../utils/deckManager.js';
+import { analyzeBoard as sharedAnalyzeBoard } from '../utils/boardAnalyzer.js';
+import { evaluateHandBoard } from '../utils/handEvaluator.js';
 
 // C-bet decisions
 const CBET_ACTIONS = {
@@ -15,9 +14,6 @@ const CBET_ACTIONS = {
     BET_LARGE: 'bet-large',    // 75-100% pot
     CHECK: 'check'
 };
-
-// Positions
-const POSITIONS = ['UTG', 'HJ', 'CO', 'BTN', 'SB', 'BB'];
 
 let currentScenario = null;
 let stats = { correct: 0, total: 0 };
@@ -81,17 +77,29 @@ function render() {
     return container;
 }
 
+// Hero hand types for c-bet scenarios (preflop raiser range)
+const RAISER_HAND_TYPES = [
+    ['A', 'A'], ['K', 'K'], ['Q', 'Q'], ['A', 'K'],
+    ['A', 'Q'], ['A', 'J'], ['K', 'Q'],
+    ['J', 'J'], ['T', 'T'], ['9', '9'],
+    ['J', 'T'], ['T', '9'], ['9', '8'],
+    ['A', '5'], ['K', '7'], ['Q', '8']
+];
+
 function generateScenario() {
-    // Generate scenario components
-    const heroPosition = getRandomPosition(['UTG', 'HJ', 'CO', 'BTN']);
-    const villainPosition = 'BB'; // Most common c-bet scenario
-    const board = generateRandomFlop();
-    const heroHand = generateHeroHand(board);
+    const positions = ['UTG', 'HJ', 'CO', 'BTN'];
+    const heroPosition = positions[Math.floor(Math.random() * positions.length)];
+    const villainPosition = 'BB';
+    const board = generateBoard(3);
+    const heroHand = generateHeroHandFromDeck(board, RAISER_HAND_TYPES);
     const potSize = Math.floor(Math.random() * 15 + 6); // 6-20 BB
 
-    // Analyze the situation
-    const boardAnalysis = analyzeBoard(board);
-    const handStrength = analyzeHandStrength(heroHand, board);
+    // Use shared analyzers
+    const boardAnalysis = sharedAnalyzeBoard(board);
+    const handEval = evaluateHandBoard(heroHand, board);
+
+    // Map shared strength to local categories for c-bet decision tree
+    const handStrength = mapToLocalStrength(handEval, heroHand, board);
 
     // Determine correct action
     const { action, reason } = determineCorrectCbet(boardAnalysis, handStrength, heroPosition);
@@ -111,194 +119,26 @@ function generateScenario() {
     renderScenario();
 }
 
-function getRandomPosition(positions) {
-    return positions[Math.floor(Math.random() * positions.length)];
-}
+/**
+ * Map shared hand evaluator output to c-bet specific strength categories
+ */
+function mapToLocalStrength(handEval, hand, board) {
+    const { strength, hasFlushDraw, hasOvercards, hasBackdoorFlush, hasTopPair, hasOverpair, hasSet, hasTwoPair } = handEval;
+    let localStrength;
 
-function generateRandomFlop() {
-    const deck = [];
-    for (const rank of RANKS) {
-        for (const suit of SUITS) {
-            deck.push({ rank, suit });
-        }
-    }
-
-    // Shuffle
-    for (let i = deck.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [deck[i], deck[j]] = [deck[j], deck[i]];
-    }
-
-    return deck.slice(0, 3);
-}
-
-function generateHeroHand(board) {
-    const usedCards = new Set(board.map(c => `${c.rank}${c.suit}`));
-    const deck = [];
-
-    for (const rank of RANKS) {
-        for (const suit of SUITS) {
-            const card = `${rank}${suit}`;
-            if (!usedCards.has(card)) {
-                deck.push({ rank, suit });
-            }
-        }
-    }
-
-    // Shuffle
-    for (let i = deck.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [deck[i], deck[j]] = [deck[j], deck[i]];
-    }
-
-    // Generate realistic preflop raising hands
-    const handTypes = [
-        // Premium hands
-        { ranks: ['A', 'A'] },
-        { ranks: ['K', 'K'] },
-        { ranks: ['Q', 'Q'] },
-        { ranks: ['A', 'K'] },
-        // Broadway
-        { ranks: ['A', 'Q'] },
-        { ranks: ['A', 'J'] },
-        { ranks: ['K', 'Q'] },
-        // Medium pairs
-        { ranks: ['J', 'J'] },
-        { ranks: ['T', 'T'] },
-        { ranks: ['9', '9'] },
-        // Suited connectors
-        { ranks: ['J', 'T'] },
-        { ranks: ['T', '9'] },
-        { ranks: ['9', '8'] },
-        // Air / missed
-        { ranks: ['A', '5'] },
-        { ranks: ['K', '7'] },
-        { ranks: ['Q', '8'] }
-    ];
-
-    const selectedType = handTypes[Math.floor(Math.random() * handTypes.length)];
-
-    // Find cards matching the ranks
-    const hand = [];
-    const availableCards = [...deck];
-
-    for (const targetRank of selectedType.ranks) {
-        const idx = availableCards.findIndex(c => c.rank === targetRank);
-        if (idx !== -1) {
-            hand.push(availableCards.splice(idx, 1)[0]);
-        } else {
-            // Fallback to random card
-            hand.push(availableCards.shift());
-        }
-    }
-
-    return hand;
-}
-
-function analyzeBoard(board) {
-    const ranks = board.map(c => RANKS.indexOf(c.rank));
-    const suits = board.map(c => c.suit);
-
-    ranks.sort((a, b) => b - a);
-
-    // Paired?
-    const isPaired = ranks[0] === ranks[1] || ranks[1] === ranks[2] || ranks[0] === ranks[2];
-
-    // Suits
-    const suitCounts = {};
-    suits.forEach(s => suitCounts[s] = (suitCounts[s] || 0) + 1);
-    const maxSuitCount = Math.max(...Object.values(suitCounts));
-
-    const isMonotone = maxSuitCount === 3;
-    const isTwoTone = maxSuitCount === 2;
-
-    // Connectivity
-    const spread = ranks[0] - ranks[2];
-    const isConnected = spread <= 4 && !isPaired;
-
-    // Height
-    const highCards = ranks.filter(r => r >= 9).length;
-    const isHigh = highCards >= 2;
-    const isLow = ranks[0] <= 7;
-
-    // Texture
-    let texture;
-    if (isPaired || (!isTwoTone && !isMonotone && !isConnected)) {
-        texture = 'dry';
-    } else if (isMonotone || (isTwoTone && isConnected)) {
-        texture = 'wet';
-    } else {
-        texture = 'semi-wet';
-    }
-
-    // Who it favors
-    let favorRaiser = isHigh;
-    let favorCaller = isLow && isConnected;
+    if (strength === 'MONSTER') localStrength = 'monster';
+    else if (strength === 'STRONG' || strength === 'MEDIUM_STRONG') localStrength = 'strong';
+    else if (strength === 'MEDIUM' || strength === 'DRAW') localStrength = 'medium';
+    else if (strength === 'STRONG_DRAW' || strength === 'OVERCARDS') localStrength = 'weak-with-equity';
+    else localStrength = 'air';
 
     return {
-        isPaired,
-        isMonotone,
-        isTwoTone,
-        isConnected,
-        isHigh,
-        isLow,
-        texture,
-        favorRaiser,
-        favorCaller,
-        spread
-    };
-}
-
-function analyzeHandStrength(hand, board) {
-    const handRanks = hand.map(c => RANKS.indexOf(c.rank));
-    const boardRanks = board.map(c => RANKS.indexOf(c.rank));
-    const allRanks = [...handRanks, ...boardRanks];
-
-    // Check for pairs, sets, etc.
-    const rankCounts = {};
-    allRanks.forEach(r => rankCounts[r] = (rankCounts[r] || 0) + 1);
-
-    const counts = Object.values(rankCounts);
-    const hasSet = counts.includes(3);
-    const hasTwoPair = counts.filter(c => c >= 2).length >= 2;
-    const hasOverpair = handRanks[0] === handRanks[1] && handRanks[0] > Math.max(...boardRanks);
-    const hasTopPair = handRanks.some(r => r === Math.max(...boardRanks));
-    const hasPair = counts.includes(2);
-
-    // Check for draws
-    const handSuits = hand.map(c => c.suit);
-    const boardSuits = board.map(c => c.suit);
-    const allSuits = [...handSuits, ...boardSuits];
-    const suitCounts = {};
-    allSuits.forEach(s => suitCounts[s] = (suitCounts[s] || 0) + 1);
-    const hasFlushDraw = Object.values(suitCounts).some(c => c >= 4);
-
-    // Overcards
-    const hasOvercards = handRanks.some(r => r > Math.max(...boardRanks));
-
-    // Backdoor draws (simplified)
-    const hasBackdoorFlush = handSuits[0] === handSuits[1] && boardSuits.includes(handSuits[0]);
-
-    let strength;
-    if (hasSet || hasTwoPair) {
-        strength = 'monster';
-    } else if (hasOverpair || hasTopPair) {
-        strength = 'strong';
-    } else if (hasPair || hasFlushDraw) {
-        strength = 'medium';
-    } else if (hasOvercards || hasBackdoorFlush) {
-        strength = 'weak-with-equity';
-    } else {
-        strength = 'air';
-    }
-
-    return {
-        strength,
+        strength: localStrength,
         hasSet,
         hasTwoPair,
         hasOverpair,
         hasTopPair,
-        hasPair,
+        hasPair: handEval.hasPairOnBoard,
         hasFlushDraw,
         hasOvercards,
         hasBackdoorFlush
@@ -306,11 +146,16 @@ function analyzeHandStrength(hand, board) {
 }
 
 function determineCorrectCbet(boardAnalysis, handStrength, position) {
-    // Decision tree for c-betting
+    // Map shared texture to simple categories for decision tree
+    const tex = boardAnalysis.texture; // DRY, WET, STATIC, DYNAMIC
+    const isWet = tex === 'WET' || tex === 'DYNAMIC';
+    const isDry = tex === 'DRY' || tex === 'STATIC';
+    const favorRaiser = boardAnalysis.favor === 'raiser';
+    const favorCaller = boardAnalysis.favor === 'caller';
 
     // Strong made hands - usually bet for value
     if (handStrength.strength === 'monster') {
-        if (boardAnalysis.texture === 'wet') {
+        if (isWet) {
             return {
                 action: CBET_ACTIONS.BET_LARGE,
                 reason: 'Monster hand on wet board - bet large for protection and value'
@@ -324,12 +169,12 @@ function determineCorrectCbet(boardAnalysis, handStrength, position) {
     }
 
     if (handStrength.strength === 'strong') {
-        if (boardAnalysis.texture === 'wet') {
+        if (isWet) {
             return {
                 action: CBET_ACTIONS.BET_MEDIUM,
                 reason: 'Strong hand on wet board - bet medium for value and protection'
             };
-        } else if (boardAnalysis.texture === 'dry') {
+        } else if (isDry) {
             return {
                 action: CBET_ACTIONS.BET_SMALL,
                 reason: 'Strong hand on dry board - small bet is efficient, opponent has few draws'
@@ -344,12 +189,12 @@ function determineCorrectCbet(boardAnalysis, handStrength, position) {
 
     // Medium hands - context dependent
     if (handStrength.strength === 'medium') {
-        if (boardAnalysis.favorRaiser && boardAnalysis.texture === 'dry') {
+        if (favorRaiser && isDry) {
             return {
                 action: CBET_ACTIONS.BET_SMALL,
                 reason: 'Medium hand on dry raiser-favored board - small c-bet for thin value'
             };
-        } else if (boardAnalysis.favorCaller) {
+        } else if (favorCaller) {
             return {
                 action: CBET_ACTIONS.CHECK,
                 reason: 'Medium hand on caller-favored board - check to control pot'
@@ -364,7 +209,7 @@ function determineCorrectCbet(boardAnalysis, handStrength, position) {
 
     // Weak hands with equity - can bluff or check
     if (handStrength.strength === 'weak-with-equity') {
-        if (boardAnalysis.texture === 'dry' && boardAnalysis.favorRaiser) {
+        if (isDry && favorRaiser) {
             return {
                 action: CBET_ACTIONS.BET_SMALL,
                 reason: 'Overcards on dry raiser-favored board - small c-bet as bluff'
@@ -384,8 +229,7 @@ function determineCorrectCbet(boardAnalysis, handStrength, position) {
 
     // Air - check most of the time, occasionally bluff
     if (handStrength.strength === 'air') {
-        if (boardAnalysis.texture === 'dry' && boardAnalysis.favorRaiser && !boardAnalysis.favorCaller) {
-            // Can bluff on dry boards that favor us
+        if (isDry && favorRaiser && !favorCaller) {
             return {
                 action: CBET_ACTIONS.BET_SMALL,
                 reason: 'Air on dry raiser-favored board - small c-bet bluff is profitable'
@@ -398,7 +242,6 @@ function determineCorrectCbet(boardAnalysis, handStrength, position) {
         }
     }
 
-    // Default
     return {
         action: CBET_ACTIONS.CHECK,
         reason: 'Default - check when unsure'
@@ -557,7 +400,7 @@ function showFeedback(isCorrect, userAnswer) {
         <h4>Situation Analysis:</h4>
         <ul>
             <li><strong>Board Texture:</strong> ${currentScenario.boardAnalysis.texture}</li>
-            <li><strong>Board Favors:</strong> ${currentScenario.boardAnalysis.favorRaiser ? 'Raiser' : currentScenario.boardAnalysis.favorCaller ? 'Caller' : 'Neutral'}</li>
+            <li><strong>Board Favors:</strong> ${currentScenario.boardAnalysis.favor === 'raiser' ? 'Raiser' : currentScenario.boardAnalysis.favor === 'caller' ? 'Caller' : 'Neutral'}</li>
             <li><strong>Your Hand Strength:</strong> ${currentScenario.handStrength.strength}</li>
             ${currentScenario.handStrength.hasTopPair ? '<li>You have top pair</li>' : ''}
             ${currentScenario.handStrength.hasOverpair ? '<li>You have an overpair</li>' : ''}
