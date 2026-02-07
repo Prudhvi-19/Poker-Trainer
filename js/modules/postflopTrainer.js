@@ -1,0 +1,832 @@
+// Postflop Trainer Module
+
+import { POSITIONS, ACTIONS, TRAINER_TYPES, BET_SIZES, RANKS, SUITS, SUIT_NAMES } from '../utils/constants.js';
+import { randomItem, generateId, formatPercentage, showToast } from '../utils/helpers.js';
+import { createHandDisplay, createCard } from '../components/Card.js';
+import storage from '../utils/storage.js';
+import { BOARD_TEXTURES, CBET_FREQUENCIES, DEFENSE_FREQUENCIES } from '../data/postflopRanges.js';
+
+let currentSession = null;
+
+function render() {
+    const container = document.createElement('div');
+    container.className = 'trainer-container';
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'trainer-header';
+    header.innerHTML = '<h1>🎲 Postflop Trainer</h1><p class="text-muted">Use keyboard: B=Bet/Raise, C=Call/Check, F=Fold, Space=Next</p>';
+    container.appendChild(header);
+
+    // Trainer type selector
+    const typeSelector = createTypeSelector();
+    container.appendChild(typeSelector);
+
+    // Session stats
+    const statsContainer = document.createElement('div');
+    statsContainer.id = 'session-stats';
+    container.appendChild(statsContainer);
+
+    // Scenario area
+    const scenarioContainer = document.createElement('div');
+    scenarioContainer.id = 'scenario-container';
+    container.appendChild(scenarioContainer);
+
+    // Initialize session
+    startNewSession(TRAINER_TYPES.CBET);
+
+    // Add keyboard shortcut listener
+    const keyboardHandler = (e) => {
+        const action = e.detail.action;
+        const scenarioEl = document.getElementById('scenario-container');
+        if (!scenarioEl) return;
+
+        // Check if we're in feedback mode
+        if (scenarioEl.querySelector('.feedback-panel')) {
+            if (action === 'next') {
+                showNextScenario();
+            }
+            return;
+        }
+
+        // Get current scenario from buttons
+        const buttons = scenarioEl.querySelectorAll('.action-buttons .btn');
+        if (buttons.length === 0) return;
+
+        // Map action to button
+        let targetButton = null;
+        buttons.forEach(btn => {
+            const btnText = btn.textContent.toLowerCase();
+            if (btnText.includes(action) || (action === 'raise' && btnText.includes('bet'))) {
+                targetButton = btn;
+            }
+        });
+
+        if (targetButton) {
+            targetButton.click();
+        }
+    };
+
+    document.addEventListener('poker-shortcut', keyboardHandler);
+
+    // Cleanup on navigation away
+    window.addEventListener('hashchange', () => {
+        document.removeEventListener('poker-shortcut', keyboardHandler);
+    }, { once: true });
+
+    return container;
+}
+
+function createTypeSelector() {
+    const container = document.createElement('div');
+    container.className = 'card mb-lg';
+
+    const label = document.createElement('label');
+    label.textContent = 'Training Mode:';
+    label.style.fontWeight = '600';
+    label.style.marginRight = '1rem';
+
+    const select = document.createElement('select');
+    select.id = 'postflop-trainer-type-select';
+    select.style.padding = '0.5rem 1rem';
+    select.style.fontSize = '1rem';
+
+    const types = [
+        { value: TRAINER_TYPES.CBET, label: 'C-Betting (As Aggressor)' },
+        { value: TRAINER_TYPES.FACING_CBET, label: 'Facing C-Bet (As Caller)' },
+        { value: TRAINER_TYPES.TURN_PLAY, label: 'Turn Play' },
+        { value: TRAINER_TYPES.RIVER_PLAY, label: 'River Play' },
+        { value: TRAINER_TYPES.BOARD_TEXTURE, label: 'Board Texture Quiz' }
+    ];
+
+    types.forEach(type => {
+        const option = document.createElement('option');
+        option.value = type.value;
+        option.textContent = type.label;
+        select.appendChild(option);
+    });
+
+    // Set initial value to CBET
+    select.value = TRAINER_TYPES.CBET;
+
+    select.addEventListener('change', (e) => {
+        startNewSession(e.target.value);
+    });
+
+    container.appendChild(label);
+    container.appendChild(select);
+
+    return container;
+}
+
+function startNewSession(trainerType) {
+    currentSession = {
+        id: generateId(),
+        module: `postflop-${trainerType}`,
+        trainerType,
+        startTime: new Date().toISOString(),
+        results: []
+    };
+
+    updateStats();
+    showNextScenario();
+}
+
+function updateStats() {
+    const statsEl = document.getElementById('session-stats');
+    if (!statsEl) return;
+
+    const totalHands = currentSession.results.length;
+    const correct = currentSession.results.filter(r => r.isCorrect).length;
+    const accuracy = totalHands > 0 ? correct / totalHands : 0;
+
+    statsEl.innerHTML = '';
+    statsEl.className = 'session-stats';
+
+    const handsEl = createStatBox(totalHands, 'Hands');
+    const correctEl = createStatBox(correct, 'Correct');
+    const accuracyEl = createStatBox(formatPercentage(accuracy, 0), 'Accuracy');
+
+    statsEl.appendChild(handsEl);
+    statsEl.appendChild(correctEl);
+    statsEl.appendChild(accuracyEl);
+}
+
+function createStatBox(value, label) {
+    const box = document.createElement('div');
+    box.className = 'stat-box';
+
+    const valueEl = document.createElement('div');
+    valueEl.className = 'stat-value';
+    valueEl.textContent = value;
+
+    const labelEl = document.createElement('div');
+    labelEl.className = 'stat-label';
+    labelEl.textContent = label;
+
+    box.appendChild(valueEl);
+    box.appendChild(labelEl);
+
+    return box;
+}
+
+// Track when scenario is shown for response time measurement
+let scenarioStartTime = null;
+
+function showNextScenario() {
+    const scenarioEl = document.getElementById('scenario-container');
+    if (!scenarioEl) return;
+
+    scenarioEl.innerHTML = '';
+
+    // Start timer when scenario is shown
+    scenarioStartTime = Date.now();
+
+    const scenario = generateScenario(currentSession.trainerType);
+
+    const card = document.createElement('div');
+    card.className = 'scenario-card';
+
+    // Position and situation info
+    const situationInfo = document.createElement('div');
+    situationInfo.className = 'situation-info';
+    situationInfo.style.marginBottom = '1rem';
+    situationInfo.style.padding = '1rem';
+    situationInfo.style.background = 'var(--color-bg-tertiary)';
+    situationInfo.style.borderRadius = 'var(--border-radius)';
+    situationInfo.innerHTML = `
+        <div><strong>Position:</strong> ${scenario.position}</div>
+        <div><strong>Pot:</strong> ${scenario.pot}bb</div>
+        ${scenario.effectiveStack ? `<div><strong>Effective Stack:</strong> ${scenario.effectiveStack}bb</div>` : ''}
+    `;
+    card.appendChild(situationInfo);
+
+    // Board display
+    const boardDisplay = createBoardDisplay(scenario.board);
+    card.appendChild(boardDisplay);
+
+    // Hero hand (if shown)
+    if (scenario.heroHand) {
+        const handLabel = document.createElement('div');
+        handLabel.textContent = 'Your Hand:';
+        handLabel.style.fontWeight = '600';
+        handLabel.style.marginTop = '1rem';
+        handLabel.style.marginBottom = '0.5rem';
+        card.appendChild(handLabel);
+
+        const handDisplay = createHandDisplay(scenario.heroHand, true);
+        card.appendChild(handDisplay);
+    }
+
+    // Scenario description
+    const description = document.createElement('div');
+    description.className = 'action-description';
+    description.textContent = scenario.description;
+    description.style.marginTop = '1rem';
+    card.appendChild(description);
+
+    // Action buttons
+    const buttons = document.createElement('div');
+    buttons.className = 'action-buttons';
+
+    scenario.options.forEach(option => {
+        const btn = document.createElement('button');
+        btn.className = `btn btn-${option.action.toLowerCase()}`;
+        btn.textContent = option.label.toUpperCase();
+
+        btn.addEventListener('click', () => handleAnswer(scenario, option.action));
+
+        buttons.appendChild(btn);
+    });
+
+    card.appendChild(buttons);
+
+    scenarioEl.appendChild(card);
+}
+
+function createBoardDisplay(board) {
+    const container = document.createElement('div');
+    container.style.marginTop = '1rem';
+
+    const label = document.createElement('div');
+    label.textContent = 'Board:';
+    label.style.fontWeight = '600';
+    label.style.marginBottom = '0.5rem';
+    container.appendChild(label);
+
+    const cardsContainer = document.createElement('div');
+    cardsContainer.style.display = 'flex';
+    cardsContainer.style.gap = '0.5rem';
+    cardsContainer.style.flexWrap = 'wrap';
+
+    board.forEach(cardString => {
+        const rank = cardString.slice(0, -1);
+        const suit = cardString.slice(-1);
+        const card = createCard({ rank, suit });
+        cardsContainer.appendChild(card);
+    });
+
+    container.appendChild(cardsContainer);
+
+    return container;
+}
+
+function generateScenario(trainerType) {
+    switch (trainerType) {
+        case TRAINER_TYPES.CBET:
+            return generateCBetScenario();
+        case TRAINER_TYPES.FACING_CBET:
+            return generateFacingCBetScenario();
+        case TRAINER_TYPES.TURN_PLAY:
+            return generateTurnScenario();
+        case TRAINER_TYPES.RIVER_PLAY:
+            return generateRiverScenario();
+        case TRAINER_TYPES.BOARD_TEXTURE:
+            return generateBoardTextureScenario();
+        default:
+            return generateCBetScenario();
+    }
+}
+
+function generateCBetScenario() {
+    const position = randomItem(['IP', 'OOP']);
+    const board = generateBoard(3);
+    const texture = classifyBoardTexture(board);
+    const pot = 6; // Standard single raised pot
+    const effectiveStack = 100;
+
+    // Generate a reasonable hand for the preflop raiser
+    const heroHand = generatePreflopRaiserHand();
+
+    // Evaluate hand strength on this board
+    const handStrength = evaluateHandBoardInteraction(heroHand, board);
+
+    // GTO c-betting decision based on hand strength and board texture
+    const correctAction = determineCBetAction(handStrength, texture, position);
+
+    return {
+        type: TRAINER_TYPES.CBET,
+        position: position === 'IP' ? 'BTN' : 'BB',
+        board,
+        texture,
+        heroHand,
+        handStrength,
+        pot,
+        effectiveStack,
+        description: `You raised preflop and ${position === 'IP' ? 'have position' : 'are out of position'}. Villain calls. What do you do on the flop?`,
+        options: [
+            { action: ACTIONS.BET, label: 'Bet (50% pot)' },
+            { action: ACTIONS.CHECK, label: 'Check' }
+        ],
+        correctAction
+    };
+}
+
+function generateFacingCBetScenario() {
+    const position = randomItem(['IP', 'OOP']);
+    const board = generateBoard(3);
+    const texture = classifyBoardTexture(board);
+    const pot = 6;
+    const effectiveStack = 100;
+    const cBetSize = 3; // 50% pot
+
+    const heroHand = generatePreflopCallerHand();
+
+    // Evaluate hand strength and determine GTO action
+    const handStrength = evaluateHandBoardInteraction(heroHand, board);
+    const correctAction = determineDefenseAction(handStrength, texture, position);
+
+    return {
+        type: TRAINER_TYPES.FACING_CBET,
+        position: position === 'IP' ? 'BTN' : 'BB',
+        board,
+        texture,
+        heroHand,
+        handStrength,
+        pot: pot + cBetSize, // Current pot hero sees (original pot + villain's bet)
+        effectiveStack,
+        description: `Villain raised preflop, you called. ${position === 'IP' ? 'You have position' : 'You are out of position'}. Villain bets ${cBetSize}bb (50% pot). What do you do?`,
+        options: [
+            { action: ACTIONS.RAISE, label: 'Raise' },
+            { action: ACTIONS.CALL, label: 'Call' },
+            { action: ACTIONS.FOLD, label: 'Fold' }
+        ],
+        correctAction
+    };
+}
+
+function generateTurnScenario() {
+    const position = randomItem(['IP', 'OOP']);
+    const board = generateBoard(4);
+    const texture = classifyBoardTexture(board.slice(0, 3)); // Classify based on flop
+    const pot = 15; // After flop betting
+    const effectiveStack = 85;
+
+    const heroHand = generatePreflopRaiserHand();
+
+    // Evaluate hand strength on full board and determine GTO action
+    const handStrength = evaluateHandBoardInteraction(heroHand, board);
+    const correctAction = determineTurnAction(handStrength, texture);
+
+    return {
+        type: TRAINER_TYPES.TURN_PLAY,
+        position: position === 'IP' ? 'BTN' : 'BB',
+        board,
+        texture,
+        heroHand,
+        handStrength,
+        pot,
+        effectiveStack,
+        description: `You raised preflop, c-bet the flop, and villain called. ${position === 'IP' ? 'You have position' : 'You are out of position'}. What do you do on the turn?`,
+        options: [
+            { action: ACTIONS.BET, label: 'Bet (67% pot)' },
+            { action: ACTIONS.CHECK, label: 'Check' }
+        ],
+        correctAction
+    };
+}
+
+function generateRiverScenario() {
+    const position = randomItem(['IP', 'OOP']);
+    const board = generateBoard(5);
+    const texture = classifyBoardTexture(board.slice(0, 3));
+    const pot = 40;
+    const effectiveStack = 60;
+
+    const heroHand = generatePreflopRaiserHand();
+
+    // Evaluate hand strength on full board and determine GTO action
+    const handStrength = evaluateHandBoardInteraction(heroHand, board);
+    const correctAction = determineRiverAction(handStrength, texture);
+
+    return {
+        type: TRAINER_TYPES.RIVER_PLAY,
+        position: position === 'IP' ? 'BTN' : 'BB',
+        board,
+        texture,
+        heroHand,
+        handStrength,
+        pot,
+        effectiveStack,
+        description: `Multi-street action. ${position === 'IP' ? 'You have position' : 'You are out of position'}. Both players check the turn. What do you do on the river?`,
+        options: [
+            { action: ACTIONS.BET, label: 'Bet (75% pot)' },
+            { action: ACTIONS.CHECK, label: 'Check' }
+        ],
+        correctAction
+    };
+}
+
+function generateBoardTextureScenario() {
+    const board = generateBoard(3);
+    const actualTexture = classifyBoardTexture(board);
+
+    // For quiz mode, we ask user to identify texture
+    const options = [
+        { action: 'DRY', label: 'Dry' },
+        { action: 'WET', label: 'Wet' },
+        { action: 'STATIC', label: 'Static' },
+        { action: 'DYNAMIC', label: 'Dynamic' }
+    ];
+
+    return {
+        type: TRAINER_TYPES.BOARD_TEXTURE,
+        position: 'Quiz',
+        board,
+        texture: actualTexture,
+        pot: 0,
+        description: 'What is the texture of this board?',
+        options,
+        correctAction: actualTexture
+    };
+}
+
+function generateBoard(numCards) {
+    const cards = [];
+    const usedCards = new Set();
+
+    while (cards.length < numCards) {
+        const rank = randomItem(RANKS);
+        const suit = randomItem(Object.values(SUITS));
+        const card = `${rank}${suit}`;
+
+        if (!usedCards.has(card)) {
+            cards.push(card);
+            usedCards.add(card);
+        }
+    }
+
+    return cards;
+}
+
+function classifyBoardTexture(board) {
+    // Improved texture classification
+    const ranks = board.map(card => card.slice(0, -1));
+    const suits = board.map(card => card.slice(-1));
+
+    // Check for monotone (flush possible) or two-tone (flush draw)
+    const suitCounts = {};
+    suits.forEach(suit => {
+        suitCounts[suit] = (suitCounts[suit] || 0) + 1;
+    });
+    const maxSuitCount = Math.max(...Object.values(suitCounts));
+    const isMonotone = maxSuitCount >= 3; // All same suit (flush possible on board)
+    const hasTwoTone = maxSuitCount === 2; // Two of same suit (flush draw possible)
+
+    // Check for straight possibilities
+    const rankValues = ranks.map(rank => {
+        const index = RANKS.indexOf(rank);
+        return 12 - index; // A=12, K=11, ..., 2=0
+    });
+
+    // Sort and check connectivity
+    const sortedRanks = [...rankValues].sort((a, b) => b - a);
+    const spread = sortedRanks[0] - sortedRanks[sortedRanks.length - 1];
+
+    // Count connected cards (within 1-2 of each other)
+    let connectedCount = 0;
+    for (let i = 0; i < sortedRanks.length - 1; i++) {
+        const gap = sortedRanks[i] - sortedRanks[i + 1];
+        if (gap <= 2) connectedCount++;
+    }
+
+    const isConnected = connectedCount >= 2 || spread <= 4;
+    const hasStraightDraw = spread <= 5 && connectedCount >= 1;
+
+    // Check for pairs on board
+    const rankCounts = {};
+    ranks.forEach(rank => {
+        rankCounts[rank] = (rankCounts[rank] || 0) + 1;
+    });
+    const hasPair = Object.values(rankCounts).some(count => count >= 2);
+
+    // High card check (broadway-heavy boards)
+    const highCards = ranks.filter(r => ['A', 'K', 'Q', 'J', 'T'].includes(r));
+    const isBroadwayHeavy = highCards.length >= 2;
+
+    // Classify texture
+    // STATIC: Paired boards with no draws
+    if (hasPair && !isMonotone && !isConnected) {
+        return 'STATIC';
+    }
+
+    // DYNAMIC: Very connected + flush draws, equity shifts dramatically
+    if ((isMonotone || hasTwoTone) && isConnected) {
+        return 'DYNAMIC';
+    }
+
+    // WET: Has draws (flush or straight potential)
+    if (isMonotone || (hasTwoTone && hasStraightDraw) || (isConnected && !hasPair)) {
+        return 'WET';
+    }
+
+    // DRY: Disconnected, rainbow, no real draws
+    // Examples: K72r, A94r, Q82r
+    if (!hasTwoTone && !isConnected && spread > 5) {
+        return 'DRY';
+    }
+
+    // Default to WET for borderline cases
+    if (hasTwoTone || hasStraightDraw) {
+        return 'WET';
+    }
+
+    return 'DRY';
+}
+
+function generatePreflopRaiserHand() {
+    // Generate a typical raising hand
+    const hands = [
+        { rank1: 'A', rank2: 'K', suited: true },
+        { rank1: 'A', rank2: 'Q', suited: true },
+        { rank1: 'A', rank2: 'J', suited: true },
+        { rank1: 'A', rank2: 'K', suited: false },
+        { rank1: 'K', rank2: 'Q', suited: true },
+        { rank1: 'Q', rank2: 'Q', suited: false },
+        { rank1: 'J', rank2: 'J', suited: false },
+        { rank1: 'T', rank2: 'T', suited: false },
+        { rank1: 'A', rank2: '5', suited: true },
+        { rank1: '8', rank2: '7', suited: true }
+    ];
+
+    const hand = randomItem(hands);
+    const display = hand.rank1 === hand.rank2
+        ? `${hand.rank1}${hand.rank2}`
+        : `${hand.rank1}${hand.rank2}${hand.suited ? 's' : 'o'}`;
+
+    return { ...hand, display };
+}
+
+function generatePreflopCallerHand() {
+    // Generate a typical calling hand
+    const hands = [
+        { rank1: 'Q', rank2: 'J', suited: true },
+        { rank1: 'J', rank2: 'T', suited: true },
+        { rank1: 'T', rank2: '9', suited: true },
+        { rank1: '9', rank2: '9', suited: false },
+        { rank1: '8', rank2: '8', suited: false },
+        { rank1: '7', rank2: '7', suited: false },
+        { rank1: 'A', rank2: 'T', suited: true },
+        { rank1: 'A', rank2: 'J', suited: false },
+        { rank1: 'K', rank2: 'Q', suited: false },
+        { rank1: '7', rank2: '6', suited: true }
+    ];
+
+    const hand = randomItem(hands);
+    const display = hand.rank1 === hand.rank2
+        ? `${hand.rank1}${hand.rank2}`
+        : `${hand.rank1}${hand.rank2}${hand.suited ? 's' : 'o'}`;
+
+    return { ...hand, display };
+}
+
+// Evaluate hand strength relative to the board
+function evaluateHandBoardInteraction(hand, board) {
+    const boardRanks = board.map(c => c.slice(0, -1));
+    const boardSuits = board.map(c => c.slice(-1));
+
+    const r1 = hand.rank1;
+    const r2 = hand.rank2;
+    const isPair = r1 === r2;
+
+    // Check for made hands
+    const hasPairOnBoard = boardRanks.includes(r1) || boardRanks.includes(r2);
+    const hasOverpair = isPair && RANKS.indexOf(r1) < Math.min(...boardRanks.map(r => RANKS.indexOf(r)));
+    const hasTopPair = boardRanks.includes(r1) && RANKS.indexOf(r1) === Math.min(...boardRanks.map(r => RANKS.indexOf(r)));
+    const hasSecondPair = !hasTopPair && hasPairOnBoard;
+    const hasSet = isPair && boardRanks.includes(r1);
+
+    // Check for draws
+    const hasFlushDraw = hand.suited && boardSuits.filter(s => s === getHandSuit(hand)).length >= 2;
+    const hasStraightDraw = checkStraightDraw(r1, r2, boardRanks);
+    const hasOvercards = RANKS.indexOf(r1) < Math.min(...boardRanks.map(r => RANKS.indexOf(r))) &&
+                         RANKS.indexOf(r2) < Math.min(...boardRanks.map(r => RANKS.indexOf(r)));
+
+    // Categorize hand strength
+    if (hasSet) return 'MONSTER';
+    if (hasOverpair) return 'STRONG';
+    if (hasTopPair) return 'MEDIUM_STRONG';
+    if (hasSecondPair) return 'MEDIUM';
+    if (hasFlushDraw && hasStraightDraw) return 'STRONG_DRAW';
+    if (hasFlushDraw || hasStraightDraw) return 'DRAW';
+    if (hasOvercards) return 'OVERCARDS';
+    return 'AIR';
+}
+
+function getHandSuit(hand) {
+    // For suited hands, return a consistent suit (we don't track actual suits in hand objects)
+    return '♠';
+}
+
+function checkStraightDraw(r1, r2, boardRanks) {
+    const allRanks = [r1, r2, ...boardRanks];
+    const rankValues = allRanks.map(r => RANKS.indexOf(r)).sort((a, b) => a - b);
+    const unique = [...new Set(rankValues)];
+
+    // Check for 4-card straight (open-ended or gutshot)
+    for (let i = 0; i <= unique.length - 4; i++) {
+        const span = unique[i + 3] - unique[i];
+        if (span <= 4) return true;
+    }
+    return false;
+}
+
+// Determine c-bet action based on hand strength and texture
+function determineCBetAction(handStrength, texture, position) {
+    // GTO c-betting: bet value hands and some draws/air for balance
+    // Check strong hands sometimes for deception, weak hands on bad textures
+
+    const strengthMap = {
+        'MONSTER': { betFreq: 0.85, checkFreq: 0.15 },    // Slow-play sometimes
+        'STRONG': { betFreq: 0.90, checkFreq: 0.10 },
+        'MEDIUM_STRONG': { betFreq: 0.80, checkFreq: 0.20 },
+        'MEDIUM': { betFreq: 0.50, checkFreq: 0.50 },
+        'STRONG_DRAW': { betFreq: 0.75, checkFreq: 0.25 },
+        'DRAW': { betFreq: 0.55, checkFreq: 0.45 },
+        'OVERCARDS': { betFreq: 0.45, checkFreq: 0.55 },
+        'AIR': { betFreq: 0.30, checkFreq: 0.70 }
+    };
+
+    // Adjust for texture
+    let betFreq = strengthMap[handStrength]?.betFreq || 0.50;
+
+    // Wet boards: check more (opponent has more draws/made hands)
+    if (texture === 'WET' || texture === 'DYNAMIC') {
+        betFreq *= 0.85;
+    }
+    // Dry boards: bet more (easier to deny equity)
+    if (texture === 'DRY' || texture === 'STATIC') {
+        betFreq *= 1.10;
+    }
+    // OOP: bet less
+    if (position === 'OOP') {
+        betFreq *= 0.85;
+    }
+
+    betFreq = Math.min(1, Math.max(0, betFreq));
+
+    // Deterministic decision based on hand strength tier for training
+    // We want consistent answers, so use threshold rather than random
+    return betFreq >= 0.50 ? ACTIONS.BET : ACTIONS.CHECK;
+}
+
+// Evaluate defense action when facing c-bet
+function determineDefenseAction(handStrength, texture, position) {
+    // GTO defense: call with draws and made hands, raise strong hands/draws, fold weak
+
+    if (handStrength === 'MONSTER' || handStrength === 'STRONG') {
+        return ACTIONS.RAISE; // Value raise
+    }
+    if (handStrength === 'STRONG_DRAW') {
+        return Math.random() < 0.4 ? ACTIONS.RAISE : ACTIONS.CALL; // Mix raises
+    }
+    if (handStrength === 'MEDIUM_STRONG' || handStrength === 'MEDIUM' || handStrength === 'DRAW') {
+        return ACTIONS.CALL;
+    }
+    if (handStrength === 'OVERCARDS') {
+        // Call with backdoor equity sometimes
+        return texture === 'DRY' ? ACTIONS.CALL : ACTIONS.FOLD;
+    }
+    return ACTIONS.FOLD;
+}
+
+// Determine turn barrel action
+function determineTurnAction(handStrength, texture) {
+    if (handStrength === 'MONSTER' || handStrength === 'STRONG') {
+        return ACTIONS.BET; // Keep building pot
+    }
+    if (handStrength === 'MEDIUM_STRONG') {
+        return ACTIONS.BET; // Value/protection
+    }
+    if (handStrength === 'STRONG_DRAW') {
+        return ACTIONS.BET; // Semi-bluff
+    }
+    if (handStrength === 'MEDIUM' || handStrength === 'DRAW') {
+        // Check-call or small bet
+        return texture === 'DRY' ? ACTIONS.BET : ACTIONS.CHECK;
+    }
+    // Overcards and air - give up or occasional bluff
+    return ACTIONS.CHECK;
+}
+
+// Determine river action
+function determineRiverAction(handStrength, texture) {
+    if (handStrength === 'MONSTER' || handStrength === 'STRONG') {
+        return ACTIONS.BET; // Value bet
+    }
+    if (handStrength === 'MEDIUM_STRONG') {
+        return ACTIONS.BET; // Thin value
+    }
+    if (handStrength === 'MEDIUM') {
+        return ACTIONS.CHECK; // Showdown value
+    }
+    // Bluff some air on river for balance
+    if (handStrength === 'AIR' && texture === 'DRY') {
+        return ACTIONS.BET; // Bluff on scary runouts
+    }
+    return ACTIONS.CHECK;
+}
+
+function handleAnswer(scenario, userAnswer) {
+    // Calculate response time from when scenario was shown
+    const responseTimeMs = scenarioStartTime ? Date.now() - scenarioStartTime : 0;
+
+    const isCorrect = userAnswer === scenario.correctAction;
+
+    const result = {
+        id: generateId(),
+        timestamp: new Date().toISOString(),
+        scenario,
+        userAnswer,
+        correctAnswer: scenario.correctAction,
+        isCorrect,
+        responseTimeMs
+    };
+
+    currentSession.results.push(result);
+
+    showFeedback(scenario, userAnswer, isCorrect);
+    updateStats();
+}
+
+function showFeedback(scenario, userAnswer, isCorrect) {
+    const scenarioEl = document.getElementById('scenario-container');
+    if (!scenarioEl) return;
+
+    const card = scenarioEl.querySelector('.scenario-card');
+    if (!card) return;
+
+    // Hide action buttons
+    const buttons = card.querySelector('.action-buttons');
+    if (buttons) {
+        buttons.style.display = 'none';
+    }
+
+    // Create feedback panel
+    const feedback = document.createElement('div');
+    feedback.className = `feedback-panel ${isCorrect ? 'correct' : 'incorrect'}`;
+
+    const title = document.createElement('div');
+    title.className = 'feedback-title';
+    title.textContent = isCorrect ? '✅ Correct!' : '❌ Incorrect';
+
+    const explanation = document.createElement('div');
+    explanation.className = 'feedback-explanation';
+
+    // Format hand strength for display
+    const strengthLabels = {
+        'MONSTER': 'Monster (Set/Top Two)',
+        'STRONG': 'Strong (Overpair/Top Pair Top Kicker)',
+        'MEDIUM_STRONG': 'Medium-Strong (Top Pair)',
+        'MEDIUM': 'Medium (Second Pair/Weak Top Pair)',
+        'STRONG_DRAW': 'Strong Draw (Flush + Straight)',
+        'DRAW': 'Draw (Flush/Straight)',
+        'OVERCARDS': 'Overcards',
+        'AIR': 'Air (No pair, no draw)'
+    };
+    const handStrengthLabel = scenario.handStrength ? strengthLabels[scenario.handStrength] || scenario.handStrength : null;
+
+    if (!isCorrect) {
+        let correctLabel = scenario.correctAction.toUpperCase();
+        if (scenario.type === TRAINER_TYPES.BOARD_TEXTURE) {
+            correctLabel = scenario.correctAction;
+        }
+
+        explanation.innerHTML = `
+            <p>Your answer: <strong>${userAnswer.toUpperCase()}</strong></p>
+            <p>Correct answer: <strong>${correctLabel}</strong></p>
+            ${handStrengthLabel ? `<p>Your hand strength: <strong>${handStrengthLabel}</strong></p>` : ''}
+            ${scenario.texture ? `<p>Board texture: <strong>${scenario.texture}</strong></p>` : ''}
+        `;
+    } else {
+        explanation.innerHTML = `
+            <p>Great job! Keep going!</p>
+            ${handStrengthLabel ? `<p>Your hand strength: <strong>${handStrengthLabel}</strong></p>` : ''}
+            ${scenario.texture ? `<p>Board texture: <strong>${scenario.texture}</strong></p>` : ''}
+        `;
+    }
+
+    // Add next button
+    const nextButton = document.createElement('button');
+    nextButton.className = 'btn btn-primary';
+    nextButton.textContent = 'Next Hand (Space)';
+    nextButton.style.marginTop = '1rem';
+    nextButton.addEventListener('click', () => {
+        showNextScenario();
+    });
+
+    feedback.appendChild(title);
+    feedback.appendChild(explanation);
+    feedback.appendChild(nextButton);
+
+    card.appendChild(feedback);
+
+    // Save session after every hand (storage handles deduplication by ID)
+    // This ensures sessions are saved even if user plays < 10 hands
+    currentSession.endTime = new Date().toISOString();
+    storage.saveSession(currentSession);
+}
+
+export default {
+    render
+};
