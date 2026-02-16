@@ -72,8 +72,13 @@ class Storage {
 
     // Specific data access methods
     getSettings() {
-        // Return a clone of DEFAULT_SETTINGS to prevent mutation of the shared constant
-        return this.get(STORAGE_KEYS.SETTINGS, { ...DEFAULT_SETTINGS });
+        // Merge stored settings with DEFAULT_SETTINGS to ensure new keys always exist.
+        // Also return a fresh object to prevent mutation of the shared constant.
+        const stored = this.get(STORAGE_KEYS.SETTINGS, null);
+        return {
+            ...DEFAULT_SETTINGS,
+            ...(stored && typeof stored === 'object' ? stored : {})
+        };
     }
 
     saveSettings(settings) {

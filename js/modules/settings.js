@@ -130,7 +130,7 @@ function createTrainingSettings() {
             { value: '50', label: '50 hands' },
             { value: '100', label: '100 hands' }
         ],
-        currentSettings.defaultSessionLength.toString()
+        String(currentSettings.defaultSessionLength ?? DEFAULT_SETTINGS.defaultSessionLength)
     );
     settings.appendChild(sessionLengthSetting);
 

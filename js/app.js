@@ -141,6 +141,10 @@ function initKeyboardShortcuts() {
 
         // Dispatch custom events for keyboard shortcuts
         switch (key) {
+            // Postflop trainers often describe B=Bet. Map it to the same action as raise/bet.
+            case 'b':
+                document.dispatchEvent(new CustomEvent('poker-shortcut', { detail: { action: 'raise' } }));
+                break;
             case 'r':
                 document.dispatchEvent(new CustomEvent('poker-shortcut', { detail: { action: 'raise' } }));
                 break;

@@ -77,9 +77,6 @@ export function setActiveNavItem(moduleId) {
             link.classList.remove('active');
         }
     });
-
-    // Update URL hash
-    window.location.hash = moduleId;
 }
 
 /**

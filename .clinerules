@@ -1,0 +1,37 @@
+## Cline rules for this repo (Poker-Trainer)
+
+These rules capture **behavior and requirements** that may evolve during the engagement.
+
+### Workflow
+
+- Always create/use a feature branch for changes (do not commit to `main`).
+- Prefer small, reviewable commits; keep commit messages descriptive.
+- When doing a refactor, first document issues in `openBugs.md`, then fix.
+
+### Bug tracking
+
+- Keep `openBugs.md` up-to-date with:
+  - severity (P0–P3),
+  - repro steps,
+  - suspected root cause,
+  - fix idea,
+  - status.
+- When a bug is fixed, move it to `closedBugs.md` with:
+  - date,
+  - PR/commit reference,
+  - short verification notes.
+
+### Engineering quality targets
+
+- Favor correctness and determinism in trainers (avoid random/ambiguous “correct answers”).
+- Avoid DOM lookups by id when element references already exist (store refs).
+- Avoid duplicate sources of truth (share logic via `js/utils/*` where possible).
+- Harden localStorage reads/writes; always merge stored settings with `DEFAULT_SETTINGS`.
+
+### Product / design targets
+
+- Upgrade UI to “production-grade” polish (Apple/Google-level):
+  - consistent spacing, typography scale, and component states,
+  - accessible contrast and focus states,
+  - smooth animations that respect `prefers-reduced-motion`,
+  - responsive behavior across mobile/desktop.

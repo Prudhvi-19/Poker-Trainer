@@ -225,12 +225,19 @@ function setRandomHand(handId) {
 
     document.getElementById(`${handId}-card1`).value = card1;
     document.getElementById(`${handId}-card2`).value = card2;
+
+    // Programmatic value changes don't trigger 'change' events.
+    // Ensure duplicate-card disabling stays correct.
+    updateCardAvailability();
 }
 
 function clearBoard() {
     for (let i = 1; i <= 5; i++) {
         document.getElementById(`board-card${i}`).value = '';
     }
+
+    // Programmatic value changes don't trigger 'change' events.
+    updateCardAvailability();
 }
 
 function getUsedCards() {
@@ -300,9 +307,11 @@ function runMonteCarloSimulation(hand1, hand2, board, iterations) {
     let hand2Wins = 0;
     let ties = 0;
 
-    const usedCards = new Set([...hand1, ...hand2, ...board]);
+    const baseUsedCards = new Set([...hand1, ...hand2, ...board]);
 
     for (let i = 0; i < iterations; i++) {
+        const usedCards = new Set(baseUsedCards);
+
         // Complete the board
         const fullBoard = [...board];
         while (fullBoard.length < 5) {
@@ -329,11 +338,6 @@ function runMonteCarloSimulation(hand1, hand2, board, iterations) {
             } else {
                 ties++;
             }
-        }
-
-        // Remove added cards for next iteration
-        while (fullBoard.length > board.length) {
-            usedCards.delete(fullBoard.pop());
         }
     }
 
