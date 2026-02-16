@@ -66,12 +66,12 @@ To keep quality high, every chapter will follow a consistent template:
 - [x] B1. RFI strategy by position (goals, construction, why BTN widens)
 - [x] B2. 3-bet strategy (value vs bluff, linear vs polarized)
 - [x] B3. 4-bet strategy (ranges, blockers, sizing, when to call)
-- [ ] B4. Cold calling (when it’s allowed, why it’s often tight, multiway effects)
-- [ ] B5. Squeezes (fold equity vs two players, sizing, when not to squeeze)
-- [ ] B6. BB defense (MDF intuition, pot odds, suited hands realization)
-- [ ] B7. SB strategy (3-bet or fold tendencies; why calling is tricky)
-- [ ] B8. Preflop sizing standards (2x/2.5x/3x opens, 3b sizing IP/OOP)
-- [ ] B9. Common preflop leaks (over-calling, under-defending BB, wrong blockers)
+- [x] B4. Cold calling (when it’s allowed, why it’s often tight, multiway effects)
+- [x] B5. Squeezes (fold equity vs two players, sizing, when not to squeeze)
+- [x] B6. BB defense (MDF intuition, pot odds, suited hands realization)
+- [x] B7. SB strategy (3-bet or fold tendencies; why calling is tricky)
+- [x] B8. Preflop sizing standards (2x/2.5x/3x opens, 3b sizing IP/OOP)
+- [x] B9. Common preflop leaks (over-calling, under-defending BB, wrong blockers)
 
 ### C. Postflop single-street (maps to Postflop Trainer + Cbet Trainer)
 

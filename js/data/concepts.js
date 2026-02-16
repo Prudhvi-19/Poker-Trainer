@@ -494,33 +494,204 @@ This is one of the most important preflop spots because ranges are tight and sta
 - Equity Calculator: compare AK vs QQ on different runouts to build intuition for all-in equity`
         },
         {
+            id: 'cold-calling',
+            title: 'Cold Calling (When to Flat a Raise)',
+            content: `A cold call is calling an open raise when you were not already invested (not in the blinds).
+
+Cold calling can be correct, but it’s often overused.
+
+**Why cold calling is usually tighter than people think:**
+- You invite squeezes (someone behind can 3-bet and force you to fold)
+- You often go multiway (harder to realize equity)
+- Many hands that look playable are actually dominated (AJo, KQo vs strong ranges)
+
+**Hands that cold call well (general properties):**
+- Hands with good playability: suited broadways, suited connectors
+- Hands with implied odds: pocket pairs (set mining)
+- Hands that are not easily dominated (suited > offsuit)
+
+**Position matters a lot:**
+- IP: you realize equity better and can defend more
+- OOP: cold calling becomes much harder (you face c-bets and pressure)
+
+**When cold calling is more attractive:**
+- The opener is wide (CO/BTN steals)
+- Players behind are passive (less likely to squeeze)
+- Stacks are deeper (implied odds improve)
+
+**When cold calling is usually a mistake:**
+- Against tight early-position opens
+- With offsuit broadways that are dominated
+- When aggressive players behind can squeeze
+
+**Drills (in this app):**
+- Preflop Trainer → Cold Call: practice fold vs call vs 3-bet decisions
+- Preflop Trainer → 3-Bet: learn which hands prefer aggression over calling`
+        },
+        {
+            id: 'squeezing',
+            title: 'Squeezes (3-Betting After an Open + Caller)',
+            content: `A squeeze is a 3-bet after there is an open raise and at least one caller.
+
+**Why squeezes can be very profitable:**
+- There is extra dead money (open + call + blinds)
+- The caller often has a capped/weak range (they didn’t 3-bet)
+- Your bet pressures *two* players at once
+
+**What makes a good squeeze spot:**
+- Open raiser is capable of folding
+- Caller is loose / weak
+- You have blockers or a strong value hand
+- You have a good position (squeezing from BTN/CO vs earlier positions)
+
+**Sizing intuition:**
+- Squeeze sizes are typically larger than normal 3-bets because there is more money in the pot
+- OOP you generally size bigger than IP
+
+**Range construction:**
+- Value: premiums and strong hands that can continue if called
+- Bluffs: blocker-heavy hands (Ax suited) and hands with playability when called
+
+**Common mistakes:**
+- Squeezing with hands that play terribly when called (weak offsuit hands)
+- Squeezing too small (gives great odds to call in position)
+- Squeezing into players who never fold (use value-heavy ranges instead)
+
+**Drills (in this app):**
+- Preflop Trainer: compare 3-bet vs squeeze logic (fold equity vs value)
+- EV feedback: notice how dead money increases the EV of aggression`
+        },
+        {
             id: 'bb-defense',
             title: 'Blind Defense Principles',
-            content: `The BB is the most important position to defend correctly.
+            content: `The Big Blind (BB) is the best “price” you will ever get preflop, because you already invested 1bb.
 
-**Why Defend Wide:**
-- You already have 1bb invested
-- You're getting excellent pot odds (3.5:1 minimum)
-- You close the action (no one left to act)
+**Why BB defense matters:**
+- You close the action preflop
+- You often get good pot odds
+- If you over-fold the BB, you lose a lot of EV over time
 
-**Defense Range vs Position:**
-- vs UTG: Tightest (~15% total - calls + 3-bets)
-- vs HJ: ~20%
-- vs CO: ~27%
-- vs BTN: Very wide (~40%)
-- vs SB: Widest (~55%)
+**Pot odds intuition:**
+When facing a standard open, you usually need surprisingly little equity to continue.
+That’s why BB defense ranges are wide, especially vs BTN/SB.
 
-**Call vs 3-Bet Decision:**
-- 3-Bet: Very strong hands + some bluffs (polarized)
-- Call: Medium strength hands that play well postflop
-- Fold: Weakest hands with poor playability
+**Defense vs position (high-level):**
+- vs UTG: defend tight (opener range is strong)
+- vs CO: defend wider
+- vs BTN: defend widest (steal is wide)
+- vs SB: defend very wide (heads-up, but you are OOP postflop)
 
-**Hands that Always Call (vs most positions):**
-- Small pairs (implied odds)
-- Suited connectors (playability)
-- Suited aces (nut potential)
+**Call vs 3-bet:**
 
-**Avoid:** Weak offsuit hands (K4o, Q7o, J6o) unless vs very wide ranges (BTN/SB)`
+**3-bet** when:
+- you have strong value
+- you have good blocker bluffs
+- you are OOP and calling would realize poorly
+
+**Call** when:
+- your hand plays well postflop (suitedness, connectedness)
+- you don’t want to inflate the pot OOP with a medium-strength hand
+
+**Fold** when:
+- your hand is dominated and plays poorly (weak offsuit trash)
+
+**Hand quality rules of thumb:**
+- Suited hands realize equity better than offsuit
+- Connected hands realize better than disconnected
+- Small pairs can call for implied odds when stacks are deeper
+
+**Common mistakes:**
+- Over-folding vs BTN steals
+- Defending with too many weak offsuit hands (they realize poorly)
+- Never 3-betting from the BB (you become passive and capped)
+
+**Drills (in this app):**
+- Preflop Trainer → BB Defense: focus on defending wider vs BTN/SB than vs UTG
+- Postflop Trainer: practice playing OOP after defending BB`
+        }
+        ,
+        {
+            id: 'sb-strategy',
+            title: 'Small Blind (SB) Strategy: Why It’s Often 3-Bet or Fold',
+            content: `The Small Blind is a difficult position postflop because you are almost always OOP.
+
+**Why SB is tricky:**
+- You act first postflop
+- Your equity realization is worse
+- Calling invites the BB to enter (multiway) or squeeze
+
+**Common modern baseline:**
+- SB vs open: often prefers 3-bet or fold more than cold calling
+
+**Why 3-betting from SB is attractive:**
+- You deny BB’s ability to realize equity cheaply
+- You can win the pot immediately more often
+- You create a lower SPR pot where initiative matters
+
+**When SB can call:**
+- Vs very small opens
+- With hands that play very well multiway (some suited connectors)
+- When BB is passive and opener is wide
+
+**Common mistakes:**
+- Calling too much from SB with dominated hands
+- Using tiny 3-bet sizes that give great odds
+
+**Drills (in this app):**
+- Preflop Trainer: compare SB decisions vs BB decisions
+- Postflop Trainer: focus on OOP play after SB flats/3-bets`
+        },
+        {
+            id: 'preflop-sizing-standards',
+            title: 'Preflop Sizing Standards (Opens, 3-Bets, 4-Bets)',
+            content: `Sizing is part of strategy: it changes pot odds, SPR, and how wide opponents can continue.
+
+**Opens (RFI):**
+- Many games use ~2.0–2.5bb opens
+- Smaller opens allow wider ranges; bigger opens force tighter ranges
+
+**3-bets:**
+- IP: often ~3x the open
+- OOP: often ~3.5–4x the open
+Reason: OOP wants more fold equity and less positional disadvantage.
+
+**4-bets:**
+- IP: smaller
+- OOP: bigger
+Reason: OOP needs to deny IP’s advantage and avoid giving good calling odds.
+
+**A good default principle:**
+Use a sizing that makes your value hands happy and doesn’t allow opponents to profitably continue with everything.
+
+**Common mistakes:**
+- Too-small 3-bets OOP (gives great odds)
+- Inconsistent sizing that “tells a story” (big = value, small = bluff)
+
+**Drills (in this app):**
+- Preflop Trainer: observe how sizing affects the profitability of marginal continues
+- Pot Odds Trainer: connect sizing to required equity`
+        },
+        {
+            id: 'preflop-common-leaks',
+            title: 'Common Preflop Leaks (and How to Fix Them)',
+            content: `Most win-rate comes from avoiding big, repeatable mistakes.
+
+**Very common leaks:**
+- Over-calling preflop (especially OOP)
+- Under-defending the BB vs steals
+- Over-valuing weak offsuit aces (domination)
+- Never 3-betting (too passive)
+- 3-betting only premiums (too face-up)
+
+**How to fix them:**
+- Tighten cold calls; prefer suited/connected hands
+- Learn BB defense fundamentals (position + pot odds)
+- Add a small set of blocker bluffs to your 3-bet/4-bet ranges
+- Track EV loss in trainers and focus on your biggest repeat errors
+
+**Drills (in this app):**
+- Smart Practice: let SRS repeatedly quiz the spots you miss
+- Session History: review which preflop spot types cause the most EV loss`
         }
     ],
 
