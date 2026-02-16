@@ -82,13 +82,18 @@ function render() {
         const buttons = scenarioEl.querySelectorAll('.action-buttons .btn');
         if (buttons.length === 0) return;
 
+        // Deterministic action mapping (aligns with BUG-029 fix in postflop trainer)
+        const desiredActions = action === 'raise'
+            ? [ACTIONS.RAISE, ACTIONS.BET]
+            : action === 'call'
+                ? [ACTIONS.CALL, ACTIONS.CHECK]
+                : [action];
+
         let targetButton = null;
-        buttons.forEach(btn => {
-            const btnText = btn.textContent.toLowerCase();
-            if (btnText.includes(action) || (action === 'raise' && btnText.includes('bet'))) {
-                targetButton = btn;
-            }
-        });
+        for (const desired of desiredActions) {
+            targetButton = Array.from(buttons).find(btn => btn.dataset.action === desired) || null;
+            if (targetButton) break;
+        }
 
         if (targetButton) {
             targetButton.click();
@@ -349,6 +354,7 @@ function showCurrentStreet() {
         const btn = document.createElement('button');
         btn.className = `btn btn-${option.action.toLowerCase()}`;
         btn.textContent = option.label;
+        btn.dataset.action = option.action;
 
         btn.addEventListener('click', () => handleDecision(scenario, option.action));
 
