@@ -82,6 +82,8 @@ This file tracks **known open bugs, logic/UX issues, and feature enhancements** 
   - Preflop trainer shows 4-tier feedback (Perfect/Good/Mistake/Blunder) with EV loss in bb.
   - Postflop trainer shows EV loss + tiered grading and tracks session EV lost.
   - Multi-street trainer shows EV loss + tiered grading per decision and tracks session EV lost.
+  - C-Bet trainer shows EV loss + tiered grading and tracks session EV lost.
+  - Bet Sizing trainer shows EV loss + tiered grading and tracks session EV lost.
 
 ### ENH-003 Progressive Web App (PWA) with Offline Support
 
