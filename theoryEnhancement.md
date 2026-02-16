@@ -56,9 +56,9 @@ To keep quality high, every chapter will follow a consistent template:
 - [x] A3. Ranges & combos (169 hands, combos, blockers, suited vs offsuit)
 - [x] A4. Equity, pot odds, and required equity (call thresholds)
 - [x] A5. Expected value (EV) basics (chip EV, bb EV; why EV loss matters)
-- [ ] A6. Fold equity (what it is; what drives it; where our models approximate)
-- [ ] A7. Initiative & range advantage vs nut advantage
-- [ ] A8. SPR (stack-to-pot ratio) and how it changes strategy
+- [x] A6. Fold equity (what it is; what drives it; where our models approximate)
+- [x] A7. Initiative & range advantage vs nut advantage
+- [x] A8. SPR (stack-to-pot ratio) and how it changes strategy
 - [ ] A9. Why GTO is a baseline + when exploit deviations are reasonable
 
 ### B. Preflop (maps to Preflop Trainer)

@@ -183,6 +183,107 @@ Many trainers show an EV grade (Perfect / Good / Mistake / Blunder) and an EV lo
 - Smart Practice: let SRS bring back the spots where your EV loss is highest`
         },
         {
+            id: 'fold-equity',
+            title: 'Fold Equity (Why Aggression Works)',
+            content: `Fold equity is the part of your bet’s EV that comes from your opponent folding.
+
+When you bet, two things can happen:
+- Villain folds (you win the pot immediately)
+- Villain continues (you realize equity at showdown or in future streets)
+
+**Simple model (one-street intuition):**
+EV(bet) ≈ (Fold% × PotNow) + (Call% × EV_when_called)
+
+So even a weak hand can profitably bet if:
+- Villain folds often enough, and/or
+- You still have some equity when called (draws)
+
+**What increases fold equity?**
+- Bigger sizing (but costs more when called)
+- Scary boards / runouts for villain’s range
+- Your perceived range advantage (you represent strong hands)
+- Being in position (you can apply pressure on future streets)
+
+**What decreases fold equity?**
+- Calling-station opponents
+- Very wet boards where villain has many draws
+- When your line is inconsistent (you rarely have value)
+
+**Important warning:**
+Fold equity is not a free gift. If you bluff too much, opponents adjust by calling more.
+
+**How this relates to our EV feedback:**
+Many trainer EV models include rough fold equity assumptions (especially preflop). These are approximations to produce useful feedback, not perfect solver truth.
+
+**Drills (in this app):**
+- C-bet Trainer: observe how wet vs dry boards change the recommended betting frequency
+- Bet Sizing Trainer: see how bigger bets require more value/bluff polarization`
+        },
+        {
+            id: 'initiative-range-nut-advantage',
+            title: 'Initiative + Range Advantage vs Nut Advantage',
+            content: `These ideas explain *who gets to bet more* and *who should be careful* on different boards.
+
+**Initiative (high-level):**
+Initiative means you were the last aggressor (often the preflop raiser).
+- Having initiative lets you represent strength and win pots without showdown
+- You still must respect board texture and the opponent’s range
+
+**Range advantage:**
+You have range advantage when your range has higher average strength on this board.
+- Example: many A-high / K-high dry flops favor the preflop raiser’s range
+
+**Nut advantage:**
+You have nut advantage when you hold more of the *very best hands* (nuts / near-nuts).
+- Example: some low connected flops can give the caller more sets / 2-pair / straights
+
+**Why the difference matters:**
+- Range advantage often supports **smaller bets** at high frequency
+- Nut advantage often supports **bigger bets / stack pressure** because you can credibly represent the top
+
+**Practical pattern:**
+- If you have range advantage but not nut advantage, bet often but be cautious with very large sizes
+- If you have nut advantage, you can polarize (big bet / check) more effectively
+
+**Common mistakes:**
+- Thinking “I raised preflop, so I always c-bet”
+- Betting big on boards where you don’t have the top hands (you get raised a lot)
+
+**Drills (in this app):**
+- C-bet Trainer / Postflop Trainer: compare decisions on dry A/K-high boards vs low connected boards
+- Board Texture Trainer: practice identifying when boards shift advantage toward the caller`
+        },
+        {
+            id: 'spr',
+            title: 'SPR (Stack-to-Pot Ratio) and Commitment',
+            content: `SPR = Stack-to-Pot Ratio. It measures how “deep” you are relative to the pot.
+
+**Definition:**
+SPR = Effective Stack / Pot Size
+
+**Why SPR matters:**
+SPR heavily influences which hands are strong enough to stack off.
+- Low SPR: one-pair hands go up in value (easier to get all-in)
+- High SPR: you need stronger hands (two pair+), and draws gain implied odds
+
+**Rules of thumb (cash-game style intuition):**
+- SPR ~ 1–3: top pair / overpair can often be comfortable stacking off
+- SPR ~ 4–8: one-pair becomes more “pot control” oriented; draws become powerful
+- SPR 10+: be cautious stacking off with one pair (you can lose a huge pot)
+
+**SPR and bet sizing:**
+- With low SPR, larger bets can commit stacks quickly
+- With high SPR, betting big with marginal hands creates tough turn/river decisions
+
+**Common mistakes:**
+- Treating top pair as a “monster” at high SPR
+- Bluffing too big at low SPR when villain can call wider
+
+**Drills (in this app):**
+- Multi-street Trainer: focus on pot growth across streets and how it changes your river options
+- Bet Sizing Trainer: see how different sizing sequences change the end-of-hand pot geometry`
+        },
+        {
             id: 'ranges',
             title: 'Ranges and Range Advantage',
             content: `A range is the set of hands a player can reasonably have in a spot.
