@@ -54,13 +54,14 @@ This file tracks **known open bugs, logic/UX issues, and feature enhancements** 
 
 ### ENH-001 ELO / Skill Rating System
 
+- **Status:** ✅ **Shipped (basic v1)** on branch `enh/e0-elo-rating`.
 - **Competitive gap:** [GTO Wizard](https://gtowizard.com/), [Postflop+](https://www.craftywheel.com/postflopplus), and [PeakGTO](https://pokercoaching.com/peakgto) all have ELO rating systems. This is the single biggest differentiator between a "quiz app" and a "training platform."
-- **Description:** Implement a dynamic skill rating that adjusts after every training decision. Rate decisions against GTO optimal play (not just correct/incorrect binary). Use the PeakGTO model where K-factor scales with current rating (higher-rated players penalized more for mistakes). Show rating history graph on dashboard.
+- **Description:** Implement a dynamic skill rating that adjusts after every training decision. **v1 uses binary correct/incorrect** (EV-based grading will land in **ENH-002**). Rating and history are stored in localStorage and shown on the Dashboard.
 - **Key components:**
   - Starting rating (e.g., 1200)
-  - Per-decision rating adjustment based on EV difference from GTO play
+  - Per-decision rating adjustment (v1: correct/incorrect)
   - Rating history stored in localStorage
-  - Visual rating graph on dashboard
+  - Visual rating widget on dashboard (graph TBD)
   - Skill tier badges (Bronze/Silver/Gold/Platinum/Diamond/Master)
   - Tier lock-in -- once achieved, tier title is permanent (GGPoker model)
 - **Reference:** [PeakGTO ELO system](https://pokercoaching.com/blog/peakgto-poker-elo-score/), [ELO vs Glicko comparison](https://pokergamedevelopers.com/elo-vs-glicko-poker-ranking-system/)
