@@ -217,6 +217,6 @@
 
 - **Severity:** E0 (Must-Ship)
 - **Branch:** `enh/e0-ev-feedback`
-- **Fix/Feature:** Added Monte Carlo equity (`js/utils/equity.js`) + EV grading utilities (`js/utils/evFeedback.js`) and integrated tiered feedback + EV loss (bb) into Preflop, Postflop, and Multi-street trainers. Added feedback tier styling.
+- **Fix/Feature:** Added Monte Carlo equity (`js/utils/equity.js`) + EV grading utilities (`js/utils/evFeedback.js`) and integrated tiered feedback + EV loss (bb) into Preflop, Postflop, Multi-street, C-Bet, and Bet Sizing trainers. Added feedback tier styling.
 - **Verification:** Manual smoke test (app loads; feedback renders; no console errors).
 
