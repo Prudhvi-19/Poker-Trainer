@@ -7,6 +7,7 @@ import router from '../router.js';
 import storage from './storage.js';
 import { MODULES, STORAGE_KEYS } from './constants.js';
 import { showToast } from './helpers.js';
+import { showConfirm } from '../components/Modal.js';
 
 export function parseScenarioKey(key) {
     if (!key || typeof key !== 'string') return null;
@@ -123,4 +124,35 @@ export function navigateToCurrentKeyRoute() {
     const keyObj = getCurrentKeyObj();
     const route = getRouteForKeyObj(keyObj);
     router.navigate(route);
+}
+
+// BUG-045: Resume Smart Practice state after a page refresh.
+// If we have an active session stored, prompt the user to resume.
+// (This keeps behavior explicit; we don't auto-navigate away from current page.)
+export function maybeResumeSmartPractice() {
+    const active = getActiveSession();
+    if (!active) return;
+
+    // If user intentionally stopped autostart, don't prompt.
+    const autostart = storage.get(STORAGE_KEYS.SRS_AUTOSTART, false);
+    if (!autostart) return;
+
+    const total = Array.isArray(active.keys) ? active.keys.length : 0;
+    const index = Number.isFinite(active.index) ? active.index : 0;
+    const reviewed = Math.min(Math.max(index, 0), total);
+
+    showConfirm({
+        title: 'Resume Smart Practice?',
+        message: `You have an unfinished Smart Practice session (${reviewed}/${total} items reviewed). Do you want to resume?`,
+        confirmText: 'Resume',
+        cancelText: 'Not now',
+        onConfirm: () => {
+            navigateToCurrentKeyRoute();
+        },
+        onCancel: () => {
+            // Keep the session around, but stop prompting on refresh.
+            storage.set(STORAGE_KEYS.SRS_AUTOSTART, false);
+            showToast('Smart Practice paused. You can resume from the dashboard.', 'info', 4000);
+        }
+    });
 }

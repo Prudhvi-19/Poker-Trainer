@@ -3,7 +3,7 @@
 
 import { showToast } from '../utils/helpers.js';
 import storage from '../utils/storage.js';
-import { applyDecisionRating, appendRatingHistory } from '../utils/rating.js';
+import { applyDecisionRating, appendRatingHistory, opponentRatingForContext } from '../utils/rating.js';
 import { computeEvFeedbackFromEvs } from '../utils/evFeedback.js';
 import { buildScenarioKeyFromResult, upsertSrsResult } from '../utils/srs.js';
 import { getCurrentKey, isSessionActive, advanceSession, incrementSessionStats } from '../utils/smartPracticeSession.js';
@@ -325,7 +325,8 @@ function handleAnswer(answer) {
 
 function updateRatingAfterDecision(isCorrect) {
     const rating = storage.getRating();
-    const next = applyDecisionRating(rating.current, isCorrect, 1500);
+    const opp = opponentRatingForContext({ module: 'pot-odds-trainer', trainerType: 'pot-odds' });
+    const next = applyDecisionRating(rating.current, isCorrect, opp);
     const updated = {
         ...rating,
         current: next,

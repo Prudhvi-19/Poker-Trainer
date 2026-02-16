@@ -6,7 +6,7 @@ import { createHandDisplay } from '../components/Card.js';
 import ranges from '../data/ranges.js';
 import storage from '../utils/storage.js';
 import { setPokerShortcutHandler } from '../utils/shortcutManager.js';
-import { applyDecisionRating, appendRatingHistory } from '../utils/rating.js';
+import { applyDecisionRating, appendRatingHistory, opponentRatingForContext } from '../utils/rating.js';
 import { handCodeToConcreteCards, simulateEquityVsRange } from '../utils/equity.js';
 import { gradeFromEvLoss, evBetRaise, evCallToShowdown, evFold, evLossBb } from '../utils/evFeedback.js';
 import { buildScenarioKeyFromResult, upsertSrsResult } from '../utils/srs.js';
@@ -558,7 +558,8 @@ function handleAnswer(scenario, userAnswer) {
 
 function updateRatingAfterDecision(isCorrect) {
     const rating = storage.getRating();
-    const next = applyDecisionRating(rating.current, isCorrect, 1500);
+    const opp = opponentRatingForContext({ module: currentSession?.module, trainerType: currentSession?.trainerType });
+    const next = applyDecisionRating(rating.current, isCorrect, opp);
     const updated = {
         ...rating,
         current: next,
@@ -713,17 +714,17 @@ function computeEvFeedback({ scenario, userAnswer, isCorrect, seed }) {
     // If correct, we treat EV loss as 0 (avoid model disagreeing with trainer answer).
     // If incorrect, we compute an approximate EV loss vs the recommended action.
 
-    // Some scenario types are too underspecified to model reasonably right now.
+    // BUG-038: Extend EV feedback coverage to COLD_CALL and SQUEEZE.
     const supported = new Set([
         TRAINER_TYPES.RFI,
         TRAINER_TYPES.THREE_BET,
         TRAINER_TYPES.BB_DEFENSE,
-        TRAINER_TYPES.FOUR_BET
+        TRAINER_TYPES.FOUR_BET,
+        TRAINER_TYPES.COLD_CALL,
+        TRAINER_TYPES.SQUEEZE
     ]);
 
-    if (!supported.has(scenario.type)) {
-        return null;
-    }
+    if (!supported.has(scenario.type)) return null;
 
     const HANDS = {
         openSize: 2.5,
@@ -732,6 +733,9 @@ function computeEvFeedback({ scenario, userAnswer, isCorrect, seed }) {
         blindsPot: 1.5
     };
 
+    // BUG-037: These fold equity numbers are rough 100bb cash-game approximations.
+    // They are NOT calibrated to tournaments / short stacks / specific populations.
+    // Long-term improvement: make these configurable in Settings.
     const OPEN_FOLD_EQUITY = {
         UTG: 0.20,
         HJ: 0.25,
@@ -894,6 +898,82 @@ function computeEvFeedback({ scenario, userAnswer, isCorrect, seed }) {
                 };
             }
 
+            case TRAINER_TYPES.COLD_CALL: {
+                const villainPos = scenario.villainPosition;
+                const heroPos = scenario.position;
+                const posKey = `vs${villainPos}`;
+
+                // Approximate opener range.
+                const openRange = ranges.RFI_RANGES?.[villainPos] || [];
+
+                // Approximate what continues vs a 3-bet from heroPos.
+                const contRange = unionRange(
+                    ranges.FOUR_BET_RANGES?.[`vs${heroPos}`],
+                    ranges.CALL_3BET_RANGES?.[`vs${heroPos}`]
+                );
+
+                const callEq = estimateEquity(openRange, 'cc-call');
+                const raiseEq = estimateEquity(contRange, 'cc-raise');
+
+                const potNow = HANDS.blindsPot + HANDS.openSize; // 1.5 + 2.5
+                const evCall = evCallToShowdown({ equity: callEq.equity, potNow, callCost: HANDS.openSize });
+
+                const fe = THREE_BET_FOLD_EQUITY[villainPos] ?? 0.30;
+                const evRaise = evBetRaise({
+                    equity: raiseEq.equity,
+                    potNow,
+                    invest: HANDS.threeBetSize,
+                    villainCallExtra: HANDS.threeBetSize - HANDS.openSize,
+                    foldEquity: fe
+                });
+
+                return {
+                    meta: { equity: callEq.equity, iterations: callEq.iterations },
+                    evByAction: {
+                        [ACTIONS.FOLD]: evFold(),
+                        [ACTIONS.CALL]: evCall,
+                        [ACTIONS.RAISE]: evRaise
+                    }
+                };
+            }
+
+            case TRAINER_TYPES.SQUEEZE: {
+                const raiserPos = scenario.villainPosition;
+                const heroPos = scenario.position;
+
+                // Approximate raiser open range.
+                const openRange = ranges.RFI_RANGES?.[raiserPos] || [];
+
+                // Approximate continue range vs a squeeze from heroPos.
+                const contRange = unionRange(
+                    ranges.FOUR_BET_RANGES?.[`vs${heroPos}`],
+                    ranges.CALL_3BET_RANGES?.[`vs${heroPos}`]
+                );
+                const raiseEq = estimateEquity(contRange, 'sq-raise');
+
+                // Dead money: opener + caller already in for 2.5 each plus blinds.
+                const potNow = HANDS.blindsPot + (HANDS.openSize * 2);
+
+                // Multiway fold equity is higher due to two players needing to continue,
+                // but we keep this conservative since ranges are approximations.
+                const fe = 0.38;
+                const evRaise = evBetRaise({
+                    equity: raiseEq.equity,
+                    potNow,
+                    invest: HANDS.threeBetSize,
+                    villainCallExtra: HANDS.threeBetSize - HANDS.openSize,
+                    foldEquity: fe
+                });
+
+                return {
+                    meta: { equity: raiseEq.equity, iterations: raiseEq.iterations },
+                    evByAction: {
+                        [ACTIONS.FOLD]: evFold(),
+                        [ACTIONS.RAISE]: evRaise
+                    }
+                };
+            }
+
             default:
                 return null;
         }
@@ -906,11 +986,7 @@ function computeEvFeedback({ scenario, userAnswer, isCorrect, seed }) {
     const evUser = evs.evByAction[userAnswer];
     if (!Number.isFinite(evGto) || !Number.isFinite(evUser)) return null;
 
-    let loss = isCorrect ? 0 : evLossBb(evGto, evUser);
-    if (!isCorrect) {
-        // Prevent a wrong action from ever showing “Perfect” due to our approximate model.
-        loss = Math.max(loss, 0.15);
-    }
+    const loss = isCorrect ? 0 : evLossBb(evGto, evUser);
 
     return {
         evLossBb: loss,

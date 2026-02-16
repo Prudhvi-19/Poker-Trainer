@@ -109,11 +109,9 @@ export function computeEvFeedbackFromEvs({ evByAction, correctAction, userAnswer
     const evUser = evByAction[userAnswer];
     if (!Number.isFinite(evGto) || !Number.isFinite(evUser)) return null;
 
-    let loss = isCorrect ? 0 : evLossBb(evGto, evUser);
-    if (!isCorrect) {
-        // Prevent a wrong action from ever showing “Perfect” due to approximate modeling.
-        loss = Math.max(loss, 0.15);
-    }
+    // BUG-039: Do not force a minimum EV loss for incorrect answers.
+    // Some "wrong" actions can be extremely close in EV and should be graded as such.
+    const loss = isCorrect ? 0 : evLossBb(evGto, evUser);
 
     return {
         evLossBb: loss,

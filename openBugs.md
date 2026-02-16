@@ -74,6 +74,7 @@ _The following bugs were discovered during code review of the shipped ENH-001 th
 - **Description:** The service worker registers correctly, but there is no code to intercept the `beforeinstallprompt` event or display an "Install App" button/banner. Users must discover the "Add to Home Screen" option from the browser's own menu, which most users don't know about.
 - **Impact:** Very low PWA install rate. The feature exists technically but is invisible to 95% of users.
 - **Suggested fix:** Listen for `beforeinstallprompt`, store the event, and show a non-intrusive "Install App" banner in the header or settings page. Dismiss after install or after user declines.
+- **Status:** ✅ Fixed on branch `fix/review-bugs-035-040` (pending merge)
 
 ### BUG-036 No service worker update notification (ENH-003 gap)
 
@@ -81,6 +82,7 @@ _The following bugs were discovered during code review of the shipped ENH-001 th
 - **Description:** `self.skipWaiting()` is called on install, and `self.clients.claim()` on activate, which auto-updates the service worker. However, the app never notifies the user that new content is available. The `console.log('[sw] New version available')` message is only visible in DevTools. Combined with BUG-034 (static cache version), updates are both rare AND invisible.
 - **Impact:** Users don't know when updates are deployed. May report bugs that are already fixed.
 - **Suggested fix:** Use the `controllerchange` event in `app.js` to show a toast: "App updated! Refresh to see the latest changes." Or auto-reload on activation.
+- **Status:** ✅ Fixed on branch `fix/review-bugs-035-040` (pending merge)
 
 ### BUG-037 Preflop EV model uses hardcoded fold equity assumptions
 
@@ -88,6 +90,7 @@ _The following bugs were discovered during code review of the shipped ENH-001 th
 - **Description:** `OPEN_FOLD_EQUITY` hardcodes position-based fold equity values (UTG: 0.20, HJ: 0.25, CO: 0.35, BTN: 0.45, SB: 0.35, BB: 0). These are rough approximations that don't account for stack depth, table dynamics, or opponent tendencies. The values assume a standard 100bb cash game. For tournament contexts or shallow stacks, these are significantly wrong.
 - **Impact:** EV feedback for preflop RFI decisions can be misleading. A hand might show "Good" when the actual EV loss is higher (or lower) than estimated. Users may internalize incorrect EV expectations.
 - **Suggested fix:** Add a comment explicitly documenting that these are 100bb cash approximations. Consider making fold equity configurable in settings for different game types. Long-term: derive fold equity from actual range data rather than hardcoding.
+- **Status:** ✅ Fixed (documented assumption in code) on branch `fix/review-bugs-035-040` (pending merge)
 
 ### BUG-038 EV feedback for cold call and squeeze scenarios returns null
 
@@ -95,6 +98,7 @@ _The following bugs were discovered during code review of the shipped ENH-001 th
 - **Description:** The `actionEvs()` switch statement in `computeEvFeedback` handles RFI, 3-bet, 4-bet, and BB defense types. But cold call (`TRAINER_TYPES.COLD_CALL`) and squeeze (`TRAINER_TYPES.SQUEEZE`) are not handled -- they fall through to the `default` case which returns `null`. This means ~2 of 6 preflop trainer modes silently skip EV feedback entirely.
 - **Impact:** Users training cold call or squeeze scenarios see no EV information. The feedback panel still shows correct/incorrect but the 4-tier grade and EV loss (bb) fields are missing. Inconsistent experience within the same trainer module.
 - **Suggested fix:** Add `case TRAINER_TYPES.COLD_CALL` and `case TRAINER_TYPES.SQUEEZE` blocks to the switch. For cold call, model as calling a raise (EV of call vs fold). For squeeze, model as 3-bet with fold equity against both raiser and caller.
+- **Status:** ✅ Fixed on branch `fix/review-bugs-035-040` (pending merge)
 
 ### BUG-039 EV loss floor prevents "Perfect" on technically wrong-but-close answers
 
@@ -102,6 +106,7 @@ _The following bugs were discovered during code review of the shipped ENH-001 th
 - **Description:** When `isCorrect === false`, the code forces `loss = Math.max(loss, 0.15)`. This prevents a wrong answer from ever receiving a "Perfect" grade (threshold: <= 0.1bb). However, in poker, some "wrong" answers are extremely close in EV (e.g., folding vs calling when both have nearly identical EV). A legitimate 0.02bb EV difference gets artificially inflated to 0.15bb, which is then graded "Good" instead of the more accurate "Perfect."
 - **Impact:** Users see "Good" for near-optimal plays that happen to differ from the GTO recommendation. This is technically incorrect feedback -- the EV loss shown doesn't match reality.
 - **Suggested fix:** Either remove the floor entirely and let wrong answers show their actual EV (even if "Perfect"), or reduce the floor to a smaller value (e.g., 0.05bb). Add a note in the feedback: "Close to optimal" for wrong-but-near-perfect decisions.
+- **Status:** ✅ Fixed on branch `fix/review-bugs-035-040` (pending merge)
 
 ### BUG-040 SRS scenario keys for multistreet are too coarse
 
@@ -109,6 +114,7 @@ _The following bugs were discovered during code review of the shipped ENH-001 th
 - **Description:** Multistreet SRS keys only include `{ module, street, position }`. This means ALL decisions on the flop from BTN map to the same SRS item, regardless of board texture, hand strength, or action taken. A user who nails flop c-bets on dry boards but struggles on wet boards will have both experiences averaged into one SRS item.
 - **Impact:** SRS cannot identify granular weaknesses within multi-street play. A single "flop from BTN" item might oscillate between "due" and "not due" as different board textures yield different results, degrading the scheduling algorithm's effectiveness.
 - **Suggested fix:** Include `heroIsAggressor` and at least `texture` (from the multistreet hand's board analysis) in the key to differentiate scenarios. The scenario key function already accepts these fields -- the multistreet decision objects just don't populate them.
+- **Status:** ✅ Fixed on branch `fix/review-bugs-035-040` (pending merge)
 
 ### BUG-041 Manifest missing maskable icon purpose
 
@@ -116,6 +122,7 @@ _The following bugs were discovered during code review of the shipped ENH-001 th
 - **Description:** Icon entries have `"type": "image/png"` but no `"purpose"` field. Modern Android (13+) uses adaptive icons that require `"purpose": "any maskable"` to render correctly in different icon shapes (circle, squircle, teardrop). Without this, the icon may be cropped awkwardly or show with large padding.
 - **Impact:** Installed PWA icon looks poorly cropped on modern Android devices.
 - **Suggested fix:** Add `"purpose": "any maskable"` to icon entries. Ensure the actual icon artwork has safe zone padding (inner 80% contains the visual content).
+- **Status:** ✅ Fixed on branch `fix/review-bugs-031-034` (pending merge)
 
 ### BUG-042 CSS styling duplication for EV feedback grades
 
@@ -123,6 +130,7 @@ _The following bugs were discovered during code review of the shipped ENH-001 th
 - **Description:** Both files define near-identical rules for `.feedback-panel.grade-perfect`, `.grade-good`, `.grade-mistake`, `.grade-blunder` and `.feedback-section.grade-*`. The color values and border-left styles are duplicated across both files.
 - **Impact:** Maintenance burden. If feedback colors are changed in one file, the other becomes out of sync. Increases CSS payload unnecessarily.
 - **Suggested fix:** Consolidate all grade styling into `css/components.css` (where component-level styles belong) and remove duplicates from `css/modules.css`.
+- **Status:** ✅ Fixed on branch `fix/review-bugs-035-040` (pending merge)
 
 ---
 
@@ -134,6 +142,7 @@ _The following bugs were discovered during code review of the shipped ENH-001 th
 - **Description:** Every `applyDecisionRating(current, isCorrect, 1500)` call uses a fixed opponent rating of 1500. This means a simple RFI drill and a complex multi-street river decision both use the same difficulty baseline. Preflop RFI decisions are objectively easier than postflop river plays, but the rating system doesn't differentiate.
 - **Impact:** Rating growth doesn't accurately reflect skill development across different complexity levels. A user grinding only easy preflop RFI can inflate their rating to Master tier without ever practicing hard postflop spots.
 - **Suggested fix:** Map trainer type to estimated difficulty: preflop RFI = 1300, postflop river = 1700, multi-street = 1800, etc. This makes rating gains harder for simple tasks and more rewarding for complex ones.
+- **Status:** ✅ Fixed on branch `fix/review-bugs-035-040` (pending merge)
 
 ### BUG-044 No ELO rating reset mechanism in settings
 
@@ -141,6 +150,7 @@ _The following bugs were discovered during code review of the shipped ENH-001 th
 - **Description:** Settings has "Reset All Progress" and "Clear All Data" buttons, but neither explicitly mentions the rating system. While "Clear All Data" presumably clears localStorage (including rating), there is no targeted "Reset Rating" option for users who want a fresh start without losing session history.
 - **Impact:** Minor UX gap. Users who want to restart their rating journey must either clear all data or manually edit localStorage.
 - **Suggested fix:** Add a "Reset Rating" button in settings under the Data Management section. Confirm via modal before resetting.
+- **Status:** ✅ Fixed on branch `fix/review-bugs-035-040` (pending merge)
 
 ### BUG-045 Smart Practice session state lost on page refresh
 
@@ -148,6 +158,7 @@ _The following bugs were discovered during code review of the shipped ENH-001 th
 - **Description:** The Smart Practice session stores its queue in `STORAGE_KEYS.SRS_ACTIVE` but if the user refreshes the page mid-session (F5, browser refresh, or PWA restart), the active session context is lost. The next visit to the dashboard shows a fresh "Smart Practice" section with a new queue, and any in-progress queue position is gone.
 - **Impact:** Minor. Users must restart their Smart Practice queue after refresh. Progress within the queue (which items have been reviewed) is lost.
 - **Suggested fix:** On app initialization, check for an active SRS session in storage and offer to resume it: "You have an unfinished Smart Practice session (3/10 items reviewed). Resume?"
+- **Status:** ✅ Fixed on branch `fix/review-bugs-035-040` (pending merge)
 
 ### BUG-046 No offline indicator in app UI (ENH-003 gap)
 
@@ -155,6 +166,7 @@ _The following bugs were discovered during code review of the shipped ENH-001 th
 - **Description:** The PWA works offline via service worker cache, but the app provides no visual indication of online/offline status. Users training offline don't know whether their data exports or future sync features would work. There's no `navigator.onLine` check or `online`/`offline` event listener.
 - **Impact:** Minor confusion for offline users. No functional impact since the app is fully client-side.
 - **Suggested fix:** Add a small connectivity indicator (e.g., subtle icon in the navigation footer). Listen for `online`/`offline` events and toggle the indicator.
+- **Status:** ✅ Fixed on branch `fix/review-bugs-035-040` (pending merge)
 
 ---
 

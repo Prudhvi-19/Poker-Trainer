@@ -10,7 +10,7 @@ import { createDeck, shuffle } from '../utils/deckManager.js';
 import { analyzeBoard as sharedAnalyzeBoard } from '../utils/boardAnalyzer.js';
 import { evaluateHandBoard } from '../utils/handEvaluator.js';
 import { setPokerShortcutHandler } from '../utils/shortcutManager.js';
-import { applyDecisionRating, appendRatingHistory } from '../utils/rating.js';
+import { applyDecisionRating, appendRatingHistory, opponentRatingForContext } from '../utils/rating.js';
 import { handCodeToConcreteCards, simulateEquityVsRange } from '../utils/equity.js';
 import {
     computeEvFeedbackFromEvs,
@@ -583,7 +583,7 @@ function handleDecision(scenario, userAction) {
     });
 
     // ENH-004: record spaced repetition outcome.
-    // Multistreet decisions are keyed by street+heroPosition (coarser, but stable).
+    // BUG-040: include at least heroIsAggressor + texture + handStrength to avoid overly-coarse keys.
     const scenarioKey = smartPracticeActiveKey || buildScenarioKeyFromResult({
         module: currentSession.module,
         trainerType: 'multistreet',
@@ -627,7 +627,8 @@ function handleDecision(scenario, userAction) {
 
 function updateRatingAfterDecision(isCorrect) {
     const rating = storage.getRating();
-    const next = applyDecisionRating(rating.current, isCorrect, 1500);
+    const opp = opponentRatingForContext({ module: currentSession?.module, trainerType: 'multistreet', street: currentHand?.currentStreet });
+    const next = applyDecisionRating(rating.current, isCorrect, opp);
     const updated = {
         ...rating,
         current: next,

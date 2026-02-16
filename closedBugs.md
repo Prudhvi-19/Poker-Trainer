@@ -265,3 +265,80 @@
 - **Branch/Commit:** `fix/review-bugs-031-034` (pending)
 - **Fix:** Switched service worker caching to a stable cache name + network-first for navigations and stale-while-revalidate for assets, so new deployments refresh automatically without manual cache version bumps.
 
+### FIXED — BUG-035 No PWA install prompt UX
+
+- **Severity:** P2
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added an in-app "Install App" button (sidebar footer) using `beforeinstallprompt` (and iOS Safari instructions).
+- **Verification:** Code inspection; manual install prompt test recommended on supported browsers.
+
+### FIXED — BUG-036 No service worker update notification
+
+- **Severity:** P2
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added update detection (service worker `updatefound` + `controllerchange`) and prompts users to reload via modal.
+- **Verification:** Code inspection; manual SW update test recommended.
+
+### FIXED — BUG-037 Preflop EV model uses hardcoded fold equity assumptions
+
+- **Severity:** P2
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Documented fold equity constants as 100bb cash approximations; noted future settings/config work.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-038 EV feedback missing for cold call + squeeze
+
+- **Severity:** P2
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added EV models for `TRAINER_TYPES.COLD_CALL` and `TRAINER_TYPES.SQUEEZE` in `preflopTrainer.computeEvFeedback()`.
+- **Verification:** Code inspection; manual trainer test recommended.
+
+### FIXED — BUG-039 EV loss floor prevents Perfect on close wrong answers
+
+- **Severity:** P2
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Removed EV-loss flooring for incorrect answers in `computeEvFeedbackFromEvs()`.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-040 Multi-street SRS keys too coarse
+
+- **Severity:** P2
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added `heroIsAggressor`, `texture`, and `handStrength` into multistreet SRS scenario key generation.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-042 CSS duplication for EV feedback grades
+
+- **Severity:** P2
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Consolidated grade styles into `css/components.css` and removed duplicates from `css/modules.css`.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-043 Opponent rating hardcoded at 1500
+
+- **Severity:** P3
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added `opponentRatingForContext()` and updated all trainers to use difficulty-mapped opponent ratings.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-044 No rating reset in settings
+
+- **Severity:** P3
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added "Reset Rating" button under Settings → Data Management.
+- **Verification:** Code inspection; manual click test recommended.
+
+### FIXED — BUG-045 Smart Practice session lost on refresh
+
+- **Severity:** P3
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added resume prompt on app init when `SRS_ACTIVE` exists and `SRS_AUTOSTART` is true.
+- **Verification:** Code inspection; manual refresh mid-session recommended.
+
+### FIXED — BUG-046 No offline indicator
+
+- **Severity:** P3
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added online/offline badge in sidebar footer and listens to `online`/`offline` events.
+- **Verification:** Code inspection; toggle in DevTools recommended.
+

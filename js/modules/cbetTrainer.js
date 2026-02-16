@@ -8,7 +8,7 @@ import { analyzeBoard as sharedAnalyzeBoard } from '../utils/boardAnalyzer.js';
 import { evaluateHandBoard } from '../utils/handEvaluator.js';
 import ranges from '../data/ranges.js';
 import storage from '../utils/storage.js';
-import { applyDecisionRating, appendRatingHistory } from '../utils/rating.js';
+import { applyDecisionRating, appendRatingHistory, opponentRatingForContext } from '../utils/rating.js';
 import { simulateEquityVsRange } from '../utils/equity.js';
 import {
     computeEvFeedbackFromEvs,
@@ -434,7 +434,8 @@ function handleAnswer(answer) {
 
 function updateRatingAfterDecision(isCorrect) {
     const rating = storage.getRating();
-    const next = applyDecisionRating(rating.current, isCorrect, 1500);
+    const opp = opponentRatingForContext({ module: 'cbet-trainer', trainerType: 'cbet' });
+    const next = applyDecisionRating(rating.current, isCorrect, opp);
     const updated = {
         ...rating,
         current: next,
