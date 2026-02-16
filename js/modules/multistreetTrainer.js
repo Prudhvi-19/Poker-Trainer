@@ -11,6 +11,14 @@ import { analyzeBoard as sharedAnalyzeBoard } from '../utils/boardAnalyzer.js';
 import { evaluateHandBoard } from '../utils/handEvaluator.js';
 import { setPokerShortcutHandler } from '../utils/shortcutManager.js';
 import { applyDecisionRating, appendRatingHistory } from '../utils/rating.js';
+import { handCodeToConcreteCards, simulateEquityVsRange } from '../utils/equity.js';
+import {
+    computeEvFeedbackFromEvs,
+    evBetRaise,
+    evCallToShowdown,
+    evCheckToShowdown,
+    evFold
+} from '../utils/evFeedback.js';
 
 let currentSession = null;
 let currentHand = null;
@@ -551,6 +559,8 @@ function determineDefenseAction(strength, texture, hasPosition) {
 function handleDecision(scenario, userAction) {
     const isCorrect = userAction === scenario.correctAction;
 
+    const evFeedback = computeEvFeedback({ scenario, userAction, isCorrect, seed: `multistreet:${currentHand.id}:${currentHand.currentStreet}` });
+
     currentSession.totalDecisions++;
     if (isCorrect) {
         currentSession.correctDecisions++;
@@ -560,7 +570,8 @@ function handleDecision(scenario, userAction) {
         street: currentHand.currentStreet,
         action: userAction,
         correctAction: scenario.correctAction,
-        isCorrect
+        isCorrect,
+        evFeedback
     });
 
     // Update pot/stack based on action
@@ -573,7 +584,7 @@ function handleDecision(scenario, userAction) {
     upsertCurrentHandIntoSession();
     persistSession();
 
-    showDecisionFeedback(scenario, userAction, isCorrect);
+    showDecisionFeedback(scenario, userAction, isCorrect, evFeedback);
     updateStats();
 }
 
@@ -689,7 +700,7 @@ function updatePotAndStack(action, scenario) {
     }
 }
 
-function showDecisionFeedback(scenario, userAction, isCorrect) {
+function showDecisionFeedback(scenario, userAction, isCorrect, evFeedback) {
     if (!scenarioEl) return;
 
     const card = scenarioEl.querySelector('.scenario-card');
@@ -700,12 +711,17 @@ function showDecisionFeedback(scenario, userAction, isCorrect) {
         buttons.style.display = 'none';
     }
 
+    const evLoss = evFeedback?.evLossBb ?? (isCorrect ? 0 : null);
+    const grade = evFeedback?.grade || (isCorrect ? { key: 'perfect', label: 'Perfect', icon: '✅' } : { key: 'blunder', label: 'Blunder', icon: '🔴' });
+
     const feedback = document.createElement('div');
-    feedback.className = `feedback-panel ${isCorrect ? 'correct' : 'incorrect'}`;
+    feedback.className = `feedback-panel grade-${grade.key}`;
 
     const title = document.createElement('div');
     title.className = 'feedback-title';
-    title.textContent = isCorrect ? '✅ Correct!' : '❌ Incorrect';
+    title.textContent = evLoss === null
+        ? (isCorrect ? '✅ Correct!' : '❌ Incorrect')
+        : `${grade.icon} ${grade.label} (EV loss: ${evLoss.toFixed(2)}bb)`;
 
     const explanation = document.createElement('div');
     explanation.className = 'feedback-explanation';
@@ -726,11 +742,13 @@ function showDecisionFeedback(scenario, userAction, isCorrect) {
         explanation.innerHTML = `
             <p>Your action: <strong>${userAction.toUpperCase()}</strong></p>
             <p>GTO action: <strong>${scenario.correctAction.toUpperCase()}</strong></p>
+            ${evLoss !== null ? `<p>EV impact: <strong>-${evLoss.toFixed(2)}bb</strong></p>` : ''}
             ${strengthLabel ? `<p style="margin-top: 0.5rem; color: var(--color-text-secondary);">Hand strength: ${strengthLabel}</p>` : ''}
         `;
     } else {
         explanation.innerHTML = `
             <p>Good decision! Continuing to next street...</p>
+            ${evLoss !== null ? `<p>EV impact: <strong>-${evLoss.toFixed(2)}bb</strong></p>` : ''}
             ${strengthLabel ? `<p style="margin-top: 0.5rem; color: var(--color-text-secondary);">Hand strength: ${strengthLabel}</p>` : ''}
         `;
     }
@@ -853,15 +871,22 @@ function updateStats() {
     statsEl.innerHTML = '';
     statsEl.className = 'session-stats';
 
+    const totalEvLost = currentSession.hands.reduce((sum, h) => {
+        const handLoss = (h.decisions || []).reduce((s, d) => s + (d.evFeedback?.evLossBb || 0), 0);
+        return sum + handLoss;
+    }, 0);
+
     const handsEl = createStatBox(currentSession.hands.length, 'Hands');
     const decisionsEl = createStatBox(currentSession.totalDecisions, 'Decisions');
     const correctEl = createStatBox(currentSession.correctDecisions, 'Correct');
     const accuracyEl = createStatBox(formatPercentage(accuracy, 0), 'Accuracy');
+    const evEl = createStatBox(`${totalEvLost.toFixed(1)}bb`, 'EV Lost');
 
     statsEl.appendChild(handsEl);
     statsEl.appendChild(decisionsEl);
     statsEl.appendChild(correctEl);
     statsEl.appendChild(accuracyEl);
+    statsEl.appendChild(evEl);
 }
 
 function createStatBox(value, label) {
@@ -880,6 +905,121 @@ function createStatBox(value, label) {
     box.appendChild(labelEl);
 
     return box;
+}
+
+function computeEvFeedback({ scenario, userAction, isCorrect, seed }) {
+    // Only compute for decisions with a hero hand code we can concretize
+    const handCode = currentHand?.heroHand?.display;
+    if (!handCode || !currentHand?.board) return null;
+
+    const used = new Set([...(currentHand.board || []), ...(currentHand.heroCards || [])]);
+    const heroCards = currentHand.heroCards?.length === 2
+        ? currentHand.heroCards
+        : handCodeToConcreteCards(handCode, used, seed);
+    if (!heroCards) return null;
+
+    // Choose villain range by street / role.
+    // Preflop uses actual range tables; postflop uses the closest approximation.
+    let villainRange = [];
+    if (scenario.street === STREET.PREFLOP) {
+        if (currentHand.heroIsAggressor) {
+            // folded-to-hero open spot: villain is BB
+            villainRange = ranges.BB_DEFENSE_RANGES?.vsBTN || [];
+        } else {
+            // hero is BB facing BTN open
+            villainRange = ranges.RFI_RANGES?.BTN || [];
+        }
+    } else {
+        // postflop: approximate villain as BB defend if hero was aggressor, else BTN RFI
+        villainRange = currentHand.heroIsAggressor
+            ? (ranges.BB_DEFENSE_RANGES?.vsBTN || [])
+            : (ranges.RFI_RANGES?.BTN || []);
+    }
+
+    const equityRes = simulateEquityVsRange({
+        heroCards,
+        villainRange,
+        board: currentHand.board,
+        iterations: 1200,
+        seed
+    });
+
+    const equity = equityRes.equity;
+    const meta = { equity, iterations: equityRes.iterations };
+
+    // Pot model
+    const potNow = Number(currentHand.pot) || 0;
+
+    const evByAction = {};
+    evByAction[ACTIONS.FOLD] = evFold();
+    evByAction[ACTIONS.CHECK] = evCheckToShowdown({ equity, potNow });
+
+    // Preflop sizing model
+    if (scenario.street === STREET.PREFLOP) {
+        const openSize = scenario.openSize ?? 2.5;
+        const threeBetSize = scenario.threeBetSize ?? 9;
+
+        if (scenario.options?.some(o => o.action === ACTIONS.CALL)) {
+            evByAction[ACTIONS.CALL] = evCallToShowdown({
+                equity,
+                potNow,
+                callCost: Math.max(0, openSize - (currentHand.heroContribution ?? 0))
+            });
+        }
+
+        if (scenario.options?.some(o => o.action === ACTIONS.RAISE)) {
+            const totalTo = currentHand.heroIsAggressor ? openSize : threeBetSize;
+            const invest = Math.max(0, totalTo - (currentHand.heroContribution ?? 0));
+            const villainCallExtra = Math.max(0, totalTo - (currentHand.villainContribution ?? 0));
+            const fe = currentHand.heroIsAggressor ? 0.35 : 0.22;
+            evByAction[ACTIONS.RAISE] = evBetRaise({
+                equity,
+                potNow,
+                invest,
+                villainCallExtra,
+                foldEquity: fe
+            });
+        }
+    } else {
+        // Postflop sizing model: use 67% pot bet / calls as in this trainer.
+        const betSize = potNow * 0.67;
+
+        // If villain is the aggressor in this street, the decision is facing a bet.
+        // Include villain bet in potNow for call/raise EVs.
+        const facingBet = !currentHand.heroIsAggressor;
+        const potSeen = facingBet ? potNow + betSize : potNow;
+
+        if (scenario.options?.some(o => o.action === ACTIONS.BET)) {
+            evByAction[ACTIONS.BET] = evBetRaise({
+                equity,
+                potNow,
+                invest: betSize,
+                villainCallExtra: betSize,
+                foldEquity: 0.20
+            });
+        }
+        if (scenario.options?.some(o => o.action === ACTIONS.CALL)) {
+            evByAction[ACTIONS.CALL] = evCallToShowdown({ equity, potNow: potSeen, callCost: betSize });
+        }
+        if (scenario.options?.some(o => o.action === ACTIONS.RAISE)) {
+            const raiseTo = betSize * 3;
+            evByAction[ACTIONS.RAISE] = evBetRaise({
+                equity,
+                potNow: potSeen,
+                invest: raiseTo,
+                villainCallExtra: Math.max(0, raiseTo - betSize),
+                foldEquity: 0.32
+            });
+        }
+    }
+
+    return computeEvFeedbackFromEvs({
+        evByAction,
+        correctAction: scenario.correctAction,
+        userAnswer: userAction,
+        isCorrect,
+        meta
+    });
 }
 
 export default {
