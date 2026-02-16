@@ -10,7 +10,7 @@ import { createDeck, shuffle } from '../utils/deckManager.js';
 import { analyzeBoard as sharedAnalyzeBoard } from '../utils/boardAnalyzer.js';
 import { evaluateHandBoard } from '../utils/handEvaluator.js';
 import { setPokerShortcutHandler } from '../utils/shortcutManager.js';
-import { applyDecisionRating, appendRatingHistory } from '../utils/rating.js';
+import { applyDecisionRating, appendRatingHistory, opponentRatingForContext } from '../utils/rating.js';
 import { handCodeToConcreteCards, simulateEquityVsRange } from '../utils/equity.js';
 import {
     computeEvFeedbackFromEvs,
@@ -19,9 +19,13 @@ import {
     evCheckToShowdown,
     evFold
 } from '../utils/evFeedback.js';
+import { buildScenarioKeyFromResult, upsertSrsResult } from '../utils/srs.js';
+import { getCurrentKey, isSessionActive, advanceSession, incrementSessionStats } from '../utils/smartPracticeSession.js';
 
 let currentSession = null;
 let currentHand = null;
+
+let smartPracticeActiveKey = null;
 
 // Store element references to avoid getElementById timing issues
 let statsEl = null;
@@ -72,6 +76,9 @@ function render() {
 
     // Initialize session (now uses stored references)
     startNewSession();
+
+    // ENH-004: mark if Smart Practice is active
+    smartPracticeActiveKey = isSessionActive() ? getCurrentKey() : null;
 
     // Add keyboard shortcut listener
     const keyboardHandler = (e) => {
@@ -133,6 +140,7 @@ function startNewSession() {
 }
 
 function startNewHand() {
+    smartPracticeActiveKey = isSessionActive() ? getCurrentKey() : null;
     currentHand = generateNewHand();
     if (!currentHand) {
         showToast('Could not generate a new hand. Retrying...', 'error');
@@ -574,6 +582,35 @@ function handleDecision(scenario, userAction) {
         evFeedback
     });
 
+    // ENH-004: record spaced repetition outcome.
+    // BUG-040: include at least heroIsAggressor + texture + handStrength to avoid overly-coarse keys.
+    const scenarioKey = smartPracticeActiveKey || buildScenarioKeyFromResult({
+        module: currentSession.module,
+        trainerType: 'multistreet',
+        scenario: {
+            street: currentHand.currentStreet,
+            position: currentHand.heroPosition,
+            heroIsAggressor: currentHand.heroIsAggressor,
+            texture: classifyTexture(currentHand.board),
+            handStrength: scenario.handStrength || null
+        }
+    });
+    upsertSrsResult({
+        scenarioKey,
+        isCorrect,
+        evFeedback,
+        timestamp: new Date().toISOString(),
+        payload: {
+            module: currentSession.module,
+            street: currentHand.currentStreet,
+            position: currentHand.heroPosition,
+            heroIsAggressor: currentHand.heroIsAggressor
+        }
+    });
+    if (isSessionActive() && smartPracticeActiveKey) {
+        incrementSessionStats({ isCorrect, evFeedback });
+    }
+
     // Update pot/stack based on action
     updatePotAndStack(userAction, scenario);
 
@@ -590,7 +627,8 @@ function handleDecision(scenario, userAction) {
 
 function updateRatingAfterDecision(isCorrect) {
     const rating = storage.getRating();
-    const next = applyDecisionRating(rating.current, isCorrect, 1500);
+    const opp = opponentRatingForContext({ module: currentSession?.module, trainerType: 'multistreet', street: currentHand?.currentStreet });
+    const next = applyDecisionRating(rating.current, isCorrect, opp);
     const updated = {
         ...rating,
         current: next,
@@ -767,16 +805,33 @@ function showDecisionFeedback(scenario, userAction, isCorrect, evFeedback) {
     if (canContinue) {
         const nextBtn = document.createElement('button');
         nextBtn.className = 'btn btn-primary';
-        nextBtn.textContent = 'Continue to Next Street';
+        nextBtn.textContent = smartPracticeActiveKey ? 'Next Review' : 'Continue to Next Street';
         nextBtn.style.marginTop = '1rem';
-        nextBtn.addEventListener('click', () => advanceStreet());
+        nextBtn.addEventListener('click', () => {
+            if (isSessionActive() && smartPracticeActiveKey) {
+                const { done, nextRoute } = advanceSession();
+                if (!done) {
+                    window.location.hash = nextRoute;
+                    return;
+                }
+            }
+            advanceStreet();
+        });
         feedback.appendChild(nextBtn);
     } else {
         const newHandBtn = document.createElement('button');
         newHandBtn.className = 'btn btn-primary';
-        newHandBtn.textContent = userAction === ACTIONS.FOLD ? 'New Hand (Folded)' : 'New Hand (Complete)';
+        newHandBtn.textContent = smartPracticeActiveKey ? 'Next Review' : (userAction === ACTIONS.FOLD ? 'New Hand (Folded)' : 'New Hand (Complete)');
         newHandBtn.style.marginTop = '1rem';
         newHandBtn.addEventListener('click', () => {
+            if (isSessionActive() && smartPracticeActiveKey) {
+                const { done, nextRoute } = advanceSession();
+                if (!done) {
+                    window.location.hash = nextRoute;
+                    return;
+                }
+            }
+
             saveHandToSession();
             startNewHand();
         });

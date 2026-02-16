@@ -5,6 +5,8 @@ import { MODULES } from './utils/constants.js';
 import storage from './utils/storage.js';
 import { initNavigation, setActiveNavItem, updateStreakDisplay } from './components/Navigation.js';
 import { showToast } from './utils/helpers.js';
+import { showAlert, showConfirm } from './components/Modal.js';
+import { maybeResumeSmartPractice } from './utils/smartPracticeSession.js';
 
 // Import all modules
 import dashboard from './modules/dashboard.js';
@@ -31,6 +33,18 @@ import potOddsTrainer from './modules/potOddsTrainer.js';
  */
 function init() {
     console.log('🃏 GTO Poker Trainer - Initializing...');
+
+    // ENH-003: Register PWA service worker (GitHub Pages + local static hosting)
+    registerServiceWorker();
+
+    // BUG-035: Provide an install UX (where supported) instead of relying on browser menus.
+    initPwaInstallPrompt();
+
+    // BUG-046: show online/offline status.
+    initConnectivityIndicator();
+
+    // BUG-045: resume smart practice if user refreshes mid-session.
+    maybeResumeSmartPractice();
 
     // Global error handler for uncaught errors
     window.addEventListener('error', (event) => {
@@ -98,6 +112,209 @@ function init() {
     initKeyboardShortcuts();
 
     console.log('✅ GTO Poker Trainer - Ready!');
+}
+
+// --- BUG-046: Offline indicator ---
+
+function ensureConnectivityBadge() {
+    const footer = document.querySelector('.sidebar-footer');
+    if (!footer) return null;
+
+    let badge = document.getElementById('connectivity-badge');
+    if (badge) return badge;
+
+    badge = document.createElement('div');
+    badge.id = 'connectivity-badge';
+    badge.className = 'connectivity-badge';
+    badge.style.marginTop = '0.5rem';
+    badge.style.fontSize = '0.85rem';
+    badge.style.color = 'var(--color-text-secondary)';
+    badge.style.textAlign = 'center';
+    footer.appendChild(badge);
+    return badge;
+}
+
+function initConnectivityIndicator() {
+    const badge = ensureConnectivityBadge();
+    if (!badge) return;
+
+    const render = () => {
+        const online = navigator.onLine;
+        badge.textContent = online ? '● Online' : '● Offline';
+        badge.style.color = online ? 'var(--color-text-secondary)' : 'var(--color-warning)';
+    };
+
+    window.addEventListener('online', render);
+    window.addEventListener('offline', render);
+    render();
+}
+
+function registerServiceWorker() {
+    try {
+        if (!('serviceWorker' in navigator)) return;
+        const hadControllerAtStart = !!navigator.serviceWorker.controller;
+        // Service workers require a secure context (https) OR localhost.
+        const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        const isSecure = location.protocol === 'https:';
+        if (!isSecure && !isLocalhost) return;
+
+        navigator.serviceWorker.register('./service-worker.js')
+            .then((reg) => {
+                // Optional: listen for updates.
+                reg.addEventListener?.('updatefound', () => {
+                    const newWorker = reg.installing;
+                    if (!newWorker) return;
+                    newWorker.addEventListener('statechange', () => {
+                        // BUG-036: notify users when a new service worker version is available.
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            promptForRefreshOnce();
+                        }
+                    });
+                });
+
+                // Also handle the common "waiting" case (when skipWaiting isn't used).
+                if (reg.waiting && navigator.serviceWorker.controller) {
+                    promptForRefreshOnce();
+                }
+
+                // If controller changes, a new SW has taken over; prompt to reload to get new JS.
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    // Avoid showing an "Update available" dialog on the very first install.
+                    if (!hadControllerAtStart) return;
+                    promptForRefreshOnce({ controllerChanged: true });
+                });
+            })
+            .catch((err) => {
+                console.warn('[pwa] service worker registration failed:', err);
+            });
+    } catch (e) {
+        console.warn('[pwa] service worker registration error:', e);
+    }
+}
+
+// --- BUG-035: Install prompt UX ---
+
+let deferredInstallPrompt = null;
+
+function isStandaloneMode() {
+    const isStandalone = window.matchMedia?.('(display-mode: standalone)')?.matches;
+    const isIosStandalone = window.navigator.standalone === true; // iOS Safari
+    return !!(isStandalone || isIosStandalone);
+}
+
+function isIosSafari() {
+    const ua = navigator.userAgent || '';
+    const isIos = /iPad|iPhone|iPod/.test(ua);
+    const isSafari = /Safari/.test(ua) && !/Chrome|CriOS|FxiOS|EdgiOS/.test(ua);
+    return isIos && isSafari;
+}
+
+function ensureInstallButton() {
+    const footer = document.querySelector('.sidebar-footer');
+    if (!footer) return null;
+
+    let btn = document.getElementById('pwa-install-btn');
+    if (btn) return btn;
+
+    btn = document.createElement('button');
+    btn.id = 'pwa-install-btn';
+    btn.className = 'btn btn-secondary btn-sm';
+    btn.textContent = '⬇️ Install App';
+    btn.style.marginTop = '0.75rem';
+    btn.style.width = '100%';
+    btn.style.display = 'none';
+    footer.appendChild(btn);
+
+    btn.addEventListener('click', async () => {
+        // iOS doesn't support beforeinstallprompt.
+        if (!deferredInstallPrompt) {
+            if (isIosSafari() && !isStandaloneMode()) {
+                showAlert({
+                    title: 'Install on iPhone/iPad',
+                    type: 'info',
+                    message: 'To install: tap the Share button in Safari, then choose “Add to Home Screen”.'
+                });
+            }
+            return;
+        }
+
+        try {
+            deferredInstallPrompt.prompt();
+            const choice = await deferredInstallPrompt.userChoice;
+            if (choice?.outcome === 'accepted') {
+                showToast('Installing…', 'success', 2500);
+            }
+        } catch (e) {
+            console.warn('[pwa] install prompt failed:', e);
+        } finally {
+            deferredInstallPrompt = null;
+            // Hide after use; it will re-appear if browser fires prompt event again.
+            btn.style.display = 'none';
+        }
+    });
+
+    return btn;
+}
+
+function showInstallButtonIfAvailable() {
+    const btn = ensureInstallButton();
+    if (!btn) return;
+    if (isStandaloneMode()) {
+        btn.style.display = 'none';
+        return;
+    }
+    // Show when we have a deferred prompt, or for iOS Safari where we can show instructions.
+    if (deferredInstallPrompt || isIosSafari()) {
+        btn.style.display = 'inline-flex';
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+function initPwaInstallPrompt() {
+    // iOS Safari won't fire beforeinstallprompt, but we can still show instructions.
+    showInstallButtonIfAvailable();
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent the mini-infobar and save the event so we can trigger it via UI.
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        showInstallButtonIfAvailable();
+    });
+
+    window.addEventListener('appinstalled', () => {
+        deferredInstallPrompt = null;
+        showInstallButtonIfAvailable();
+        showToast('App installed!', 'success', 3000);
+    });
+}
+
+// --- BUG-036: Service worker update notification ---
+
+let hasPromptedForRefresh = false;
+
+function promptForRefreshOnce(meta = null) {
+    if (hasPromptedForRefresh) return;
+    hasPromptedForRefresh = true;
+
+    // Prefer a modal so the user has a clear action.
+    showConfirm({
+        title: 'Update available',
+        message: 'A new version of the app is available. Reload to update now?',
+        confirmText: 'Reload',
+        cancelText: 'Later',
+        onConfirm: () => {
+            // A hard reload is simplest for a static app.
+            window.location.reload();
+        },
+        onCancel: () => {
+            // Allow prompting again on the next update.
+            hasPromptedForRefresh = false;
+            if (meta?.controllerChanged) {
+                showToast('App updated in background. Reload when convenient.', 'info', 5000);
+            }
+        }
+    });
 }
 
 /**

@@ -122,7 +122,10 @@ export const STORAGE_KEYS = {
     CUSTOM_RANGES: 'poker_trainer_custom_ranges',
     LAST_VISIT: 'poker_trainer_last_visit',
     STREAK: 'poker_trainer_streak',
-    RATING: 'poker_trainer_rating'
+    RATING: 'poker_trainer_rating',
+    SRS: 'poker_trainer_srs',
+    SRS_ACTIVE: 'poker_trainer_srs_active',
+    SRS_AUTOSTART: 'poker_trainer_srs_autostart'
 };
 
 export const DEFAULT_SETTINGS = {

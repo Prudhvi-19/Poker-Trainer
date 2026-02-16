@@ -3,7 +3,10 @@
 
 import { showToast } from '../utils/helpers.js';
 import storage from '../utils/storage.js';
-import { applyDecisionRating, appendRatingHistory } from '../utils/rating.js';
+import { applyDecisionRating, appendRatingHistory, opponentRatingForContext } from '../utils/rating.js';
+import { computeEvFeedbackFromEvs } from '../utils/evFeedback.js';
+import { buildScenarioKeyFromResult, upsertSrsResult } from '../utils/srs.js';
+import { getCurrentKey, isSessionActive, advanceSession, incrementSessionStats } from '../utils/smartPracticeSession.js';
 
 // Question types
 const QUESTION_TYPES = {
@@ -14,10 +17,12 @@ const QUESTION_TYPES = {
 };
 
 let currentQuestion = null;
-let stats = { correct: 0, total: 0 };
+let stats = { correct: 0, total: 0, evLostBb: 0 };
 let container = null;
 let mainAreaEl = null;
 let statsBarEl = null;
+
+let smartPracticeActiveKey = null;
 
 function render() {
     container = document.createElement('div');
@@ -86,13 +91,35 @@ function render() {
     container.appendChild(mainAreaEl);
 
     // Start first question
+    smartPracticeActiveKey = isSessionActive() ? getCurrentKey() : null;
     generateQuestion();
     updateStats();
 
     return container;
 }
 
+function getSmartPracticeOverrideQuestion() {
+    if (!smartPracticeActiveKey) return null;
+    const srs = storage.getSrsState();
+    const item = srs?.items?.[smartPracticeActiveKey] || null;
+    const payload = item?.payload || null;
+    const question = payload?.question || null;
+    if (!question || typeof question !== 'object') return null;
+    if (typeof question.correctAnswer !== 'number') return null;
+    if (!Array.isArray(question.options) || question.options.length === 0) return null;
+    return question;
+}
+
 function generateQuestion() {
+    smartPracticeActiveKey = isSessionActive() ? getCurrentKey() : null;
+
+    const override = getSmartPracticeOverrideQuestion();
+    if (override) {
+        currentQuestion = override;
+        renderQuestion();
+        return;
+    }
+
     const types = Object.values(QUESTION_TYPES);
     const type = types[Math.floor(Math.random() * types.length)];
 
@@ -257,13 +284,49 @@ function handleAnswer(answer) {
 
     // Stats tracked in-memory for this session
 
-    showFeedback(isCorrect, answer);
+    // BUG-031: EV feedback parity (map numeric error to EV-loss-like score)
+    const evFeedback = computeEvFeedback({
+        correctAnswer: currentQuestion.correctAnswer,
+        options: currentQuestion.options,
+        userAnswer: answer,
+        isCorrect
+    });
+    stats.evLostBb += evFeedback?.evLossBb || 0;
+
+    // BUG-032: SRS integration
+    const scenarioKey = smartPracticeActiveKey || buildScenarioKeyFromResult({
+        module: 'pot-odds-trainer',
+        trainerType: 'pot-odds',
+        scenario: {
+            type: currentQuestion?.type || null,
+            // Reuse the key's “texture” field as a bet-size bucket so SRS splits by sizing.
+            texture: typeof currentQuestion?.betPercent === 'number'
+                ? `${Math.round(currentQuestion.betPercent * 100)}%pot`
+                : null
+        }
+    });
+    upsertSrsResult({
+        scenarioKey,
+        isCorrect,
+        evFeedback,
+        timestamp: new Date().toISOString(),
+        payload: {
+            module: 'pot-odds-trainer',
+            question: currentQuestion
+        }
+    });
+    if (isSessionActive() && smartPracticeActiveKey) {
+        incrementSessionStats({ isCorrect, evFeedback });
+    }
+
+    showFeedback(isCorrect, answer, evFeedback);
     updateStats();
 }
 
 function updateRatingAfterDecision(isCorrect) {
     const rating = storage.getRating();
-    const next = applyDecisionRating(rating.current, isCorrect, 1500);
+    const opp = opponentRatingForContext({ module: 'pot-odds-trainer', trainerType: 'pot-odds' });
+    const next = applyDecisionRating(rating.current, isCorrect, opp);
     const updated = {
         ...rating,
         current: next,
@@ -273,7 +336,7 @@ function updateRatingAfterDecision(isCorrect) {
     storage.saveRating(updated);
 }
 
-function showFeedback(isCorrect, userAnswer) {
+function showFeedback(isCorrect, userAnswer, evFeedback) {
     if (!mainAreaEl) return;
     const mainArea = mainAreaEl;
 
@@ -293,12 +356,18 @@ function showFeedback(isCorrect, userAnswer) {
 
     // Feedback
     const feedback = document.createElement('div');
-    feedback.className = `feedback-section ${isCorrect ? 'correct' : 'incorrect'}`;
+    const evLoss = evFeedback?.evLossBb ?? (isCorrect ? 0 : null);
+    const grade = evFeedback?.grade || (isCorrect
+        ? { key: 'perfect', label: 'Perfect', icon: '✅' }
+        : { key: 'blunder', label: 'Blunder', icon: '🔴' }
+    );
+
+    feedback.className = `feedback-section grade-${grade.key}`;
 
     feedback.innerHTML = `
-        <div class="feedback-icon">${isCorrect ? '✓' : '✗'}</div>
+        <div class="feedback-icon">${grade.icon}</div>
         <div class="feedback-text">
-            <strong>${isCorrect ? 'Correct!' : 'Incorrect'}</strong>
+            <strong>${grade.label}${evLoss === null ? '' : ` (EV loss: ${evLoss.toFixed(2)}bb)`}</strong>
             <p>The answer is: <strong>${currentQuestion.correctAnswer}%</strong></p>
             <p class="feedback-explanation">${currentQuestion.explanation}</p>
         </div>
@@ -334,9 +403,18 @@ function showFeedback(isCorrect, userAnswer) {
     // Next button
     const nextBtn = document.createElement('button');
     nextBtn.className = 'btn btn-primary';
-    nextBtn.textContent = 'Next Question';
+    nextBtn.textContent = smartPracticeActiveKey ? 'Next Review' : 'Next Question';
     nextBtn.style.marginTop = '1rem';
-    nextBtn.addEventListener('click', generateQuestion);
+    nextBtn.addEventListener('click', () => {
+        if (isSessionActive() && smartPracticeActiveKey) {
+            const { done, nextRoute } = advanceSession();
+            if (!done) {
+                window.location.hash = nextRoute;
+                return;
+            }
+        }
+        generateQuestion();
+    });
     feedback.appendChild(nextBtn);
 
     mainArea.appendChild(feedback);
@@ -362,7 +440,33 @@ function updateStats() {
             <span class="stat-value">${accuracy}%</span>
             <span class="stat-label">Accuracy</span>
         </div>
+        <div class="stat-item">
+            <span class="stat-value">${stats.evLostBb.toFixed(1)}bb</span>
+            <span class="stat-label">EV Lost</span>
+        </div>
     `;
+}
+
+function computeEvFeedback({ correctAnswer, options, userAnswer, isCorrect }) {
+    // For this knowledge-based trainer, we map “closeness” to an EV-like loss.
+    // Scale: 1% error ~= 0.10bb loss, 5% error ~= 0.50bb, 20% error ~= 2.00bb.
+    const correct = Number(correctAnswer);
+    const opts = Array.isArray(options) ? options : [];
+
+    const evByAction = {};
+    for (const opt of opts) {
+        const o = Number(opt);
+        if (!Number.isFinite(o)) continue;
+        evByAction[String(o)] = -Math.abs(o - correct) / 10;
+    }
+
+    return computeEvFeedbackFromEvs({
+        evByAction,
+        correctAction: String(correct),
+        userAnswer: String(userAnswer),
+        isCorrect,
+        meta: { mapped: 'percent-error' }
+    });
 }
 
 export default {

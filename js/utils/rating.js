@@ -21,6 +21,44 @@ export function kFactor(rating) {
     return 16;
 }
 
+// BUG-043: Difficulty mapping so all trainers don't use a fixed "1500" opponent rating.
+// This keeps the rating system more honest: easy drills = lower opponent rating,
+// harder multi-street decisions = higher opponent rating.
+export function opponentRatingForContext({ module = null, trainerType = null, street = null } = {}) {
+    const m = typeof module === 'string' ? module : '';
+    const t = typeof trainerType === 'string' ? trainerType : '';
+    const s = typeof street === 'string' ? street : '';
+
+    // Multi-street tends to be the hardest.
+    if (m === 'multistreet') {
+        if (s === 'river') return 1850;
+        if (s === 'turn') return 1800;
+        if (s === 'flop') return 1750;
+        if (s === 'preflop') return 1600;
+        return 1800;
+    }
+
+    // Preflop drills are generally easier.
+    if (m.startsWith('preflop-')) {
+        if (t === 'rfi') return 1350;
+        if (t === 'bb-defense') return 1450;
+        if (t === '3bet') return 1500;
+        if (t === '4bet') return 1550;
+        if (t === 'cold-call') return 1500;
+        if (t === 'squeeze') return 1550;
+        return 1450;
+    }
+
+    // Postflop trainers.
+    if (m.startsWith('postflop-')) return 1650;
+    if (m === 'cbet-trainer') return 1650;
+    if (m === 'bet-sizing-trainer') return 1700;
+    if (m === 'board-texture-trainer') return 1550;
+    if (m === 'pot-odds-trainer') return 1500;
+
+    return 1500;
+}
+
 /**
  * Adjust rating for a single decision.
  * @param {number} currentRating

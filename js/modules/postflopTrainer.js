@@ -9,7 +9,7 @@ import { generateBoard as sharedGenerateBoard, cardToString } from '../utils/dec
 import { analyzeBoard as sharedAnalyzeBoard } from '../utils/boardAnalyzer.js';
 import { evaluateHandBoard } from '../utils/handEvaluator.js';
 import { setPokerShortcutHandler } from '../utils/shortcutManager.js';
-import { applyDecisionRating, appendRatingHistory } from '../utils/rating.js';
+import { applyDecisionRating, appendRatingHistory, opponentRatingForContext } from '../utils/rating.js';
 import ranges from '../data/ranges.js';
 import { handCodeToConcreteCards, simulateEquityVsRange } from '../utils/equity.js';
 import {
@@ -19,10 +19,14 @@ import {
     evCheckToShowdown,
     evFold
 } from '../utils/evFeedback.js';
+import { buildScenarioKeyFromResult, upsertSrsResult } from '../utils/srs.js';
+import { getCurrentKey, isSessionActive, advanceSession, incrementSessionStats } from '../utils/smartPracticeSession.js';
 
 let currentSession = null;
 let statsContainerEl = null;
 let scenarioContainerEl = null;
+
+let smartPracticeActiveKey = null;
 
 function render() {
     const container = document.createElement('div');
@@ -58,8 +62,10 @@ function render() {
 
         // Check if we're in feedback mode
         if (scenarioEl.querySelector('.feedback-panel')) {
+            // Let the rendered Next button handle smart-practice routing.
             if (action === 'next') {
-                showNextScenario();
+                const nextBtn = scenarioEl.querySelector('.feedback-panel .btn-primary');
+                if (nextBtn) nextBtn.click();
             }
             return;
         }
@@ -146,8 +152,36 @@ function startNewSession(trainerType) {
         results: []
     };
 
+    // ENH-004: if Smart Practice is active, force the trainer type for the due item.
+    const activeKey = isSessionActive() ? getCurrentKey() : null;
+    smartPracticeActiveKey = activeKey;
+    if (activeKey) {
+        try {
+            const keyObj = JSON.parse(activeKey);
+            if (keyObj?.module && typeof keyObj.module === 'string' && keyObj.module.startsWith('postflop-')) {
+                const dueType = keyObj.module.replace('postflop-', '');
+                currentSession.trainerType = dueType;
+                currentSession.module = `postflop-${dueType}`;
+                const select = document.getElementById('postflop-trainer-type-select');
+                if (select) select.value = dueType;
+            }
+        } catch {
+            // ignore
+        }
+    }
+
     updateStats();
     showNextScenario();
+}
+
+function getSmartPracticeOverrideScenario() {
+    if (!smartPracticeActiveKey) return null;
+    const srs = storage.getSrsState();
+    const item = srs?.items?.[smartPracticeActiveKey] || null;
+    const payload = item?.payload || null;
+    const scenario = payload?.scenario || null;
+    if (!scenario || typeof scenario !== 'object') return null;
+    return scenario;
 }
 
 function updateStats() {
@@ -202,7 +236,8 @@ function showNextScenario() {
     // Start timer when scenario is shown
     scenarioStartTime = Date.now();
 
-    const scenario = generateScenario(currentSession.trainerType);
+    const override = getSmartPracticeOverrideScenario();
+    const scenario = override || generateScenario(currentSession.trainerType);
 
     const card = document.createElement('div');
     card.className = 'scenario-card';
@@ -643,6 +678,28 @@ function handleAnswer(scenario, userAnswer) {
 
     currentSession.results.push(result);
 
+    // ENH-004: record spaced repetition outcome
+    const scenarioKey = smartPracticeActiveKey || buildScenarioKeyFromResult({
+        module: currentSession.module,
+        trainerType: currentSession.trainerType,
+        scenario
+    });
+    upsertSrsResult({
+        scenarioKey,
+        isCorrect,
+        evFeedback,
+        timestamp: result.timestamp,
+        payload: {
+            module: currentSession.module,
+            trainerType: currentSession.trainerType,
+            // Store the exact scenario so smart practice can replay it deterministically.
+            scenario
+        }
+    });
+    if (isSessionActive() && smartPracticeActiveKey) {
+        incrementSessionStats({ isCorrect, evFeedback });
+    }
+
     // ENH-001: update skill rating after each decision
     updateRatingAfterDecision(isCorrect);
 
@@ -652,7 +709,9 @@ function handleAnswer(scenario, userAnswer) {
 
 function updateRatingAfterDecision(isCorrect) {
     const rating = storage.getRating();
-    const next = applyDecisionRating(rating.current, isCorrect, 1500);
+    // BUG-043: use difficulty mapping; keep it simple here (trainerType already captures turn/river).
+    const opp = opponentRatingForContext({ module: currentSession?.module, trainerType: currentSession?.trainerType });
+    const next = applyDecisionRating(rating.current, isCorrect, opp);
     const updated = {
         ...rating,
         current: next,
@@ -733,9 +792,18 @@ function showFeedback(result) {
     // Add next button
     const nextButton = document.createElement('button');
     nextButton.className = 'btn btn-primary';
-    nextButton.textContent = 'Next Hand (Space)';
+    nextButton.textContent = smartPracticeActiveKey ? 'Next Review (Space)' : 'Next Hand (Space)';
     nextButton.style.marginTop = '1rem';
     nextButton.addEventListener('click', () => {
+        if (isSessionActive() && smartPracticeActiveKey) {
+            const { done, nextRoute } = advanceSession();
+            if (!done) {
+                window.location.hash = nextRoute;
+                return;
+            }
+        }
+
+        smartPracticeActiveKey = isSessionActive() ? getCurrentKey() : null;
         showNextScenario();
     });
 

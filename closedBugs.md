@@ -96,6 +96,13 @@
 
 ## 2026-02-16
 
+### SHIPPED — ENH-001 ELO / Skill Rating System
+
+- **Severity:** E0 (Must-Ship)
+- **Commit:** `0716cb6`
+- **Fix/Feature:** Added a basic v1 skill rating (ELO-like) that updates after each decision and is displayed on the Dashboard.
+- **Verification:** Manual smoke test (app loads; rating updates; no console errors).
+
 ### FIXED — BUG-014 Infinite recursion in cold call scenario generation
 
 - **Severity:** P1
@@ -216,7 +223,122 @@
 ### SHIPPED — ENH-002 EV-based 4-tier decision feedback + EV impact
 
 - **Severity:** E0 (Must-Ship)
-- **Branch:** `enh/e0-ev-feedback`
+- **Commits:** `b6bb1b8`, `78a7f45`
 - **Fix/Feature:** Added Monte Carlo equity (`js/utils/equity.js`) + EV grading utilities (`js/utils/evFeedback.js`) and integrated tiered feedback + EV loss (bb) into Preflop, Postflop, Multi-street, C-Bet, and Bet Sizing trainers. Added feedback tier styling.
 - **Verification:** Manual smoke test (app loads; feedback renders; no console errors).
+
+### SHIPPED — ENH-003 Progressive Web App (PWA) with Offline Support
+
+- **Severity:** E0 (Must-Ship)
+- **Commit:** `5924809`
+- **Fix/Feature:** Added `manifest.webmanifest`, placeholder icons, and a service worker with precaching + cache-first fetch strategy. Added service worker registration in `js/app.js`.
+- **Verification:** Loaded app via `http://127.0.0.1:5173` and confirmed `service-worker.js`/manifest/icons were served. Offline behavior should be validated via DevTools (Application → Service Workers/Cache).
+
+### SHIPPED — ENH-004 Smart Practice (Spaced Repetition)
+
+- **Severity:** E0 (Must-Ship)
+- **Commit:** `03cf4e3`
+- **Fix/Feature:** Implemented a simplified SM-2 scheduler in `js/utils/srs.js`, stored in localStorage. Added Dashboard “Smart Practice” section to start a review queue. Integrated SRS result recording into Preflop/Postflop/Multi-street/C-bet/Bet Sizing trainers and added cross-module session routing via `js/utils/smartPracticeSession.js`.
+- **Verification:** Manual smoke test (app loads; Smart Practice card renders; trainers compile). Full end-to-end SRS queue replay should be verified interactively.
+
+### FIXED — BUG-031 Board Texture & Pot Odds trainers missing EV feedback
+
+- **Severity:** P1
+- **Branch/Commit:** `fix/review-bugs-031-034` (pending)
+- **Fix:** Added EV-grade styled feedback (4-tier) + EV-lost stats to `boardTextureTrainer` and `potOddsTrainer`.
+
+### FIXED — BUG-032 Board Texture & Pot Odds trainers not integrated with SRS
+
+- **Severity:** P1
+- **Branch/Commit:** `fix/review-bugs-031-034` (pending)
+- **Fix:** Added `upsertSrsResult` recording + Smart Practice session routing/resume support for these trainers; updated `smartPracticeSession.getRouteForKeyObj` to route to Board Texture & Pot Odds modules.
+
+### FIXED — BUG-033 PWA icons are placeholder stubs
+
+- **Severity:** P1
+- **Branch/Commit:** `fix/review-bugs-031-034` (pending)
+- **Fix:** Generated real poker-themed app icons (512/192/180) and added maskable icon purpose in `manifest.webmanifest`.
+
+### FIXED — BUG-034 Service worker cache version is static
+
+- **Severity:** P1
+- **Branch/Commit:** `fix/review-bugs-031-034` (pending)
+- **Fix:** Switched service worker caching to a stable cache name + network-first for navigations and stale-while-revalidate for assets, so new deployments refresh automatically without manual cache version bumps.
+
+### FIXED — BUG-035 No PWA install prompt UX
+
+- **Severity:** P2
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added an in-app "Install App" button (sidebar footer) using `beforeinstallprompt` (and iOS Safari instructions).
+- **Verification:** Code inspection; manual install prompt test recommended on supported browsers.
+
+### FIXED — BUG-036 No service worker update notification
+
+- **Severity:** P2
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added update detection (service worker `updatefound` + `controllerchange`) and prompts users to reload via modal.
+- **Verification:** Code inspection; manual SW update test recommended.
+
+### FIXED — BUG-037 Preflop EV model uses hardcoded fold equity assumptions
+
+- **Severity:** P2
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Documented fold equity constants as 100bb cash approximations; noted future settings/config work.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-038 EV feedback missing for cold call + squeeze
+
+- **Severity:** P2
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added EV models for `TRAINER_TYPES.COLD_CALL` and `TRAINER_TYPES.SQUEEZE` in `preflopTrainer.computeEvFeedback()`.
+- **Verification:** Code inspection; manual trainer test recommended.
+
+### FIXED — BUG-039 EV loss floor prevents Perfect on close wrong answers
+
+- **Severity:** P2
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Removed EV-loss flooring for incorrect answers in `computeEvFeedbackFromEvs()`.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-040 Multi-street SRS keys too coarse
+
+- **Severity:** P2
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added `heroIsAggressor`, `texture`, and `handStrength` into multistreet SRS scenario key generation.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-042 CSS duplication for EV feedback grades
+
+- **Severity:** P2
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Consolidated grade styles into `css/components.css` and removed duplicates from `css/modules.css`.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-043 Opponent rating hardcoded at 1500
+
+- **Severity:** P3
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added `opponentRatingForContext()` and updated all trainers to use difficulty-mapped opponent ratings.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-044 No rating reset in settings
+
+- **Severity:** P3
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added "Reset Rating" button under Settings → Data Management.
+- **Verification:** Code inspection; manual click test recommended.
+
+### FIXED — BUG-045 Smart Practice session lost on refresh
+
+- **Severity:** P3
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added resume prompt on app init when `SRS_ACTIVE` exists and `SRS_AUTOSTART` is true.
+- **Verification:** Code inspection; manual refresh mid-session recommended.
+
+### FIXED — BUG-046 No offline indicator
+
+- **Severity:** P3
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added online/offline badge in sidebar footer and listens to `online`/`offline` events.
+- **Verification:** Code inspection; toggle in DevTools recommended.
 
