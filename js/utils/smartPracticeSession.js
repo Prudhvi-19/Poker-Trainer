@@ -74,6 +74,8 @@ export function getRouteForKeyObj(keyObj) {
     if (module === 'multistreet') return MODULES.MULTISTREET_TRAINER;
     if (module === 'cbet-trainer') return MODULES.CBET_TRAINER;
     if (module === 'bet-sizing-trainer') return MODULES.BET_SIZING_TRAINER;
+    if (module === 'board-texture-trainer') return MODULES.BOARD_TEXTURE_TRAINER;
+    if (module === 'pot-odds-trainer') return MODULES.POT_ODDS_TRAINER;
     return MODULES.DASHBOARD;
 }
 

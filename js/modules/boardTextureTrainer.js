@@ -7,13 +7,18 @@ import { generateBoard } from '../utils/deckManager.js';
 import { analyzeBoard as sharedAnalyzeBoard } from '../utils/boardAnalyzer.js';
 import storage from '../utils/storage.js';
 import { applyDecisionRating, appendRatingHistory } from '../utils/rating.js';
+import { gradeFromEvLoss } from '../utils/evFeedback.js';
+import { buildScenarioKeyFromResult, upsertSrsResult } from '../utils/srs.js';
+import { getCurrentKey, isSessionActive, advanceSession, incrementSessionStats } from '../utils/smartPracticeSession.js';
 
 let currentBoard = null;
 let currentQuestion = null;
-let stats = { correct: 0, total: 0 };
+let stats = { correct: 0, total: 0, evLostBb: 0 };
 let container = null;
 let mainAreaEl = null;
 let statsBarEl = null;
+
+let smartPracticeActiveKey = null;
 
 function render() {
     container = document.createElement('div');
@@ -39,13 +44,35 @@ function render() {
     container.appendChild(mainAreaEl);
 
     // Start first question
+    smartPracticeActiveKey = isSessionActive() ? getCurrentKey() : null;
     generateQuestion();
     updateStats();
 
     return container;
 }
 
+function getSmartPracticeOverrideQuestion() {
+    if (!smartPracticeActiveKey) return null;
+    const srs = storage.getSrsState();
+    const item = srs?.items?.[smartPracticeActiveKey] || null;
+    const payload = item?.payload || null;
+    const question = payload?.question || null;
+    if (!question || typeof question !== 'object') return null;
+    if (!Array.isArray(question.board) || question.board.length !== 3) return null;
+    return question;
+}
+
 function generateQuestion() {
+    smartPracticeActiveKey = isSessionActive() ? getCurrentKey() : null;
+
+    const override = getSmartPracticeOverrideQuestion();
+    if (override) {
+        currentQuestion = override;
+        currentBoard = override.board;
+        renderQuestion();
+        return;
+    }
+
     // Generate a random flop using shared deck manager
     currentBoard = generateBoard(3);
 
@@ -210,11 +237,48 @@ function handleAnswer(answer) {
     // ENH-001: update skill rating after each decision
     updateRatingAfterDecision(isCorrect);
 
+    // BUG-031: EV feedback parity (map binary correctness to 4-tier feedback)
+    // Since this trainer is conceptual (not a chip-EV decision tree), we map:
+    // - correct => Perfect (0bb)
+    // - incorrect => Blunder (~2.5bb)
+    const evLoss = isCorrect ? 0 : 2.5;
+    const evFeedback = {
+        evLossBb: evLoss,
+        grade: gradeFromEvLoss(evLoss),
+        meta: { mapped: 'binary-board-texture' },
+        evGto: 0,
+        evUser: -evLoss
+    };
+    stats.evLostBb += evFeedback.evLossBb;
+
+    // BUG-032: SRS integration
+    const scenarioKey = smartPracticeActiveKey || buildScenarioKeyFromResult({
+        module: 'board-texture-trainer',
+        trainerType: 'board-texture',
+        scenario: {
+            type: currentQuestion?.type || null,
+            texture: currentQuestion?.analysis?.texture || null
+        }
+    });
+    upsertSrsResult({
+        scenarioKey,
+        isCorrect,
+        evFeedback,
+        timestamp: new Date().toISOString(),
+        payload: {
+            module: 'board-texture-trainer',
+            question: currentQuestion
+        }
+    });
+    if (isSessionActive() && smartPracticeActiveKey) {
+        incrementSessionStats({ isCorrect, evFeedback });
+    }
+
     // Save stats
     // Stats tracked in-memory for this session
 
     // Show feedback
-    showFeedback(isCorrect, correctAnswer, explanation);
+    showFeedback(isCorrect, correctAnswer, explanation, evFeedback);
     updateStats();
 }
 
@@ -230,7 +294,7 @@ function updateRatingAfterDecision(isCorrect) {
     storage.saveRating(updated);
 }
 
-function showFeedback(isCorrect, correctAnswer, explanation) {
+function showFeedback(isCorrect, correctAnswer, explanation, evFeedback) {
     if (!mainAreaEl) return;
 
     // Disable buttons
@@ -239,14 +303,20 @@ function showFeedback(isCorrect, correctAnswer, explanation) {
         btn.style.pointerEvents = 'none';
     });
 
+    const evLoss = evFeedback?.evLossBb ?? (isCorrect ? 0 : null);
+    const grade = evFeedback?.grade || (isCorrect
+        ? { key: 'perfect', label: 'Perfect', icon: '✅' }
+        : { key: 'blunder', label: 'Blunder', icon: '🔴' }
+    );
+
     // Add feedback section
     const feedback = document.createElement('div');
-    feedback.className = `feedback-section ${isCorrect ? 'correct' : 'incorrect'}`;
+    feedback.className = `feedback-section grade-${grade.key}`;
 
     feedback.innerHTML = `
-        <div class="feedback-icon">${isCorrect ? '✓' : '✗'}</div>
+        <div class="feedback-icon">${grade.icon}</div>
         <div class="feedback-text">
-            <strong>${isCorrect ? 'Correct!' : 'Incorrect'}</strong>
+            <strong>${grade.label}${evLoss === null ? '' : ` (EV loss: ${evLoss.toFixed(2)}bb)`}</strong>
             <p>The answer is: <strong>${correctAnswer}</strong></p>
             <p class="feedback-explanation">${explanation}</p>
         </div>
@@ -272,9 +342,18 @@ function showFeedback(isCorrect, correctAnswer, explanation) {
     // Next button
     const nextBtn = document.createElement('button');
     nextBtn.className = 'btn btn-primary';
-    nextBtn.textContent = 'Next Board';
+    nextBtn.textContent = smartPracticeActiveKey ? 'Next Review' : 'Next Board';
     nextBtn.style.marginTop = '1rem';
-    nextBtn.addEventListener('click', generateQuestion);
+    nextBtn.addEventListener('click', () => {
+        if (isSessionActive() && smartPracticeActiveKey) {
+            const { done, nextRoute } = advanceSession();
+            if (!done) {
+                window.location.hash = nextRoute;
+                return;
+            }
+        }
+        generateQuestion();
+    });
     feedback.appendChild(nextBtn);
 
     mainAreaEl.appendChild(feedback);
@@ -300,6 +379,10 @@ function updateStats() {
         <div class="stat-item">
             <span class="stat-value">${accuracy}%</span>
             <span class="stat-label">Accuracy</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value">${stats.evLostBb.toFixed(1)}bb</span>
+            <span class="stat-label">EV Lost</span>
         </div>
     `;
 }
