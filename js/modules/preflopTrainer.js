@@ -5,6 +5,7 @@ import { randomItem, generateId, formatPercentage, showToast, randomHand } from 
 import { createHandDisplay } from '../components/Card.js';
 import ranges from '../data/ranges.js';
 import storage from '../utils/storage.js';
+import { setPokerShortcutHandler } from '../utils/shortcutManager.js';
 
 let currentSession = null;
 let statsContainerEl = null;
@@ -69,12 +70,8 @@ function render() {
         }
     };
 
-    document.addEventListener('poker-shortcut', keyboardHandler);
-
-    // Cleanup on navigation away
-    window.addEventListener('hashchange', () => {
-        document.removeEventListener('poker-shortcut', keyboardHandler);
-    }, { once: true });
+    // Install/replace active shortcut handler (single global listener)
+    setPokerShortcutHandler(keyboardHandler);
 
     return container;
 }

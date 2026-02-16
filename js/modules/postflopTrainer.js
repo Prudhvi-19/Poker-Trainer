@@ -8,6 +8,7 @@ import { BOARD_TEXTURES, CBET_FREQUENCIES, DEFENSE_FREQUENCIES } from '../data/p
 import { generateBoard as sharedGenerateBoard, cardToString } from '../utils/deckManager.js';
 import { analyzeBoard as sharedAnalyzeBoard } from '../utils/boardAnalyzer.js';
 import { evaluateHandBoard } from '../utils/handEvaluator.js';
+import { setPokerShortcutHandler } from '../utils/shortcutManager.js';
 
 let currentSession = null;
 let statsContainerEl = null;
@@ -71,12 +72,8 @@ function render() {
         }
     };
 
-    document.addEventListener('poker-shortcut', keyboardHandler);
-
-    // Cleanup on navigation away
-    window.addEventListener('hashchange', () => {
-        document.removeEventListener('poker-shortcut', keyboardHandler);
-    }, { once: true });
+    // Install/replace active shortcut handler (single global listener)
+    setPokerShortcutHandler(keyboardHandler);
 
     return container;
 }
