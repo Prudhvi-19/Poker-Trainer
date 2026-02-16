@@ -286,19 +286,31 @@ function calculateEquity() {
         return;
     }
 
-    // Show loading
-    resultsEl.innerHTML = '<div style="text-align: center; padding: 2rem;"><div class="text-muted">Calculating equity (running 10,000 simulations)...</div></div>';
+    // Show loading + disable button to avoid queued calculations (BUG-022)
+    const calculateBtn = document.querySelector('.btn.btn-primary.btn-lg');
+    if (calculateBtn) calculateBtn.disabled = true;
+
+    resultsEl.innerHTML = `
+        <div style="text-align: center; padding: 2rem;">
+            <div class="text-muted">Calculating equity (running 10,000 simulations)...</div>
+            <div class="spinner" style="margin: 1rem auto 0;"></div>
+        </div>
+    `;
 
     // Run Monte Carlo simulation with brief delay to show loading state
     setTimeout(() => {
-        const result = runMonteCarloSimulation(
-            [hand1Card1, hand1Card2],
-            [hand2Card1, hand2Card2],
-            board,
-            10000
-        );
+        try {
+            const result = runMonteCarloSimulation(
+                [hand1Card1, hand1Card2],
+                [hand2Card1, hand2Card2],
+                board,
+                10000
+            );
 
-        displayResults(result, [hand1Card1, hand1Card2], [hand2Card1, hand2Card2], board);
+            displayResults(result, [hand1Card1, hand1Card2], [hand2Card1, hand2Card2], board);
+        } finally {
+            if (calculateBtn) calculateBtn.disabled = false;
+        }
     }, 100);
 }
 
