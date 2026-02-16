@@ -4,6 +4,7 @@ import router from './router.js';
 import { MODULES } from './utils/constants.js';
 import storage from './utils/storage.js';
 import { initNavigation, setActiveNavItem, updateStreakDisplay } from './components/Navigation.js';
+import { showToast } from './utils/helpers.js';
 
 // Import all modules
 import dashboard from './modules/dashboard.js';
@@ -122,7 +123,17 @@ function applySettings() {
             medium: '16px',
             large: '18px'
         };
-        document.documentElement.style.fontSize = fontSizes[savedSettings.fontSize] || '16px';
+
+        const allowed = Object.keys(fontSizes);
+        if (!allowed.includes(savedSettings.fontSize)) {
+            // BUG-023: Reset invalid stored values and inform the user.
+            const normalized = { ...savedSettings, fontSize: 'medium' };
+            storage.saveSettings(normalized);
+            document.documentElement.style.fontSize = fontSizes.medium;
+            showToast('Your font size setting was invalid and has been reset to Medium.', 'warning', 5000);
+        } else {
+            document.documentElement.style.fontSize = fontSizes[savedSettings.fontSize] || '16px';
+        }
     }
 }
 
