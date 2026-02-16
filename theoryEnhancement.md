@@ -109,22 +109,22 @@ To keep quality high, every chapter will follow a consistent template:
 ### G. Pot odds & calling thresholds (maps to Pot Odds Trainer)
 
 - [x] G1. Pot odds math (quick mental shortcuts)
-- [ ] G2. Implied odds / reverse implied odds
-- [ ] G3. Equity realization: why 30% raw equity isn’t always 30% realized
-- [ ] G4. Multiway pot odds adjustments
+- [x] G2. Implied odds / reverse implied odds
+- [x] G3. Equity realization: why 30% raw equity isn’t always 30% realized
+- [x] G4. Multiway pot odds adjustments
 
 ### H. Equity calculator / hand strength
 
-- [ ] H1. Hand rankings refresher (incl. board plays)
-- [ ] H2. Equity vs range vs hand (why ranges matter)
-- [ ] H3. Variance in Monte Carlo sims; why iterations matter (determinism in our app)
+- [x] H1. Hand rankings refresher (incl. board plays)
+- [x] H2. Equity vs range vs hand (why ranges matter)
+- [x] H3. Variance in Monte Carlo sims; why iterations matter (determinism in our app)
 
 ### I. Meta-learning (how to study with this app)
 
-- [ ] I1. How to use EV loss + grades to guide improvement
-- [ ] I2. How to use Skill Rating without “gaming” it
-- [ ] I3. How to use Smart Practice (SRS) effectively
-- [ ] I4. How to review hands (Hand Replayer workflow)
+- [x] I1. How to use EV loss + grades to guide improvement
+- [x] I2. How to use Skill Rating without “gaming” it
+- [x] I3. How to use Smart Practice (SRS) effectively
+- [x] I4. How to review hands (Hand Replayer workflow)
 
 ---
 

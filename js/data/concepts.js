@@ -133,19 +133,166 @@ Examples:
 - Open-ended straight draw on flop: ~8 outs → ~32%
 - Gutshot on flop: ~4 outs → ~16%
 
-**Important: equity realization**
-Even if you have enough raw equity, you might not realize it when:
-- You are OOP
-- Your draw is weak and faces big bets
-- You often get forced to fold on later streets
-
-**Implied odds (future money):**
-You can call slightly below break-even if you expect to win more later when you hit.
-Be careful: reverse implied odds happen when your hand improves but is still second best.
-
 **Drills (in this app):**
 - Pot Odds Trainer: practice required equity under different bet sizes
-- Equity Calculator: estimate your equity on different boards`
+- Equity Calculator: estimate your equity on different boards
+
+Next concepts:
+- Implied Odds & Reverse Implied Odds
+- Equity Realization (why raw equity != realized equity)
+- Multiway Pot Odds Adjustments`
+        },
+        {
+            id: 'implied-odds',
+            title: 'Implied Odds and Reverse Implied Odds',
+            content: `Implied odds = extra money you expect to win on later streets when you hit.
+
+Pot odds only considers the current price. Implied odds considers future betting.
+
+**When implied odds are good:**
+- You have a strong draw to a *well-disguised* hand
+- Stacks are deep (more money behind)
+- Villain will pay you when you hit (they have strong top-pair type hands)
+
+Examples (general):
+- Calling with a pocket pair for set mining can be profitable when stacks are deep.
+- Calling with a nut flush draw can be profitable even if you are slightly below direct pot-odds.
+
+**Reverse implied odds:**
+Reverse implied odds = you can hit and still lose a big pot.
+
+Common reverse implied odds situations:
+- Low flush draws (you make a flush but villain makes a higher flush)
+- Weak top pair vs ranges that contain many better top pairs
+- Straights on paired boards where full houses exist
+
+**Practical rule:**
+Prefer draws to the *nuts* and avoid dominated draws, especially OOP.
+
+**Drills (in this app):**
+- Equity Calculator: compare A-high flush draw vs low flush draw on the same flop
+- Postflop Trainer: notice when weak draws become folds on big sizing`
+        },
+        {
+            id: 'equity-realization',
+            title: 'Equity Realization (Why 30% Equity Isn’t Always 30% Realized)',
+            content: `Raw equity is your chance to win at showdown if all cards are dealt.
+
+Realized equity is how much of that equity you *actually* get to convert into winning chips.
+
+**Why equity realization changes:**
+- Position: IP realizes more (you can check behind and take free cards)
+- Bet sizing: big bets force folds and reduce realization for weak draws
+- Hand type: suited/connected hands realize better than weak offsuit hands
+- Domination: some “outs” are not clean (you improve but are still behind)
+
+**Simple examples:**
+- A gutshot OOP vs big bet often realizes poorly (you fold turns too often).
+- A nut flush draw IP realizes well (you can call and win big when you hit).
+
+**Practical consequence:**
+When you’re deciding to call, don’t ask only “do I have enough equity?”
+Ask also “can I realistically realize it from this position and against this sizing?”
+
+**Drills (in this app):**
+- Postflop Trainer: compare the same call IP vs OOP
+- Pot Odds Trainer: connect bet size increases to lower realization thresholds`
+        },
+        {
+            id: 'multiway-pot-odds',
+            title: 'Multiway Pot Odds Adjustments',
+            content: `Multiway pots change everything:
+- There is more money in the pot (better direct pot odds)
+- But your chance to win with a marginal hand is lower (someone often has something)
+
+**Key changes in multiway pots:**
+- You need stronger made hands (top pair becomes less valuable)
+- Draws become more valuable (you can win a bigger pot when you hit)
+- Bluffing becomes less effective (fold equity drops with multiple players)
+
+**Pot odds vs implied odds multiway:**
+- Direct pot odds are often better, but you must consider whether your hand can win vs multiple ranges.
+
+**Common mistakes:**
+- Calling multiway with weak top pairs because the price looks good
+- Bluffing into two players (fold equity is much lower)
+
+**Drills (in this app):**
+- Pot Odds Trainer: practice required equity with larger pots
+- Postflop Trainer: treat multiway as “need stronger value + fewer bluffs”`
+        },
+        {
+            id: 'hand-rankings',
+            title: 'Hand Rankings Refresher (Including “Board Plays”)',
+            content: `Standard hand strength (best to worst):
+1) Royal flush
+2) Straight flush
+3) Four of a kind
+4) Full house
+5) Flush
+6) Straight
+7) Three of a kind
+8) Two pair
+9) One pair
+10) High card
+
+**Important: the board can play.**
+Sometimes the best 5-card hand uses only community cards.
+
+Examples:
+- Board: A♠ K♠ Q♠ J♠ T♠ → everyone has a royal flush (chop)
+- Board: K♦ K♣ K♠ 7♥ 7♣ → everyone has a full house (KKK77)
+
+**Practical consequence:**
+When evaluating strength, always ask: “What is my *best 5-card hand*?”
+
+**Drills (in this app):**
+- Equity Calculator: test edge cases where the board plays
+- Hand Replayer: pause on river and identify the best 5-card hand`
+        },
+        {
+            id: 'equity-vs-range',
+            title: 'Equity vs a Range (Not Just vs One Hand)',
+            content: `Poker decisions are usually vs an opponent’s range, not a specific hand.
+
+**Equity vs hand:**
+Your chance to win against one exact hand.
+
+**Equity vs range:**
+Your chance to win averaged across all hands the opponent can have.
+
+**Why this matters:**
+- A hand can be crushing vs some combos and terrible vs others.
+- The same top pair can be a value bet vs a wide range and a check vs a tight range.
+
+**Practical approach:**
+1) Estimate what villain’s range looks like given preflop + flop action.
+2) Ask how your hand performs vs that entire range.
+3) Choose the line with best EV (not the line that beats the strongest possible hand).
+
+**Drills (in this app):**
+- Equity Calculator: compare your hand equity vs different ranges
+- Concepts → Ranges & Combos: practice blocker thinking for range construction`
+        },
+        {
+            id: 'monte-carlo-variance',
+            title: 'Monte Carlo Equity: Variance, Iterations, and Determinism',
+            content: `Many equity calculators estimate equity by simulation (Monte Carlo).
+
+**Key idea:**
+- More iterations → more stable results
+- Fewer iterations → more noise
+
+**Why this matters for training apps:**
+- If results change a lot from run to run, feedback can feel random.
+- For “trainer grading,” we want consistent (deterministic) feedback whenever possible.
+
+**Practical takeaway:**
+Use simulated equity as a *tool for intuition*, not as a perfect truth.
+
+**Drills (in this app):**
+- Equity Calculator: run similar spots and observe how results stabilize with more trials
+- Postflop Trainer: focus on EV direction (good vs bad) more than exact %`
         },
         {
             id: 'expected-value',
@@ -181,6 +328,92 @@ Many trainers show an EV grade (Perfect / Good / Mistake / Blunder) and an EV lo
 **Drills (in this app):**
 - Preflop / Postflop trainers: focus on reducing EV loss, not just being correct
 - Smart Practice: let SRS bring back the spots where your EV loss is highest`
+        },
+        {
+            id: 'using-ev-loss',
+            title: 'How to Use EV Loss + Grades to Improve',
+            content: `The most important metric in this app is EV loss.
+
+**EV loss = how much EV you gave up vs the best action.**
+
+**How to use it (simple loop):**
+1) Don’t chase “100% correct.” Chase lower EV loss.
+2) Look for repeated spot types (same texture/position/line) where EV loss is high.
+3) Study the relevant concept page.
+4) Drill that exact trainer mode.
+5) Re-test.
+
+**Why EV loss is better than “right/wrong”:**
+- Many poker spots have multiple close options.
+- EV loss tells you the cost of your mistake.
+
+**Practical tip:**
+Treat big EV loss spots as “priority bugs” in your strategy.
+
+**Drills (in this app):**
+- Session History: filter for biggest EV loss
+- Smart Practice: let SRS schedule your highest EV loss spots`
+        },
+        {
+            id: 'skill-rating',
+            title: 'How to Use Skill Rating (Without Gaming It)',
+            content: `Skill Rating is a progress indicator, not the goal.
+
+**How to use it correctly:**
+- Track trends over time, not day-to-day noise
+- Use it to motivate consistency, not perfection
+
+**How people “game” ratings (don’t do this):**
+- Only playing the easiest trainer modes
+- Avoiding spots you are weak at
+
+**Better approach:**
+- Intentionally practice your weak spots (where EV loss is highest)
+- Ratings will follow
+
+**Drills (in this app):**
+- Smart Practice: focus on weaknesses
+- Dashboard: check rating trends weekly`
+        },
+        {
+            id: 'smart-practice-srs',
+            title: 'Smart Practice (SRS): How to Get Fast Improvement',
+            content: `SRS (spaced repetition) is the fastest way to turn “knowledge” into automatic decisions.
+
+**What SRS does well:**
+- Brings back mistakes *right before* you forget them
+- Stops you from mindlessly grinding easy spots
+
+**How to use Smart Practice:**
+1) Do a normal session in a trainer.
+2) Let Smart Practice collect misses / high EV loss spots.
+3) Do short SRS sessions daily (even 5–10 minutes).
+
+**Important:**
+If you keep missing a spot, pause and read the concept page.
+
+**Drills (in this app):**
+- Smart Practice: short daily sets
+- Concepts: read the linked topic when a card repeats too often`
+        },
+        {
+            id: 'review-with-hand-replayer',
+            title: 'How to Review Hands with Hand Replayer',
+            content: `Review turns practice into skill.
+
+**A simple review checklist:**
+1) Identify the spot type (SRP vs 3-bet pot, IP/OOP, texture).
+2) What was your plan on flop? (value / bluff / bluff-catch)
+3) What changed on turn/river? (runout equity shift)
+4) Was sizing consistent with your goal?
+5) Where did EV loss occur?
+
+**Common mistake in review:**
+- Only looking at outcomes (win/lose) instead of decision quality.
+
+**Drills (in this app):**
+- Hand Replayer: replay the biggest EV loss hands
+- Concepts: read the topic that matches the street where you leaked EV`
         },
         {
             id: 'fold-equity',
