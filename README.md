@@ -1,6 +1,14 @@
 # 🃏 GTO Poker Trainer
 
-A comprehensive, single-page web application for learning and practicing Game Theory Optimal (GTO) poker strategy for 6-max Texas Hold'em cash games. Master preflop ranges, study postflop scenarios, and track your progress—all in your browser with zero backend dependencies.
+A comprehensive, single-page web application for learning and practicing Game Theory Optimal (GTO) poker strategy for 6-max Texas Hold'em cash games.
+
+**Highlights**
+
+- **EV-graded feedback** (Perfect / Good / Mistake / Blunder) with **bb EV loss**
+- **Skill rating (ELO-like)** that updates after each decision
+- **Smart Practice (Spaced Repetition / SRS)** to review your weak spots
+- **PWA + Offline support** (installable; works offline after first load when served over `http(s)`)
+- Zero backend, no accounts, local-first data via `localStorage`
 
 ## ✨ Features
 
@@ -9,6 +17,8 @@ A comprehensive, single-page web application for learning and practicing Game Th
 - Accuracy metrics by module and position
 - Weakness identification
 - Study streak counter
+- Skill rating widget + tier
+- Smart Practice card (spaced repetition reviews due now)
 - Quick access to all training modules
 
 ### 🎯 Preflop Trainer
@@ -19,6 +29,7 @@ A comprehensive, single-page web application for learning and practicing Game Th
 - **Squeeze Trainer**: Learn squeeze play (raise vs call + caller scenarios)
 - **BB Defense**: Master big blind defense vs all positions
 - Real-time feedback with explanations
+- EV-graded feedback (bb EV loss)
 - Session statistics and accuracy tracking
 - Auto-save progress to localStorage
 - Full keyboard shortcut support (R/C/F/Space)
@@ -33,6 +44,7 @@ A comprehensive, single-page web application for learning and practicing Game Th
 - Dynamic board generation with all streets (flop, turn, river)
 - Board texture classification algorithm
 - Real-time feedback with board texture analysis
+- EV-graded feedback (bb EV loss)
 - Session statistics and accuracy tracking
 - Full keyboard shortcut support
 
@@ -44,11 +56,12 @@ A comprehensive, single-page web application for learning and practicing Game Th
 - Tracks all decisions across all streets
 - Session statistics: hands played, total decisions, accuracy
 - Real-time feedback for each decision
+- EV-graded feedback (bb EV loss)
 - Complete poker hand experience
 
 ### 🧮 Equity Calculator ⭐ NEW!
 - **Hand vs hand equity** calculation
-- **Monte Carlo simulation** (10,000 iterations for accuracy)
+- **Monte Carlo simulation** (deterministic RNG; default 10,000 iterations for hand-vs-hand)
 - Optional board input (0-5 cards: flop, turn, river)
 - Visual equity bars with win percentages
 - Full hand evaluator (pairs through straight flush)
@@ -116,15 +129,36 @@ A comprehensive, single-page web application for learning and practicing Game Th
 ### ⚙️ Settings
 - **Display**: 4-color/2-color deck, font size, sound effects
 - **Training**: Session length, hints, difficulty
-- **Data Management**: Export/import data, reset progress
+- **Data Management**: Export/import data, reset progress, **reset skill rating**
+
+### 📲 PWA / Offline
+
+- Installable via an in-app **Install App** button (supported browsers)
+- Offline-ready via service worker precache (after first load)
+- Update notification when a new version is available (reload prompt)
+- Online/offline indicator in the sidebar footer
 
 ## 🎮 How to Use
 
 ### Getting Started
 
 1. **Clone or Download** this repository
-2. **Open `index.html`** in a modern web browser
-3. **Start Practicing!** No build process or server required
+
+2. Choose how to run it:
+
+   **Option A — Simple (no server):**
+   - Open `index.html` directly.
+   - Note: some PWA features (service worker / install prompt) won’t work on `file://`.
+
+   **Option B — Recommended (enables PWA/offline):**
+   - Start a local static server:
+     ```bash
+     python3 -m http.server 5173 --bind 127.0.0.1
+     ```
+   - Open:
+     - http://127.0.0.1:5173/index.html#dashboard
+
+3. **Start Practicing!** No build process required.
 
 ### Recommended Study Path
 
@@ -137,10 +171,10 @@ A comprehensive, single-page web application for learning and practicing Game Th
 
 ### Keyboard Shortcuts
 
-- `R` = Raise
-- `C` = Call
+- `R` / `B` = Raise / Bet (trainer-dependent)
+- `C` = Call / Check (trainer-dependent)
 - `F` = Fold
-- `Space` = Next hand
+- `Space` = Next
 - `1-6` = Bet sizing options (when applicable)
 
 ## 🏗️ Project Structure
@@ -148,6 +182,9 @@ A comprehensive, single-page web application for learning and practicing Game Th
 ```
 Poker-Trainer/
 ├── index.html                 # Main HTML file
+├── manifest.webmanifest        # PWA manifest
+├── service-worker.js           # Offline caching (PWA)
+├── icons/                      # App icons (192/512 + apple-touch)
 ├── css/
 │   ├── variables.css          # Design tokens and theme
 │   ├── base.css               # Reset and base styles
@@ -162,6 +199,11 @@ Poker-Trainer/
 │   │   ├── constants.js       # App-wide constants
 │   │   ├── storage.js         # localStorage wrapper
 │   │   ├── helpers.js         # Utility functions
+│   │   ├── equity.js           # Monte Carlo equity utilities (deterministic)
+│   │   ├── evFeedback.js       # EV grading (Perfect/Good/Mistake/Blunder)
+│   │   ├── rating.js           # Skill rating (ELO-like)
+│   │   ├── srs.js              # Spaced repetition scheduler
+│   │   └── smartPracticeSession.js # Cross-module SRS review session controller
 │   │   └── stats.js           # Statistics calculations
 │   ├── data/
 │   │   ├── ranges.js          # GTO range data
@@ -176,6 +218,12 @@ Poker-Trainer/
 │       ├── dashboard.js       # Dashboard module
 │       ├── preflopTrainer.js  # Preflop training
 │       ├── postflopTrainer.js # Postflop training (c-bet, turn, river)
+│       ├── multistreetTrainer.js # Multi-street training
+│       ├── equityCalculator.js # Equity calculator
+│       ├── boardTextureTrainer.js # Board texture trainer
+│       ├── potOddsTrainer.js   # Pot odds trainer
+│       ├── cbetTrainer.js      # Dedicated c-bet trainer
+│       ├── betSizingTrainer.js # Bet sizing trainer
 │       ├── rangeVisualizer.js # Range visualizer
 │       ├── charts.js          # Charts reference
 │       ├── scenarios.js       # Scenarios library
@@ -217,7 +265,7 @@ All ranges are based on modern GTO solver outputs for 6-max cash games:
 - No frameworks or build tools required
 - localStorage for data persistence
 - Fully responsive design
-- Works offline after first load
+- PWA service worker for offline caching (when served over `http(s)` / localhost)
 
 ### Browser Compatibility
 - Chrome/Edge: ✅ Full support
@@ -244,36 +292,22 @@ All ranges are based on modern GTO solver outputs for 6-max cash games:
 All data is stored in your browser's localStorage:
 - Practice sessions (last 100 sessions)
 - Progress metrics
+- Skill rating + rating history
+- Smart Practice / SRS state
 - Custom ranges
 - User settings
 - Study streak
 
 **Export Your Data**: Use Settings → Export Data to backup your progress
 
-## 🎉 Recent Updates (v2.0)
+## 🎉 Recent Updates
 
-### ⭐ Major Features Added
-- ✅ **Multi-Street Trainer**: Complete hand progression (preflop → river)
-- ✅ **Equity Calculator**: Hand vs hand equity with Monte Carlo simulation
-- ✅ **Hand Replayer**: Review and learn from all past training sessions
+### v3.x (current)
 
-### 🐛 Bug Fixes & Improvements
-- ✅ Fixed session history duplicates (sessions now update correctly)
-- ✅ Fixed dropdown selection issues in trainers
-- ✅ Fixed hand randomization bias (now uses all 169 starting hands equally)
-- ✅ Fixed range visualizer pair highlighting (pairs now show correctly when selected)
-- ✅ Improved charts readability (click to expand, removed text lists, better scaling)
-- ✅ Added hover effects and visual feedback throughout the app
-
-### 📊 Complete Feature Set
-This app now includes:
-- ✅ **6 Preflop Trainer Modes** (RFI, 3-bet, 4-bet, cold call, squeeze, BB defense)
-- ✅ **5 Postflop Trainer Modes** (c-bet, facing c-bet, turn, river, board texture)
-- ✅ **Multi-Street Trainer** (full hands across all streets)
-- ✅ **Equity Calculator** (hand vs hand with board input)
-- ✅ **Hand Replayer** (review past sessions)
-- ✅ **Complete GTO Data** (all positions, all scenarios)
-- ✅ **12 Total Modules** for comprehensive poker training
+- ✅ **ENH-001 Skill Rating (ELO-like)** shown on Dashboard; updates after each decision
+- ✅ **ENH-002 EV feedback**: 4-tier grading + bb EV loss across trainers
+- ✅ **ENH-003 PWA + offline support** (manifest + service worker), install UX, update prompt
+- ✅ **ENH-004 Smart Practice (SRS)**: spaced repetition review queue + resume on refresh
 
 ## 🚀 Future Enhancements
 
@@ -281,7 +315,6 @@ This app now includes:
 - [ ] Range vs range equity visualization
 - [ ] Achievement system and badges
 - [ ] Study plan generator based on weaknesses
-- [ ] Spaced repetition system for weak areas
 - [ ] Custom scenario builder
 - [ ] Multi-language support
 - [ ] Advanced tournament-specific training (ICM, bubble play)
