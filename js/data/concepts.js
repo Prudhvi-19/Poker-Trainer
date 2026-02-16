@@ -594,15 +594,39 @@ Board: K high dry flop
 - creates multiway pots
 - makes it harder to realize equity
 
+Example (correct):
+- 100bb effective, you’re UTG with A♠J♠. You open to 2.2bb. You either win the blinds immediately or get to play a single-raised pot with initiative.
+
+Counterexample (common mistake):
+- 100bb effective, you’re UTG with A♠J♠ and you limp. CO/BUTTON isolates to a bigger size, blinds come along, and you end up OOP in a multiway pot with an uncapped range behind you.
+
+More examples / variants:
+- Recreational live games sometimes allow profitable limping in specific table conditions, but in most 6-max online/cash-style environments, raise/fold is the clean baseline.
+
 **Why opening works (what you win):**
 - You can win the blinds immediately
 - You get initiative, which creates fold equity postflop
 - You often get to play heads-up (simpler decisions)
 
+Example (correct):
+- 100bb effective, you’re on the BTN with K♦J♦. Everyone folds to you. You open 2.2bb and the blinds fold. You win 1.5bb without seeing a flop.
+
+Counterexample (common mistake):
+- Same spot (BTN, K♦J♦, folds to you) but you “don’t want to play a marginal hand” and fold. Over time you give up a lot of free EV because BTN steals are a major win-rate source.
+
+More examples / variants:
+- If a blind is an aggressive 3-bettor who makes your life miserable postflop, you can tighten your steals *a bit* or prepare a stronger 4-bet/call strategy. Don’t just stop opening.
+
 **Why ranges widen by position:**
 - Later position plays more pots IP
 - Blinds are forced to defend wider vs steals
 - You can profitably open more “thin” hands because you realize more equity
+
+Example (correct):
+- CO opens wider than HJ: CO can open hands like 8♠7♠ that would be too loose in HJ because CO will often play IP vs blinds.
+
+Counterexample (common mistake):
+- You copy your BTN opening range and use it UTG (for example opening J9o / A7o UTG). These hands get dominated more and realize equity poorly OOP or multiway.
 
 **Typical RFI sizes (broad intuition):**
 - UTG: tight (strong broadways, strong pairs, suited aces)
@@ -611,23 +635,59 @@ Board: K high dry flop
 - BTN: widest (many suited hands, more offsuit broadways)
 - SB: wide but tricky (you are OOP postflop vs BB)
 
+Example (correct):
+- UTG: open AQs, KQs, 99+, AKo (baseline intuition).
+- BTN: add more suited hands and more offsuit broadways (for example KTo, QTo in many lineups).
+
+Counterexample (common mistake):
+- SB opening like the BTN and then playing “fit-or-fold” postflop OOP vs BB. SB is not BTN — your postflop disadvantage is huge.
+
 **Sizing standards:**
 - A common baseline is ~2.0–2.5bb opens (this app’s preflop trainer uses a standard open sizing model)
 - In general: smaller opens allow wider ranges; bigger opens tighten ranges
+
+Example (correct):
+- 6-max online/cash baseline: you open 2.2bb from most positions. You can include more marginal steals (especially BTN) because your risk is lower.
+
+Counterexample (common mistake):
+- You open 4bb from the BTN with a wide stealing range “to make them fold.” You risk too much to win 1.5bb, your steals need to work extremely often, and when called you often bloat pots with hands that don’t want huge SPR.
+
+More examples / variants:
+- If a table is extremely call-heavy and passive, slightly bigger opens can be fine *with a tighter range* (you’re targeting value + realization, not fold equity).
 
 **Construction rules of thumb (high-level):**
 - Prefer suited hands to offsuit hands (better equity realization)
 - Prefer connected hands to disconnected hands (more board coverage)
 - Avoid dominated offsuit hands in early position (like A7o, K9o)
 
+Example (correct):
+- BTN: open 9♠8♠ (suited + connected) more readily than 9♣8♦ (offsuit).
+- HJ/UTG: prefer A♠T♠ over A♦T♣, and avoid hands like A7o that make dominated top pair too often.
+
+Counterexample (common mistake):
+- You open K9o UTG and get called by CO/BTN. Flop comes K-high, you make top pair…but villain has KQ/KJ/KT at meaningful frequency. You win small pots and lose big ones (domination).
+
 **When to deviate exploitatively (if you have a reason):**
 - If blinds are tight: open wider (steal more)
 - If blinds are aggressive 3-bettors: tighten opens and/or 4-bet more linear
 - If table is very call-heavy: tighten opens and emphasize hands that realize well postflop
 
+Example (correct):
+- Blinds fold too much vs steals: you open BTN a bit wider (more suited junk + more offsuit broadways).
+- BB is a strong 3-bettor: you remove the weakest offsuit hands from CO/BTN opens and add more 4-bet/continue candidates.
+
+Counterexample (common mistake):
+- You “decide to exploit” by opening almost any two cards on BTN without tracking whether blinds actually over-fold. The result is you get defended/3-bet and bleed EV with trash hands.
+
 **Common mistakes:**
 - Opening too wide UTG because BTN ranges look fun
 - Over-valuing weak offsuit aces (domination)
+
+Example (common mistake):
+- UTG opens Q9o / K8o because “it’s close on the button.” These hands are not close UTG.
+
+Counterexample (what to do instead):
+- Tighten UTG/HJ by removing dominated offsuit hands; put those marginal opens into CO/BTN where you’ll realize equity far better.
 
 **Drills (in this app):**
 - Preflop Trainer → RFI: focus on UTG/HJ discipline
