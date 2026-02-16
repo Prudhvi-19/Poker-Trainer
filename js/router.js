@@ -2,6 +2,7 @@
 
 import { MODULES } from './utils/constants.js';
 import { scrollToTop } from './utils/helpers.js';
+import { clearPokerShortcutHandler } from './utils/shortcutManager.js';
 
 class Router {
     constructor() {
@@ -64,6 +65,10 @@ class Router {
     async handleRoute() {
         const hash = window.location.hash.slice(1); // Remove '#'
         const module = hash || MODULES.DASHBOARD; // Default to dashboard
+
+        // Ensure shortcuts never leak from a previous module.
+        // Trainers will re-register a handler during render.
+        clearPokerShortcutHandler();
 
         // Check if route exists
         if (!this.routes[module]) {
