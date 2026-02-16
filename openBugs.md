@@ -3,7 +3,7 @@
 This file tracks **known open bugs, logic/UX issues, and feature enhancements** found during comprehensive code review and competitive analysis.
 
 - **Repo:** Poker-Trainer
-- **Working branch:** `claude/research-product-enhancements-7hyrp`
+- **Working branch:** `audit/bug-hunt`
 - **Last updated:** 2026-02-16
 
 ## Severity scale
@@ -26,26 +26,7 @@ This file tracks **known open bugs, logic/UX issues, and feature enhancements** 
 
 ## P0 -- Critical
 
-### BUG-011 Event listener memory leak across trainer modules
-
-- **Files:** `js/modules/preflopTrainer.js:72-77`, `js/modules/postflopTrainer.js:74-79`, `js/modules/multistreetTrainer.js:81-85`
-- **Description:** Keyboard shortcut listeners (`poker-shortcut`) are registered on every trainer render. Cleanup relies on a one-time `hashchange` listener. If the user navigates away and back to the same trainer (hash unchanged), the old listener persists and a new one stacks on top. After 10+ trainer visits, multiple duplicate handlers fire per keypress, causing double-actions and memory bloat.
-- **Impact:** Performance degradation in long sessions. Duplicate raise/call/fold actions fire simultaneously, corrupting session accuracy data.
-- **Suggested fix:** Use a single global shortcut dispatcher keyed by current module, or use `AbortController` signals for deterministic cleanup.
-
-### BUG-012 XSS vulnerability in Modal innerHTML
-
-- **Files:** `js/components/Modal.js:59`, `js/components/Modal.js:156`
-- **Description:** `showModal()` sets `body.innerHTML = content` when content is a string, with zero sanitization. `showConfirm()` interpolates message directly into a template literal (`<p>${message}</p>`). If any module passes user-generated or imported data (e.g., custom range names, imported JSON scenario titles), arbitrary script execution is possible.
-- **Impact:** Security risk. While the app is currently local-only, imported JSON data or future sharing features make this exploitable.
-- **Suggested fix:** Escape HTML entities before injection, or always use DOM APIs (`textContent`, `createElement`) instead of `innerHTML`.
-
-### BUG-013 localStorage quota exceeded silently drops sessions
-
-- **Files:** `js/utils/storage.js:21-42`
-- **Description:** When `localStorage.setItem()` throws `QuotaExceededError`, the code truncates sessions to 50 and retries. If the retry also fails, the error is silently swallowed. The user receives no notification that their training history was permanently deleted.
-- **Impact:** Data loss. Users who have built up 100+ sessions of training data lose half their history without warning.
-- **Suggested fix:** Show a toast/modal warning before deleting old sessions. Offer export before cleanup. Consider using IndexedDB for larger storage capacity.
+✅ No open **P0** issues currently (BUG-011/012/013 fixed; see `closedBugs.md`).
 
 ---
 

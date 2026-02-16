@@ -73,3 +73,24 @@
 - **Fix:** Added heads-up blind posting + tracked contributions so pot/stack updates are consistent with scenario actions.
 - **Verification:** Loaded `#multistreet-trainer` in browser and interacted with actions.
 
+### FIXED — BUG-011 Event listener memory leak across trainer modules
+
+- **Severity:** P0
+- **Commits:** `76f8897`, `11d9197`
+- **Fix:** Centralized `poker-shortcut` handling via `js/utils/shortcutManager.js` and clear the active handler on every route change in `js/router.js`.
+- **Verification:** Code inspection; manual navigation test recommended.
+
+### FIXED — BUG-012 XSS vulnerability in Modal innerHTML
+
+- **Severity:** P0
+- **Commit:** `ae21f00`
+- **Fix:** `showModal()` no longer injects raw HTML strings; string content is rendered via `textContent`.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-013 localStorage quota exceeded silently drops sessions
+
+- **Severity:** P0
+- **Commit:** `f82b566`
+- **Fix:** Show toast warnings before truncating sessions and on save failure so user is informed about data loss / action needed.
+- **Verification:** Code inspection; manual storage-fill test recommended.
+
