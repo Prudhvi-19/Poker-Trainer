@@ -86,11 +86,11 @@ To keep quality high, every chapter will follow a consistent template:
 
 ### D. Turn & River (maps to Postflop Trainer)
 
-- [ ] D1. Turn barreling: card selection, equity shifts, double-barrel logic
-- [ ] D2. River value: thin value vs bluff-catch vs give-up
-- [ ] D3. Bluff construction (blockers, unblockers, minimum defense frequency intuition)
-- [ ] D4. Overbet theory (when it appears; polar ranges)
-- [ ] D5. Check-raise theory (value/bluff ratios; when it’s credible)
+- [x] D1. Turn barreling: card selection, equity shifts, double-barrel logic
+- [x] D2. River value: thin value vs bluff-catch vs give-up
+- [x] D3. Bluff construction (blockers, unblockers, minimum defense frequency intuition)
+- [x] D4. Overbet theory (when it appears; polar ranges)
+- [x] D5. Check-raise theory (value/bluff ratios; when it’s credible)
 
 ### E. Multi-street planning (maps to Multi-street Trainer)
 

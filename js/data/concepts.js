@@ -1049,6 +1049,135 @@ The trainers generally grade you against a GTO-style recommendation.
 - Use Smart Practice (SRS) to revisit the exact spots you repeatedly miss`
         },
         {
+            id: 'turn-barreling',
+            title: 'Turn Barreling (When to Continue Aggression)',
+            content: `The turn is where pots become large and mistakes become expensive.
+
+**Why barrel the turn?**
+- Value: you still get called by worse
+- Denial: you charge draws / deny equity
+- Bluff: you gain fold equity as ranges narrow
+
+**Good turn cards to barrel (general idea):**
+- Cards that improve your perceived range (overcards to the board)
+- Cards that reduce villain’s continues (bad cards for their range)
+- Cards that give you equity (pick up a draw / pair)
+
+**Bad turn cards to barrel:**
+- Cards that smash the caller’s range (complete obvious draws)
+- Cards that reduce your value advantage
+
+**Key concept: equity shift**
+Ask: “Who likes this turn more, me or villain?”
+
+**Drills (in this app):**
+- Postflop Trainer: compare flop bet → turn decisions across different runouts
+- Multi-street Trainer: plan flop/turn sizing and see how it affects river options`
+        },
+        {
+            id: 'river-value-and-bluffcatching',
+            title: 'River Value, Thin Value, and Bluff-Catching',
+            content: `On the river, there are no more cards to come: decisions are purely about ranges.
+
+**Value betting on the river:**
+- Bet when worse hands can call
+- Your sizing should target the part of villain’s range that continues
+
+**Thin value:**
+- Betting with hands that are only slightly ahead of villain’s calling range
+- Usually smaller sizing to get called by bluff-catchers
+
+**Bluff-catching:**
+- Calling a river bet with a hand that cannot beat value, but can beat bluffs
+- Requires villain to have enough bluffs in their range
+
+**Common mistakes:**
+- Over-folding rivers (many players bluff more than you think)
+- Over-calling rivers vs under-bluffing opponents
+- Using huge sizes with thin value
+
+**Drills (in this app):**
+- Postflop Trainer: practice river call/fold thresholds via pot odds
+- EV feedback: review whether your biggest losses come from river over-calls or over-folds`
+        },
+        {
+            id: 'bluff-construction',
+            title: 'Bluff Construction (Blockers, Unblockers, MDF Intuition)',
+            content: `Good bluffs are chosen, not guessed.
+
+**Two pieces of a good bluff:**
+- The story is credible (your line can represent value)
+- Your hand is a good candidate (blockers / equity)
+
+**Blockers and unblockers:**
+- Blockers: cards in your hand that reduce villain’s value combos
+- Unblockers: cards that *do not* block villain’s folding hands / bluffs
+
+Example intuition:
+- Having an Ace can be a strong blocker because it removes some of villain’s top hands.
+
+**MDF (Minimum Defense Frequency) intuition:**
+MDF tells you how often a defender must continue to avoid being auto-exploited by bluffs.
+- Bigger bets require the defender to fold more
+- Therefore, bigger bets need more polarization (strong value + bluffs)
+
+**Common mistakes:**
+- Bluffing with hands that block villain’s folds
+- Bluffing without enough credible value hands in your range
+
+**Drills (in this app):**
+- Bet Sizing Trainer: connect sizing to required bluff frequency
+- Advanced → Blockers concept: practice choosing bluff candidates with removal effects`
+        },
+        {
+            id: 'overbet-theory',
+            title: 'Overbet Theory (Why Bet Bigger Than Pot)',
+            content: `An overbet is betting more than the pot.
+
+**Why overbet?**
+- To apply maximum pressure with a polarized range
+- To target capped ranges that can’t defend well
+- To leverage nut advantage (you have more of the best hands)
+
+**When overbets appear most often:**
+- On runouts where one player has a strong nut advantage
+- When the defender’s range contains many medium-strength bluff-catchers
+
+**Common mistakes:**
+- Overbetting without nut advantage (you get called/raised too much)
+- Overbetting with thin value (you only get called by better)
+
+**Drills (in this app):**
+- Bet Sizing Trainer: practice when a big size is logical vs when small is better
+- Postflop Trainer: look for textures/runouts where pressure is highest`
+        },
+        {
+            id: 'check-raise-theory',
+            title: 'Check-Raise Theory (Value + Bluffs)',
+            content: `A check-raise is checking, then raising after villain bets.
+
+**Why check-raise?**
+- Value: build a pot with strong hands
+- Protection: deny equity on wet boards
+- Bluff: use fold equity when villain’s bet range is wide
+
+**When check-raises are credible:**
+- On boards where the caller has many strong hands (sets, two pair, strong draws)
+- When villain c-bets too frequently
+
+**Range construction:**
+- Value: strong made hands
+- Bluffs: strong draws and some blocker bluffs
+
+**Common mistakes:**
+- Check-raising only value (becomes obvious)
+- Check-raising weak draws that can’t continue vs a 3-bet
+
+**Drills (in this app):**
+- Postflop Trainer: practice when to check-raise vs when to call
+- Board Texture Trainer: identify boards where the defender has nut advantage`
+        },
+        {
             id: 'balance',
             title: 'Balance and Frequencies',
             content: `Balance means your range contains both strong hands and bluffs in correct proportions.
