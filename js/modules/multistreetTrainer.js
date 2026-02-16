@@ -41,7 +41,7 @@ function render() {
 
     // Scenario area - store reference directly
     scenarioEl = document.createElement('div');
-    scenarioEl.id = 'multistreet-scenario';
+    scenarioEl.id = 'scenario-container';
     container.appendChild(scenarioEl);
 
     // Initialize session (now uses stored references)

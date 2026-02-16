@@ -30,6 +30,7 @@ function render() {
 
     // Scenario area
     scenarioContainerEl = document.createElement('div');
+    scenarioContainerEl.id = 'scenario-container';
     container.appendChild(scenarioContainerEl);
 
     // Initialize session
