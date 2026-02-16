@@ -139,6 +139,15 @@ function initKeyboardShortcuts() {
 
         const key = e.key.toLowerCase();
 
+        // BUG-015: If a button inside a feedback panel is focused, let Space trigger
+        // the button click naturally (do NOT also dispatch a poker-shortcut).
+        if (key === ' ' && document.activeElement?.tagName === 'BUTTON') {
+            const inFeedback = document.activeElement.closest?.('.feedback-panel');
+            if (inFeedback) {
+                return;
+            }
+        }
+
         // Dispatch custom events for keyboard shortcuts
         switch (key) {
             // Postflop trainers often describe B=Bet. Map it to the same action as raise/bet.
