@@ -1178,6 +1178,96 @@ MDF tells you how often a defender must continue to avoid being auto-exploited b
 - Board Texture Trainer: identify boards where the defender has nut advantage`
         },
         {
+            id: 'multistreet-planning',
+            title: 'Multi-Street Planning (Flop → Turn → River)',
+            content: `Good players don’t just choose a flop action — they choose a *line*.
+
+**A simple planning framework:**
+1) What is my hand category? (value / bluff-catcher / draw / air)
+2) What is my goal? (get called by worse, fold out better, deny equity)
+3) What turn cards help me? What cards hurt me?
+4) What river do I expect to value bet or bluff?
+
+**Why planning matters:**
+- It prevents random “one-and-done” aggression
+- It avoids building pots with hands that can’t handle pressure later
+- It improves sizing sequences (pot geometry)
+
+**Drills (in this app):**
+- Multi-street Trainer: practice selecting lines that make sense across streets
+- Hand Replayer: review where your plan broke on turn/river`
+        },
+        {
+            id: 'range-narrowing',
+            title: 'Range Narrowing + Combos Across Streets',
+            content: `Every action removes hands from ranges.
+
+**How ranges narrow:**
+- Preflop action sets the starting range
+- Flop bet/call/raise removes many weak hands
+- Turn action removes even more
+- By the river, ranges can be very polarized
+
+**Combo thinking (practical):**
+- Ask “how many value combos do they have?” vs “how many bluffs can they have?”
+- Blockers matter more later because ranges are narrower
+
+**Common mistakes:**
+- Treating river like flop (ranges are not wide anymore)
+- Ignoring that certain lines remove bluffs (for example, passive lines often mean fewer bluffs)
+
+**Drills (in this app):**
+- Postflop Trainer: watch how EV feedback changes by street
+- Advanced concepts: apply blockers on river bluff-catch spots`
+        },
+        {
+            id: 'runouts',
+            title: 'Runouts: Good vs Bad Turns/Rivers',
+            content: `A runout is the sequence of turn + river cards.
+
+**Why runouts matter:**
+- They change equity
+- They change nut advantage
+- They change which bluffs are credible
+
+**Good runouts for the aggressor:**
+- Overcards that hit the aggressor’s perceived range
+- Bricks that don’t complete draws
+
+**Good runouts for the defender:**
+- Cards that complete many draws the defender can have
+- Low cards that connect with defender’s suited/connected hands
+
+**Practical question:**
+"If this turn/river comes, who can represent the nuts?"
+
+**Drills (in this app):**
+- Board Texture Trainer: connect flop texture to likely turn/river dynamics
+- Multi-street Trainer: practice adjusting lines on different runouts`
+        },
+        {
+            id: 'pot-geometry',
+            title: 'Pot Geometry (Sizing Sequences)',
+            content: `Pot geometry is how your bet sizes determine the final pot size by the river.
+
+**Why it matters:**
+- You can plan to get stacks in with value
+- You can apply maximum pressure with bluffs
+- You can avoid accidentally committing with marginal hands
+
+**Common sizing sequences:**
+- Small flop → big turn → shove river (pressure builds as ranges narrow)
+- Big flop → big turn (fast-play on wet boards)
+- Check flop → bet turn (delayed c-bet lines)
+
+**Geometric sizing idea:**
+Bet a consistent fraction each street so that a river shove is natural.
+
+**Drills (in this app):**
+- Bet Sizing Trainer: practice building coherent sizing lines
+- Multi-street Trainer: see how sizing affects river SPR`
+        },
+        {
             id: 'balance',
             title: 'Balance and Frequencies',
             content: `Balance means your range contains both strong hands and bluffs in correct proportions.

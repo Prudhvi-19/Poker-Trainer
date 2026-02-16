@@ -94,10 +94,10 @@ To keep quality high, every chapter will follow a consistent template:
 
 ### E. Multi-street planning (maps to Multi-street Trainer)
 
-- [ ] E1. Street-by-street plan: what changes from flop→turn→river
-- [ ] E2. Range narrowing and combinatorics across streets
-- [ ] E3. Runouts: good vs bad turns/rivers for aggressor/defender
-- [ ] E4. Pot geometry and sizing sequences (33/75/overbet lines)
+- [x] E1. Street-by-street plan: what changes from flop→turn→river
+- [x] E2. Range narrowing and combinatorics across streets
+- [x] E3. Runouts: good vs bad turns/rivers for aggressor/defender
+- [x] E4. Pot geometry and sizing sequences (33/75/overbet lines)
 
 ### F. Bet sizing (maps to Bet Sizing Trainer)
 
