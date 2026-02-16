@@ -37,6 +37,7 @@ _The following bugs were discovered during code review of the shipped ENH-001 th
 - **Files:** `js/modules/boardTextureTrainer.js`, `js/modules/potOddsTrainer.js`
 - **Description:** ENH-002 shipped 4-tier EV feedback (Perfect/Good/Mistake/Blunder) into preflop, postflop, multi-street, c-bet, and bet-sizing trainers. However, Board Texture Trainer and Pot Odds Trainer still use binary correct/incorrect feedback with no `computeEvFeedback` or `gradeFromEvLoss` integration. No import of `evFeedback.js` in either file. Both trainers do update the ELO rating (confirmed: `applyDecisionRating` is called in potOddsTrainer), but the user sees old-style green/red feedback instead of the 4-tier system with EV cost.
 - **Impact:** Inconsistent UX across trainers. Users see modern EV-graded feedback in 5 trainers but fall back to binary in 2 others. Breaks the "unified feedback experience" promise of ENH-002.
+- **Status:** ✅ Fixed on branch `fix/review-bugs-031-034` (pending merge)
 - **Suggested fix:** Add EV feedback to both trainers. For Pot Odds, the EV model is simpler (pot odds math is exact, not Monte Carlo). For Board Texture, use the correct/incorrect binary mapped to the grade system (correct = Perfect, incorrect = Blunder).
 
 ### BUG-032 Board Texture & Pot Odds trainers not integrated with SRS (ENH-004 gap)
@@ -44,6 +45,7 @@ _The following bugs were discovered during code review of the shipped ENH-001 th
 - **Files:** `js/modules/boardTextureTrainer.js`, `js/modules/potOddsTrainer.js`
 - **Description:** ENH-004 shipped spaced repetition (SRS) integration into preflop, postflop, multi-street, c-bet, and bet-sizing trainers. Board Texture and Pot Odds trainers have zero SRS integration -- no `buildScenarioKeyFromResult`, no `upsertSrsResult` calls, no Smart Practice session routing. Confirmed: no `srs` or `recordSrsResult` imports in either file.
 - **Impact:** Users who practice Board Texture or Pot Odds never build SRS entries for those skills. Weak spots in these areas are never scheduled for review. The Smart Practice queue has a blind spot for 2 of 7 trainers.
+- **Status:** ✅ Fixed on branch `fix/review-bugs-031-034` (pending merge)
 - **Suggested fix:** Add SRS key generation for board texture (key = question category + texture type) and pot odds (key = scenario type + bet size ratio). Record results via `upsertSrsResult` after each answer.
 
 ### BUG-033 PWA icons are placeholder stubs -- not real images (ENH-003 gap)
@@ -51,6 +53,7 @@ _The following bugs were discovered during code review of the shipped ENH-001 th
 - **Files:** `icons/icon-192.png`, `icons/icon-512.png`, `icons/apple-touch-icon.png`
 - **Description:** The 3 icon files committed are binary stubs (tiny placeholder PNGs), not actual branded app icons. When a user installs the PWA via "Add to Home Screen", the icon will either show a generic blank square or a broken image. The `manifest.webmanifest` references these files correctly, but the visual result is unacceptable.
 - **Impact:** PWA installability works technically, but the installed app looks broken on the home screen. First impression is terrible. Users may uninstall immediately.
+- **Status:** ✅ Fixed on branch `fix/review-bugs-031-034` (pending merge)
 - **Suggested fix:** Design and commit proper app icons -- a poker-themed icon (e.g., stylized spade/chip with "GTO" text) in 192x192 and 512x512. Also add a `"purpose": "any maskable"` field to the manifest for adaptive icon support on Android 13+.
 
 ### BUG-034 Service worker cache version is static -- never auto-increments (ENH-003 gap)
@@ -58,6 +61,7 @@ _The following bugs were discovered during code review of the shipped ENH-001 th
 - **File:** `service-worker.js:9`
 - **Description:** `CACHE_VERSION = 'poker-trainer-v2'` is hardcoded. When code is updated and deployed, the service worker still serves the old cached version because the cache key hasn't changed. Users will see stale code indefinitely until they manually clear browser cache or the developer remembers to bump the version string.
 - **Impact:** Users running the PWA never receive updates. Bug fixes and new features are invisible to installed PWA users.
+- **Status:** ✅ Fixed on branch `fix/review-bugs-031-034` (pending merge)
 - **Suggested fix:** Either (a) hash the cache version based on a build timestamp/git commit, or (b) add a version bump to the deployment checklist with prominent comments. Also add a UI notification when a new service worker version is detected ("New version available -- tap to refresh").
 
 ---

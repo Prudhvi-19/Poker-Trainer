@@ -241,3 +241,27 @@
 - **Fix/Feature:** Implemented a simplified SM-2 scheduler in `js/utils/srs.js`, stored in localStorage. Added Dashboard “Smart Practice” section to start a review queue. Integrated SRS result recording into Preflop/Postflop/Multi-street/C-bet/Bet Sizing trainers and added cross-module session routing via `js/utils/smartPracticeSession.js`.
 - **Verification:** Manual smoke test (app loads; Smart Practice card renders; trainers compile). Full end-to-end SRS queue replay should be verified interactively.
 
+### FIXED — BUG-031 Board Texture & Pot Odds trainers missing EV feedback
+
+- **Severity:** P1
+- **Branch/Commit:** `fix/review-bugs-031-034` (pending)
+- **Fix:** Added EV-grade styled feedback (4-tier) + EV-lost stats to `boardTextureTrainer` and `potOddsTrainer`.
+
+### FIXED — BUG-032 Board Texture & Pot Odds trainers not integrated with SRS
+
+- **Severity:** P1
+- **Branch/Commit:** `fix/review-bugs-031-034` (pending)
+- **Fix:** Added `upsertSrsResult` recording + Smart Practice session routing/resume support for these trainers; updated `smartPracticeSession.getRouteForKeyObj` to route to Board Texture & Pot Odds modules.
+
+### FIXED — BUG-033 PWA icons are placeholder stubs
+
+- **Severity:** P1
+- **Branch/Commit:** `fix/review-bugs-031-034` (pending)
+- **Fix:** Generated real poker-themed app icons (512/192/180) and added maskable icon purpose in `manifest.webmanifest`.
+
+### FIXED — BUG-034 Service worker cache version is static
+
+- **Severity:** P1
+- **Branch/Commit:** `fix/review-bugs-031-034` (pending)
+- **Fix:** Switched service worker caching to a stable cache name + network-first for navigations and stale-while-revalidate for assets, so new deployments refresh automatically without manual cache version bumps.
+
