@@ -9,6 +9,7 @@ import { generateBoard as sharedGenerateBoard, cardToString } from '../utils/dec
 import { analyzeBoard as sharedAnalyzeBoard } from '../utils/boardAnalyzer.js';
 import { evaluateHandBoard } from '../utils/handEvaluator.js';
 import { setPokerShortcutHandler } from '../utils/shortcutManager.js';
+import { applyDecisionRating, appendRatingHistory } from '../utils/rating.js';
 
 let currentSession = null;
 let statsContainerEl = null;
@@ -626,8 +627,23 @@ function handleAnswer(scenario, userAnswer) {
 
     currentSession.results.push(result);
 
+    // ENH-001: update skill rating after each decision
+    updateRatingAfterDecision(isCorrect);
+
     showFeedback(scenario, userAnswer, isCorrect);
     updateStats();
+}
+
+function updateRatingAfterDecision(isCorrect) {
+    const rating = storage.getRating();
+    const next = applyDecisionRating(rating.current, isCorrect, 1500);
+    const updated = {
+        ...rating,
+        current: next,
+        history: appendRatingHistory(rating.history, next),
+        lastUpdated: new Date().toISOString()
+    };
+    storage.saveRating(updated);
 }
 
 function showFeedback(scenario, userAnswer, isCorrect) {

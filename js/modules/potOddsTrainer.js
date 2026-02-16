@@ -3,6 +3,7 @@
 
 import { showToast } from '../utils/helpers.js';
 import storage from '../utils/storage.js';
+import { applyDecisionRating, appendRatingHistory } from '../utils/rating.js';
 
 // Question types
 const QUESTION_TYPES = {
@@ -251,10 +252,25 @@ function handleAnswer(answer) {
         stats.correct++;
     }
 
+    // ENH-001: update skill rating after each decision
+    updateRatingAfterDecision(isCorrect);
+
     // Stats tracked in-memory for this session
 
     showFeedback(isCorrect, answer);
     updateStats();
+}
+
+function updateRatingAfterDecision(isCorrect) {
+    const rating = storage.getRating();
+    const next = applyDecisionRating(rating.current, isCorrect, 1500);
+    const updated = {
+        ...rating,
+        current: next,
+        history: appendRatingHistory(rating.history, next),
+        lastUpdated: new Date().toISOString()
+    };
+    storage.saveRating(updated);
 }
 
 function showFeedback(isCorrect, userAnswer) {
