@@ -38,3 +38,10 @@
 - **Fix:** Call `updateCardAvailability()` after programmatic value changes.
 - **Verification:** App loads; requires quick in-UI interaction verification later.
 
+### FIXED — BUG-010 Scenario container id inconsistencies can break trainer keyboard shortcuts
+
+- **Severity:** P2
+- **Commit:** `5914195`
+- **Fix:** Standardized trainer scenario containers to use `id="scenario-container"`.
+- **Verification:** Code inspection; interactive regression test pending.
+

@@ -89,21 +89,3 @@ If hero/villain is SB/BB, subsequent pot/stack calculations are inaccurate.
 Model blind posting explicitly based on player positions OR start pot at 0 and track contributions.
 
 ---
-
-## BUG-010 — Scenario container id inconsistencies can break trainer keyboard shortcuts
-
-- **Severity:** P2
-- **Area:** `js/modules/preflopTrainer.js`, `js/modules/postflopTrainer.js`, `js/modules/multistreetTrainer.js`
-- **Status:** OPEN (fix in working tree; not yet committed)
-
-### Symptoms
-Keyboard shortcut handlers in multiple trainers call:
-
-```js
-document.getElementById('scenario-container')
-```
-
-If the scenario container element doesn’t have that id, shortcuts silently stop working.
-
-### Fix idea
-Standardize trainers to always set `scenarioContainerEl.id = 'scenario-container'` (or stop using DOM id lookups and use stored refs consistently).
