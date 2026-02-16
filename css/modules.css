@@ -96,27 +96,6 @@
     animation: slideUp 0.3s ease;
 }
 
-/* ENH-002: EV feedback tiers */
-.feedback-panel.grade-perfect {
-    background-color: rgba(34, 197, 94, 0.10);
-    border: 2px solid rgba(34, 197, 94, 0.9);
-}
-
-.feedback-panel.grade-good {
-    background-color: rgba(34, 197, 94, 0.06);
-    border: 2px solid rgba(34, 197, 94, 0.45);
-}
-
-.feedback-panel.grade-mistake {
-    background-color: rgba(245, 158, 11, 0.12);
-    border: 2px solid rgba(245, 158, 11, 0.85);
-}
-
-.feedback-panel.grade-blunder {
-    background-color: rgba(239, 68, 68, 0.12);
-    border: 2px solid rgba(239, 68, 68, 0.9);
-}
-
 .feedback-panel.correct {
     background-color: rgba(34, 197, 94, 0.1);
     border: 2px solid var(--color-success);

@@ -9,7 +9,7 @@ import { generateBoard as sharedGenerateBoard, cardToString } from '../utils/dec
 import { analyzeBoard as sharedAnalyzeBoard } from '../utils/boardAnalyzer.js';
 import { evaluateHandBoard } from '../utils/handEvaluator.js';
 import { setPokerShortcutHandler } from '../utils/shortcutManager.js';
-import { applyDecisionRating, appendRatingHistory } from '../utils/rating.js';
+import { applyDecisionRating, appendRatingHistory, opponentRatingForContext } from '../utils/rating.js';
 import ranges from '../data/ranges.js';
 import { handCodeToConcreteCards, simulateEquityVsRange } from '../utils/equity.js';
 import {
@@ -709,7 +709,9 @@ function handleAnswer(scenario, userAnswer) {
 
 function updateRatingAfterDecision(isCorrect) {
     const rating = storage.getRating();
-    const next = applyDecisionRating(rating.current, isCorrect, 1500);
+    // BUG-043: use difficulty mapping; keep it simple here (trainerType already captures turn/river).
+    const opp = opponentRatingForContext({ module: currentSession?.module, trainerType: currentSession?.trainerType });
+    const next = applyDecisionRating(rating.current, isCorrect, opp);
     const updated = {
         ...rating,
         current: next,

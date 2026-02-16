@@ -188,13 +188,33 @@ function createDataManagement() {
     resetBtn.textContent = '🗑️ Reset All Progress';
     resetBtn.addEventListener('click', resetProgress);
 
+    // BUG-044: allow resetting rating without deleting everything.
+    const resetRatingBtn = document.createElement('button');
+    resetRatingBtn.className = 'btn btn-secondary';
+    resetRatingBtn.textContent = '🏅 Reset Rating';
+    resetRatingBtn.addEventListener('click', resetRating);
+
     buttons.appendChild(exportBtn);
     buttons.appendChild(importBtn);
+    buttons.appendChild(resetRatingBtn);
     buttons.appendChild(resetBtn);
 
     section.appendChild(buttons);
 
     return section;
+}
+
+function resetRating() {
+    showConfirm({
+        title: 'Reset Skill Rating',
+        message: 'This will reset your skill rating back to the default (1200). Your sessions and other progress will be kept. Continue?',
+        confirmText: 'Reset Rating',
+        cancelText: 'Cancel',
+        onConfirm: () => {
+            storage.saveRating({ current: 1200, history: [], lastUpdated: new Date().toISOString() });
+            showToast('Rating reset to 1200.', 'success');
+        }
+    });
 }
 
 function createSelectSetting(label, description, key, options, currentValue) {
