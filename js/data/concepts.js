@@ -405,32 +405,49 @@ Board: K high dry flop
             title: '3-Betting Theory',
             content: `A 3-bet is a re-raise preflop.
 
-**3-Bet Range Construction:**
+**Why 3-bet at all?**
+- Build a bigger pot with your strongest hands
+- Win dead money immediately (fold equity)
+- Deny equity to hands that would love to see a flop cheaply
+- Create a lower SPR pot, which simplifies postflop play
 
-**Linear (Merged):**
-Contains your strongest hands without gaps
-Example: AA-99, AK-AJ
-Used vs tight opponents who will fold too much
+**3-bet ranges: linear vs polarized**
+
+**Linear (merged):**
+- You 3-bet many of your strongest hands *and* some medium-strong hands
+- Used when villain folds too much to 3-bets or when you’re OOP and don’t want to call as much
 
 **Polarized:**
-Contains very strong hands + bluffs, no medium hands
-Example: AA-QQ, AK, A5s-A2s, KQs
-Used vs opponents who call or 4-bet correctly
+- You 3-bet very strong hands + bluffs, and you *call* with the medium part
+- Used when villain defends correctly (calls/4-bets) and you can profitably call with many hands
 
-**Why 3-Bet?**
-1. Build pot with strong hands
-2. Deny opponent's pot odds
-3. Win dead money immediately
-4. Avoid playing OOP postflop (from blinds)
+**Value vs bluff 3-bets (construction):**
 
-**Standard Sizing:**
-- In Position: 3x the raise (2.5bb → 7.5bb)
-- Out of Position: 3.5x the raise (2.5bb → 9bb)
+**Value 3-bets** typically:
+- dominate villain’s calling range (AK vs AQ/KQ)
+- or are strong enough to continue vs a 4-bet (QQ+ in many pools)
 
-**Bluff Candidates:**
-- Suited aces (A5s-A2s): Blocker value + nut potential
-- Suited connectors (76s, 65s): Playability if called
-- Hands that don't play well as calls`
+**Bluff 3-bets** typically:
+- have blockers to villain’s strongest continuing hands (A♠5♠ blocks AA/AK)
+- have good playability when called (suited connectors, suited broadways)
+- do NOT make great calls (hands that get dominated when flat calling)
+
+**Sizing (standards / intuition):**
+- In Position (IP): often ~3x the open
+- Out of Position (OOP): often ~3.5–4x the open (you want to reduce villain’s positional edge)
+
+**Postflop consequences:**
+- 3-bet pots are lower SPR → top pair becomes stronger
+- ranges are tighter → boards hit differently than single-raised pots
+
+**Common mistakes:**
+- 3-betting only premiums (becomes face-up)
+- 3-betting too many dominated offsuit broadways as bluffs
+- using the same size IP and OOP
+
+**Drills (in this app):**
+- Preflop Trainer → 3-Bet: focus on building a consistent value/bluff mix
+- Preflop Trainer → 4-Bet: learn which hands can continue after you 3-bet`
         },
         {
             id: 'bb-defense',
