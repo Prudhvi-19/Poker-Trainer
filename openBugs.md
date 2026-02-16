@@ -24,39 +24,47 @@ This file tracks **known open bugs, logic/UX issues, and feature enhancements** 
 
 # PART 1 -- OPEN BUGS
 
-✅ **No open bugs currently.** All audit bugs discovered during the ENH-001..ENH-004 review (BUG-031 through BUG-046) have been fixed and moved to `closedBugs.md`.
+## All Clear
+
+**No open bugs.** 46 bugs tracked total (BUG-001 through BUG-046), all fixed and verified across two review cycles. See `closedBugs.md` for full history.
+
+**Note:** BUG-041 (manifest missing maskable icon purpose) was fixed as part of BUG-033 commit `e72773d` and documented within that entry in `closedBugs.md`. All 16 review-cycle bugs (BUG-031 through BUG-046) verified correct during second review pass on 2026-02-16.
 
 ---
 
 # PART 2 -- FEATURE ENHANCEMENTS
 
-## E0 -- Shipped (with review notes)
+## E0 -- Shipped (all verified clean)
 
-_All 4 E0 enhancements have been shipped. See `closedBugs.md` for commit references._
+_All 4 E0 enhancements shipped and all post-ship review bugs resolved._
 
-### ENH-001 ELO / Skill Rating System -- SHIPPED
+### ENH-001 ELO / Skill Rating System -- SHIPPED + POLISHED
 
-- **Status:** Shipped (commit `0716cb6`)
+- **Status:** Shipped (commit `0716cb6`) + review fixes (commit `ea34112`)
 - **Review verdict:** Correct implementation. ELO formula, K-factor scaling, tier badges all working.
-- **Open issues from review:** BUG-043 (hardcoded opponent rating), BUG-044 (no reset in settings)
+- **Post-ship fixes applied:** BUG-043 (context-aware opponent rating via `opponentRatingForContext()`), BUG-044 (rating reset button in settings with modal confirmation)
+- **Remaining review issues:** None
 
-### ENH-002 Instant Decision Feedback with EV Impact -- SHIPPED
+### ENH-002 Instant Decision Feedback with EV Impact -- SHIPPED + POLISHED
 
-- **Status:** Shipped (commits `b6bb1b8`, `78a7f45`)
-- **Review verdict:** 4-tier grading, EV loss calculation, and Monte Carlo equity all correctly implemented in 5 of 7 trainers.
-- **Open issues from review:** BUG-031 (board texture + pot odds missing EV feedback), BUG-037 (hardcoded fold equity), BUG-038 (cold call/squeeze return null), BUG-039 (EV loss floor), BUG-042 (CSS duplication)
+- **Status:** Shipped (commits `b6bb1b8`, `78a7f45`) + review fixes (commits `8ad666e`, `ea34112`)
+- **Review verdict:** 4-tier grading, EV loss, and Monte Carlo equity now correctly implemented across **all 7 trainers**.
+- **Post-ship fixes applied:** BUG-031 (board texture + pot odds EV feedback), BUG-037 (fold equity documented as 100bb cash approximation), BUG-038 (cold call + squeeze EV models added), BUG-039 (EV loss floor removed), BUG-042 (CSS grade styles consolidated)
+- **Remaining review issues:** None
 
-### ENH-003 Progressive Web App (PWA) -- SHIPPED
+### ENH-003 Progressive Web App (PWA) -- SHIPPED + POLISHED
 
-- **Status:** Shipped (commit `5924809`)
-- **Review verdict:** Service worker, manifest, and precaching all work. Technical PWA requirements met.
-- **Open issues from review:** BUG-033 (placeholder icons), BUG-034 (static cache version), BUG-035 (no install prompt), BUG-036 (no update notification), BUG-041 (missing maskable purpose), BUG-046 (no offline indicator)
+- **Status:** Shipped (commit `5924809`) + review fixes (commits `e72773d`, `ea34112`)
+- **Review verdict:** Full PWA with real icons, install prompt, update notifications, stale-while-revalidate caching, maskable icons, and offline indicator.
+- **Post-ship fixes applied:** BUG-033 (real poker-themed icons), BUG-034 (stale-while-revalidate cache strategy), BUG-035 (beforeinstallprompt + install button with iOS fallback), BUG-036 (controllerchange update notification modal), BUG-041 (maskable icon purpose in manifest), BUG-046 (online/offline badge in sidebar)
+- **Remaining review issues:** None
 
-### ENH-004 Smart Practice / Spaced Repetition -- SHIPPED
+### ENH-004 Smart Practice / Spaced Repetition -- SHIPPED + POLISHED
 
-- **Status:** Shipped (commit `03cf4e3`)
-- **Review verdict:** SM-2 variant correctly implemented. SRS state stored in localStorage and included in export/import. Integrated into 5 of 7 trainers.
-- **Open issues from review:** BUG-032 (board texture + pot odds not integrated), BUG-040 (multistreet keys too coarse), BUG-045 (session lost on refresh)
+- **Status:** Shipped (commit `03cf4e3`) + review fixes (commits `8ad666e`, `ea34112`)
+- **Review verdict:** SM-2 variant correctly implemented. SRS now integrated across **all 7 trainers** with granular scenario keys and session recovery.
+- **Post-ship fixes applied:** BUG-032 (board texture + pot odds SRS integration), BUG-040 (multistreet keys now include heroIsAggressor + texture), BUG-045 (Smart Practice session resumes on page refresh with modal prompt)
+- **Remaining review issues:** None
 
 ---
 
@@ -228,7 +236,7 @@ _All 4 E0 enhancements have been shipped. See `closedBugs.md` for commit referen
 
 # PART 3 -- COMPETITIVE POSITIONING SUMMARY
 
-## Current State vs Market (updated post-E0 ship)
+## Current State vs Market (updated post-review-fix)
 
 | Feature | Our App | GTO Wizard | Postflop+ | PeakGTO | NTPoker |
 |---------|---------|------------|-----------|---------|---------|
@@ -236,33 +244,27 @@ _All 4 E0 enhancements have been shipped. See `closedBugs.md` for commit referen
 | Postflop Training | 5 modes | Full | Full (offline) | Full | Basic |
 | Multi-Street | Yes | Yes | Yes | Yes | Yes |
 | Equity Calculator | Hand vs Hand | Full solver | Built-in | N/A | Range + Hand |
-| ELO Rating | Yes (v1) | No | Yes | Yes | No |
-| EV Feedback | 4-tier (5/7 trainers) | EV cost | 4-tier | EV + coaching | Basic |
-| Spaced Repetition | Yes (5/7 trainers) | No | No | No | No |
+| ELO Rating | Yes (context-aware) | No | Yes | Yes | No |
+| EV Feedback | 4-tier (all 7 trainers) | EV cost | 4-tier | EV + coaching | Basic |
+| Spaced Repetition | Yes (all 7 trainers) | No | No | No | No |
 | Achievements | **Missing** | No | No | No | No |
-| PWA / Offline Install | Yes (needs icons) | Web only | Native app | Web only | Native app |
+| PWA / Offline Install | Yes (full UX) | Web only | Native app | Web only | Native app |
 | ICM / Tournament | **Missing** | Yes (premium) | Yes | Yes | No |
 | Hand History Import | **Missing** | Yes | No | No | No |
 | Range vs Range | **Missing** | Yes | Yes | Yes | Yes |
 | Study Plan | **Missing** | Partial | No | No | No |
 | Price | Free | $35+/mo | $9.99/mo | $49/mo | Free tier |
 
-## Our Unique Advantages (to double down on)
+## Our Unique Advantages
 
 1. **Zero dependencies, zero cost** -- completely free, runs locally, no account needed
 2. **Privacy-first** -- all data stays in browser, no telemetry
 3. **Lightweight** -- ~200KB total, instant loads, works on any device
 4. **Open source** -- community can contribute scenarios, ranges, translations
 5. **Spaced Repetition** -- no competitor has this (first mover advantage)
+6. **Full PWA** -- installable on any device with offline support, update notifications, and install prompt
 
-## Immediate Priorities (post-E0 polish)
-
-1. **BUG-033** Real PWA icons -- the app can't be installed in its current state
-2. **BUG-031/032** Board Texture + Pot Odds trainer parity -- complete the EV + SRS integration across all 7 trainers
-3. **BUG-034** Cache versioning -- deployed updates must actually reach users
-4. **BUG-038** Cold call/squeeze EV -- complete the preflop EV coverage
-
-## Next E1 Priorities
+## Next Priorities (E1)
 
 1. **ENH-005** Achievements -- drives retention and daily engagement
 2. **ENH-007** Range vs Range -- required for serious poker study
@@ -270,4 +272,4 @@ _All 4 E0 enhancements have been shipped. See `closedBugs.md` for commit referen
 
 ---
 
-*Last reviewed: 2026-02-16 | Reviewer: Implementation review of ENH-001 through ENH-004 + all bug fixes*
+*Last reviewed: 2026-02-16 | Reviewer: Second review pass -- all BUG-031..046 verified fixed, zero new issues*
