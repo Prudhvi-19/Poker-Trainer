@@ -6,7 +6,11 @@
  * - Works for GitHub Pages subpath deployments because we use relative URLs.
  */
 
-const CACHE_VERSION = 'poker-trainer-v2';
+// BUG-034: Avoid a static cache version that requires manual bumping.
+// Instead we use a stable cache name + a stale-while-revalidate strategy so
+// deployed changes are fetched and replace cached assets automatically.
+const CACHE_NAME = 'poker-trainer-cache';
+const CACHE_PREFIX = 'poker-trainer-';
 
 // Precache the full static asset set so the app works offline after first load.
 // NOTE: Keep paths relative to support GitHub Pages subpath deployments.
@@ -80,7 +84,7 @@ const PRECACHE_URLS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_VERSION).then(async (cache) => {
+    caches.open(CACHE_NAME).then(async (cache) => {
       try {
         await cache.addAll(PRECACHE_URLS);
       } catch (e) {
@@ -94,9 +98,16 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.map((k) => (k !== CACHE_VERSION ? caches.delete(k) : Promise.resolve())))
-    ).then(() => self.clients.claim())
+    caches.keys()
+      .then((keys) => Promise.all(
+        keys.map((k) => {
+          // Clean up any older caches we might have created before switching strategy.
+          if (k === CACHE_NAME) return Promise.resolve();
+          if (k.startsWith(CACHE_PREFIX)) return caches.delete(k);
+          return Promise.resolve();
+        })
+      ))
+      .then(() => self.clients.claim())
   );
 });
 
@@ -109,27 +120,49 @@ self.addEventListener('fetch', (event) => {
   const isSameOrigin = url.origin === self.location.origin;
   if (!isSameOrigin) return;
 
-  // Always serve app shell for navigation requests.
-  if (req.mode === 'navigate') {
-    event.respondWith(
-      caches.match('./index.html').then((cached) => cached || fetch(req).catch(() => caches.match('./index.html')))
-    );
+  const isNavigate = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
+
+  // Network-first for navigations so index.html updates propagate.
+  if (isNavigate) {
+    event.respondWith((async () => {
+      try {
+        const res = await fetch(req);
+        if (res && res.status === 200) {
+          const cache = await caches.open(CACHE_NAME);
+          cache.put('./index.html', res.clone());
+        }
+        return res;
+      } catch (e) {
+        const cached = await caches.match('./index.html');
+        if (cached) return cached;
+        throw e;
+      }
+    })());
     return;
   }
 
-  event.respondWith(
-    caches.match(req).then((cached) => {
-      if (cached) return cached;
-      return fetch(req)
-        .then((res) => {
-          // Cache successful responses.
-          if (res && res.status === 200) {
-            const resClone = res.clone();
-            caches.open(CACHE_VERSION).then((cache) => cache.put(req, resClone));
-          }
-          return res;
-        })
-        .catch(() => cached);
-    })
-  );
+  // Stale-while-revalidate for static assets.
+  event.respondWith((async () => {
+    const cached = await caches.match(req);
+    const cache = await caches.open(CACHE_NAME);
+
+    const fetchPromise = fetch(req)
+      .then((res) => {
+        if (res && res.status === 200) {
+          cache.put(req, res.clone());
+        }
+        return res;
+      })
+      .catch(() => null);
+
+    if (cached) {
+      // Update in background.
+      event.waitUntil(fetchPromise);
+      return cached;
+    }
+
+    const res = await fetchPromise;
+    if (res) return res;
+    return cached;
+  })());
 });
