@@ -56,7 +56,11 @@ export function showModal({
     body.className = 'modal-body';
 
     if (typeof content === 'string') {
-        body.innerHTML = content;
+        // SECURITY: never inject raw HTML strings (prevents XSS).
+        // If callers need rich content, they should pass an HTMLElement instead.
+        const p = document.createElement('p');
+        p.textContent = content;
+        body.appendChild(p);
     } else if (content instanceof HTMLElement) {
         body.appendChild(content);
     }
@@ -153,7 +157,7 @@ export function showConfirm({
 }) {
     return showModal({
         title,
-        content: `<p>${message}</p>`,
+        content: message,
         buttons: [
             {
                 text: cancelText,
@@ -195,7 +199,7 @@ export function showAlert({
 
     return showModal({
         title: `${icon} ${title}`,
-        content: `<p>${message}</p>`,
+        content: message,
         buttons: [
             {
                 text: 'OK',

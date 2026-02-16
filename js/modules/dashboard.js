@@ -5,6 +5,7 @@ import stats from '../utils/stats.js';
 import { getRandomQuote, formatPercentage, formatDuration } from '../utils/helpers.js';
 import router from '../router.js';
 import { MODULES } from '../utils/constants.js';
+import { getRatingTier } from '../utils/rating.js';
 
 function render() {
     const container = document.createElement('div');
@@ -17,6 +18,10 @@ function render() {
     // Today's stats
     const todayStats = createTodayStats();
     container.appendChild(todayStats);
+
+    // Skill rating
+    const rating = createRatingWidget();
+    container.appendChild(rating);
 
     // Overall stats
     const overallStats = createOverallStats();
@@ -39,6 +44,49 @@ function render() {
     container.appendChild(quickStart);
 
     return container;
+}
+
+function createRatingWidget() {
+    const rating = storage.getRating();
+    const tier = getRatingTier(rating.current);
+
+    const section = document.createElement('div');
+    section.className = 'card mb-lg';
+
+    const delta = (() => {
+        const h = Array.isArray(rating.history) ? rating.history : [];
+        if (h.length < 2) return null;
+        const prev = h[h.length - 2]?.r;
+        const curr = h[h.length - 1]?.r;
+        if (!Number.isFinite(prev) || !Number.isFinite(curr)) return null;
+        return curr - prev;
+    })();
+
+    const deltaLabel = delta === null
+        ? ''
+        : `<span class="text-muted" style="font-size: 0.9rem;">(${delta >= 0 ? '+' : ''}${delta})</span>`;
+
+    section.innerHTML = `
+        <h2 style="margin-bottom: 1.5rem;">🏅 Skill Rating</h2>
+        <div class="quick-stats">
+            <div class="stat-box">
+                <div class="stat-value">${rating.current}</div>
+                <div class="stat-label">Rating ${deltaLabel}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value">${tier.label}</div>
+                <div class="stat-label">Tier</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value">${rating.history?.length || 0}</div>
+                <div class="stat-label">Rated Decisions</div>
+            </div>
+        </div>
+        <p class="text-muted" style="margin-top: 1rem;">
+            Rating updates after each decision (correct answers increase rating; incorrect decrease).
+        </p>
+    `;
+    return section;
 }
 
 function createWelcomeSection() {
@@ -186,7 +234,7 @@ function createRecentSessionsWidget() {
             if (session.results) {
                 sessionStats = stats.calculateSessionStats(session.results);
             } else {
-                const counts = stats._getSessionCounts(session);
+                const counts = stats.getSessionCounts(session);
                 sessionStats = {
                     totalHands: counts.total,
                     correct: counts.correct,

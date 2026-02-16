@@ -28,6 +28,14 @@ class Stats {
         return { total: 0, correct: 0 };
     }
 
+    /**
+     * Public wrapper for extracting total/correct counts from a session.
+     * Avoids other modules calling the private `_getSessionCounts` directly.
+     */
+    getSessionCounts(session) {
+        return this._getSessionCounts(session);
+    }
+
     // Get today's practice statistics
     getTodayStats() {
         const sessions = storage.getSessions();
@@ -286,10 +294,16 @@ class Stats {
             if (session.results) {
                 session.results.forEach(result => {
                     if (!result.isCorrect && result.scenario) {
+                        const scenario = result.scenario;
                         const key = JSON.stringify({
-                            hand: result.scenario.hand,
-                            position: result.scenario.position,
-                            action: result.scenario.action
+                            // session.module is the most reliable module identifier we have
+                            module: session.module,
+                            scenarioType: scenario.type ?? null,
+                            position: scenario.position ?? null,
+                            villainPosition: scenario.villainPosition ?? null,
+                            // Normalize hand identifier across trainers
+                            hand: scenario.hand?.display ?? scenario.heroHand?.display ?? null,
+                            correctAnswer: result.correctAnswer
                         });
                         trackMistake(key, result.scenario, result.correctAnswer, result.userAnswer);
                     }

@@ -5,6 +5,10 @@ import { randomItem, generateId, formatPercentage, showToast, randomHand } from 
 import { createHandDisplay } from '../components/Card.js';
 import ranges from '../data/ranges.js';
 import storage from '../utils/storage.js';
+import { setPokerShortcutHandler } from '../utils/shortcutManager.js';
+import { applyDecisionRating, appendRatingHistory } from '../utils/rating.js';
+import { handCodeToConcreteCards, simulateEquityVsRange } from '../utils/equity.js';
+import { gradeFromEvLoss, evBetRaise, evCallToShowdown, evFold, evLossBb } from '../utils/evFeedback.js';
 
 let currentSession = null;
 let statsContainerEl = null;
@@ -30,6 +34,7 @@ function render() {
 
     // Scenario area
     scenarioContainerEl = document.createElement('div');
+    scenarioContainerEl.id = 'scenario-container';
     container.appendChild(scenarioContainerEl);
 
     // Initialize session
@@ -68,12 +73,8 @@ function render() {
         }
     };
 
-    document.addEventListener('poker-shortcut', keyboardHandler);
-
-    // Cleanup on navigation away
-    window.addEventListener('hashchange', () => {
-        document.removeEventListener('poker-shortcut', keyboardHandler);
-    }, { once: true });
+    // Install/replace active shortcut handler (single global listener)
+    setPokerShortcutHandler(keyboardHandler);
 
     return container;
 }
@@ -348,8 +349,16 @@ function generate4BetScenario() {
 }
 
 function generateColdCallScenario() {
+    // Cold call requires hero to be in position vs the opener.
+    // If villain is the last position (BB), there are no valid hero positions,
+    // so exclude it to avoid empty arrays / recursion crashes (BUG-014).
     const villainPos = randomItem(['UTG', 'HJ', 'CO', 'BTN', 'SB']);
-    const heroPos = randomItem(POSITIONS.filter(p => POSITIONS.indexOf(p) > POSITIONS.indexOf(villainPos)));
+    const validHeroPositions = POSITIONS.filter(p => POSITIONS.indexOf(p) > POSITIONS.indexOf(villainPos));
+    if (validHeroPositions.length === 0) {
+        // Deterministic fallback: regenerate with a new villain position.
+        return generateColdCallScenario();
+    }
+    const heroPos = randomItem(validHeroPositions);
     const hand = randomHand();
 
     const posKey = `vs${villainPos}`;
@@ -419,25 +428,46 @@ function handleAnswer(scenario, userAnswer) {
 
     const isCorrect = userAnswer === scenario.correctAction;
 
+    const id = generateId();
+    const evFeedback = computeEvFeedback({ scenario, userAnswer, isCorrect, seed: `preflop:${id}` });
+
     const result = {
-        id: generateId(),
+        id,
         timestamp: new Date().toISOString(),
         scenario,
         userAnswer,
         correctAnswer: scenario.correctAction,
         isCorrect,
-        responseTimeMs
+        responseTimeMs,
+        evFeedback
     };
 
     currentSession.results.push(result);
 
-    showFeedback(scenario, userAnswer, isCorrect);
+    // ENH-001: update skill rating after each decision
+    updateRatingAfterDecision(isCorrect);
+
+    showFeedback(result);
     updateStats();
 }
 
-function showFeedback(scenario, userAnswer, isCorrect) {
+function updateRatingAfterDecision(isCorrect) {
+    const rating = storage.getRating();
+    const next = applyDecisionRating(rating.current, isCorrect, 1500);
+    const updated = {
+        ...rating,
+        current: next,
+        history: appendRatingHistory(rating.history, next),
+        lastUpdated: new Date().toISOString()
+    };
+    storage.saveRating(updated);
+}
+
+function showFeedback(result) {
     if (!scenarioContainerEl) return;
     const scenarioEl = scenarioContainerEl;
+
+    const { scenario, userAnswer, isCorrect, evFeedback } = result;
 
     const card = scenarioEl.querySelector('.scenario-card');
     if (!card) return;
@@ -448,13 +478,18 @@ function showFeedback(scenario, userAnswer, isCorrect) {
         buttons.style.display = 'none';
     }
 
+    const evLoss = evFeedback?.evLossBb ?? (isCorrect ? 0 : null);
+    const grade = evFeedback?.grade || (isCorrect ? { key: 'perfect', label: 'Perfect', icon: '✅' } : { key: 'blunder', label: 'Blunder', icon: '🔴' });
+
     // Create feedback panel
     const feedback = document.createElement('div');
-    feedback.className = `feedback-panel ${isCorrect ? 'correct' : 'incorrect'}`;
+    feedback.className = `feedback-panel grade-${grade.key}`;
 
     const title = document.createElement('div');
     title.className = 'feedback-title';
-    title.textContent = isCorrect ? '✅ Correct!' : '❌ Incorrect';
+    title.textContent = evLoss === null
+        ? `${isCorrect ? '✅ Correct!' : '❌ Incorrect'}`
+        : `${grade.icon} ${grade.label} (EV loss: ${evLoss.toFixed(2)}bb)`;
 
     const explanation = document.createElement('div');
     explanation.className = 'feedback-explanation';
@@ -522,18 +557,23 @@ function showFeedback(scenario, userAnswer, isCorrect) {
         }
     };
 
-    if (!isCorrect) {
-        explanation.innerHTML = `
+    const evMeta = evFeedback?.meta;
+    const evDetailsHtml = evMeta
+        ? `<p style="margin-top: 0.5rem; color: var(--color-text-secondary); font-size: 0.95em;">
+                Est. equity vs range: <strong>${Math.round(evMeta.equity * 100)}%</strong>
+                ${Number.isFinite(evMeta.iterations) && evMeta.iterations > 0 ? `(${evMeta.iterations} sims)` : ''}
+           </p>`
+        : '';
+
+    explanation.innerHTML = `
+        ${!isCorrect ? `
             <p>Your answer: <strong>${userAnswer.toUpperCase()}</strong></p>
-            <p>Correct answer: <strong>${scenario.correctAction.toUpperCase()}</strong></p>
-            <p style="margin-top: 0.5rem; color: var(--color-text-secondary);">${getExplanation()}</p>
-        `;
-    } else {
-        explanation.innerHTML = `
-            <p>Great job! Keep going!</p>
-            <p style="margin-top: 0.5rem; color: var(--color-text-secondary);">${getExplanation()}</p>
-        `;
-    }
+            <p>Recommended: <strong>${scenario.correctAction.toUpperCase()}</strong></p>
+        ` : `<p>Keep going!</p>`}
+        ${evLoss !== null ? `<p>EV impact: <strong>-${evLoss.toFixed(2)}bb</strong> vs recommended line</p>` : ''}
+        ${evDetailsHtml}
+        <p style="margin-top: 0.5rem; color: var(--color-text-secondary);">${getExplanation()}</p>
+    `;
 
     // Add next button
     const nextButton = document.createElement('button');
@@ -554,6 +594,218 @@ function showFeedback(scenario, userAnswer, isCorrect) {
     // This ensures sessions are saved even if user plays < 10 hands
     currentSession.endTime = new Date().toISOString();
     storage.saveSession(currentSession);
+}
+
+function computeEvFeedback({ scenario, userAnswer, isCorrect, seed }) {
+    // If correct, we treat EV loss as 0 (avoid model disagreeing with trainer answer).
+    // If incorrect, we compute an approximate EV loss vs the recommended action.
+
+    // Some scenario types are too underspecified to model reasonably right now.
+    const supported = new Set([
+        TRAINER_TYPES.RFI,
+        TRAINER_TYPES.THREE_BET,
+        TRAINER_TYPES.BB_DEFENSE,
+        TRAINER_TYPES.FOUR_BET
+    ]);
+
+    if (!supported.has(scenario.type)) {
+        return null;
+    }
+
+    const HANDS = {
+        openSize: 2.5,
+        threeBetSize: 9,
+        fourBetSize: 22,
+        blindsPot: 1.5
+    };
+
+    const OPEN_FOLD_EQUITY = {
+        UTG: 0.20,
+        HJ: 0.25,
+        CO: 0.35,
+        BTN: 0.45,
+        SB: 0.35,
+        BB: 0
+    };
+
+    const THREE_BET_FOLD_EQUITY = {
+        UTG: 0.35,
+        HJ: 0.32,
+        CO: 0.30,
+        BTN: 0.28,
+        SB: 0.30,
+        BB: 0.30
+    };
+
+    const heroHandCode = scenario.hand?.display;
+    if (!heroHandCode) return null;
+
+    const heroCards = handCodeToConcreteCards(heroHandCode, new Set(), seed);
+    if (!heroCards) return null;
+
+    function unionRange(a, b) {
+        const arrA = Array.isArray(a) ? a : [];
+        const arrB = Array.isArray(b) ? b : [];
+        return Array.from(new Set([...arrA, ...arrB]));
+    }
+
+    function estimateEquity(villainRange, subSeed) {
+        const res = simulateEquityVsRange({
+            heroCards,
+            villainRange,
+            board: [],
+            iterations: 2000,
+            seed: `${seed}:${subSeed}`
+        });
+        return { equity: res.equity, iterations: res.iterations };
+    }
+
+    function actionEvs() {
+        switch (scenario.type) {
+            case TRAINER_TYPES.RFI: {
+                const pos = scenario.position;
+                const bbKey = `vs${pos}`;
+                const villainRange = ranges.BB_DEFENSE_RANGES?.[bbKey] || [];
+                const { equity, iterations } = estimateEquity(villainRange, 'rfi');
+                const fe = OPEN_FOLD_EQUITY[pos] ?? 0.30;
+                const evRaise = evBetRaise({
+                    equity,
+                    potNow: HANDS.blindsPot,
+                    invest: HANDS.openSize,
+                    villainCallExtra: 1.5,
+                    foldEquity: fe
+                });
+                return {
+                    meta: { equity, iterations },
+                    evByAction: {
+                        [ACTIONS.FOLD]: evFold(),
+                        [ACTIONS.RAISE]: evRaise
+                    }
+                };
+            }
+
+            case TRAINER_TYPES.THREE_BET: {
+                const villainPos = scenario.villainPosition;
+                const heroPos = scenario.position;
+                const openRange = ranges.RFI_RANGES?.[villainPos] || [];
+                const contRange = unionRange(
+                    ranges.FOUR_BET_RANGES?.[`vs${heroPos}`],
+                    ranges.CALL_3BET_RANGES?.[`vs${heroPos}`]
+                );
+
+                const callEq = estimateEquity(openRange, '3b-call');
+                const raiseEq = estimateEquity(contRange, '3b-raise');
+                const fe = THREE_BET_FOLD_EQUITY[villainPos] ?? 0.30;
+
+                const potNow = HANDS.blindsPot + HANDS.openSize; // 1.5 + 2.5
+                const evCall = evCallToShowdown({ equity: callEq.equity, potNow, callCost: HANDS.openSize });
+                const evRaise = evBetRaise({
+                    equity: raiseEq.equity,
+                    potNow,
+                    invest: HANDS.threeBetSize,
+                    villainCallExtra: HANDS.threeBetSize - HANDS.openSize,
+                    foldEquity: fe
+                });
+
+                return {
+                    meta: { equity: callEq.equity, iterations: callEq.iterations },
+                    evByAction: {
+                        [ACTIONS.FOLD]: evFold(),
+                        [ACTIONS.CALL]: evCall,
+                        [ACTIONS.RAISE]: evRaise
+                    }
+                };
+            }
+
+            case TRAINER_TYPES.BB_DEFENSE: {
+                const villainPos = scenario.villainPosition;
+                const openRange = ranges.RFI_RANGES?.[villainPos] || [];
+                const contRange = unionRange(
+                    ranges.FOUR_BET_RANGES?.['vsBB'],
+                    ranges.CALL_3BET_RANGES?.['vsBB']
+                );
+                // Fallback: if we don't have vsBB keys, just use opener's call-3bet vs BTN
+                const effectiveCont = contRange.length > 0 ? contRange : unionRange(
+                    ranges.FOUR_BET_RANGES?.['vsBTN'],
+                    ranges.CALL_3BET_RANGES?.['vsBTN']
+                );
+
+                const callEq = estimateEquity(openRange, 'bb-call');
+                const raiseEq = estimateEquity(effectiveCont, 'bb-raise');
+                const fe = THREE_BET_FOLD_EQUITY[villainPos] ?? 0.30;
+
+                const potNow = HANDS.blindsPot + HANDS.openSize; // includes BB posted
+                const evCall = evCallToShowdown({ equity: callEq.equity, potNow, callCost: 1.5 });
+                const evRaise = evBetRaise({
+                    equity: raiseEq.equity,
+                    potNow,
+                    invest: HANDS.threeBetSize - 1, // BB already posted 1bb
+                    villainCallExtra: HANDS.threeBetSize - HANDS.openSize,
+                    foldEquity: fe
+                });
+                return {
+                    meta: { equity: callEq.equity, iterations: callEq.iterations },
+                    evByAction: {
+                        [ACTIONS.FOLD]: evFold(),
+                        [ACTIONS.CALL]: evCall,
+                        [ACTIONS.RAISE]: evRaise
+                    }
+                };
+            }
+
+            case TRAINER_TYPES.FOUR_BET: {
+                const heroPos = scenario.position;
+                const villain3betRange = ranges.THREE_BET_RANGES?.[`vs${heroPos}`] || [];
+                const fiveBetRange = ['AA', 'KK', 'QQ', 'AKs', 'AKo'];
+
+                const callEq = estimateEquity(villain3betRange, '4b-call');
+                const raiseEq = estimateEquity(fiveBetRange, '4b-raise');
+                const potNow = HANDS.blindsPot + HANDS.openSize + HANDS.threeBetSize; // at decision (approx)
+
+                const evCall = evCallToShowdown({ equity: callEq.equity, potNow, callCost: HANDS.threeBetSize - HANDS.openSize });
+                const evRaise = evBetRaise({
+                    equity: raiseEq.equity,
+                    potNow,
+                    invest: HANDS.fourBetSize - HANDS.openSize,
+                    villainCallExtra: HANDS.fourBetSize - HANDS.threeBetSize,
+                    foldEquity: 0.45
+                });
+
+                return {
+                    meta: { equity: callEq.equity, iterations: callEq.iterations },
+                    evByAction: {
+                        [ACTIONS.FOLD]: evFold(),
+                        [ACTIONS.CALL]: evCall,
+                        [ACTIONS.RAISE]: evRaise
+                    }
+                };
+            }
+
+            default:
+                return null;
+        }
+    }
+
+    const evs = actionEvs();
+    if (!evs || !evs.evByAction) return null;
+
+    const evGto = evs.evByAction[scenario.correctAction];
+    const evUser = evs.evByAction[userAnswer];
+    if (!Number.isFinite(evGto) || !Number.isFinite(evUser)) return null;
+
+    let loss = isCorrect ? 0 : evLossBb(evGto, evUser);
+    if (!isCorrect) {
+        // Prevent a wrong action from ever showing “Perfect” due to our approximate model.
+        loss = Math.max(loss, 0.15);
+    }
+
+    return {
+        evLossBb: loss,
+        grade: gradeFromEvLoss(loss),
+        meta: evs.meta || null,
+        evGto,
+        evUser
+    };
 }
 
 export default {

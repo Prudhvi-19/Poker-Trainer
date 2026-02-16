@@ -4,6 +4,7 @@ import storage from '../utils/storage.js';
 import { showToast } from '../utils/helpers.js';
 import { showConfirm } from '../components/Modal.js';
 import { DEFAULT_SETTINGS } from '../utils/constants.js';
+import { updateStreakDisplay } from '../components/Navigation.js';
 
 let currentSettings = {};
 
@@ -130,7 +131,7 @@ function createTrainingSettings() {
             { value: '50', label: '50 hands' },
             { value: '100', label: '100 hands' }
         ],
-        currentSettings.defaultSessionLength.toString()
+        String(currentSettings.defaultSessionLength ?? DEFAULT_SETTINGS.defaultSessionLength)
     );
     settings.appendChild(sessionLengthSetting);
 
@@ -340,9 +341,23 @@ function importData() {
         reader.onload = (event) => {
             try {
                 const data = JSON.parse(event.target.result);
-                storage.importData(data);
-                showToast('Data imported successfully! Reloading...', 'success');
-                setTimeout(() => location.reload(), 1500);
+
+                const validationError = validateImportedData(data);
+                if (validationError) {
+                    showToast(`Import failed: ${validationError}`, 'error', 6000);
+                    return;
+                }
+
+                const ok = storage.importData(data);
+                if (!ok) {
+                    showToast('Import failed: Could not write to storage.', 'error', 6000);
+                    return;
+                }
+
+                // BUG-025: Avoid a full page reload. Refresh in-memory settings + streak UI.
+                currentSettings = storage.getSettings();
+                updateStreakDisplay(storage.getStreak().current || 0);
+                showToast('Data imported successfully!', 'success');
             } catch (error) {
                 showToast('Error importing data: Invalid file format', 'error');
             }
@@ -352,6 +367,49 @@ function importData() {
     });
 
     input.click();
+}
+
+function validateImportedData(data) {
+    if (!data || typeof data !== 'object') return 'File is not a valid JSON object.';
+
+    if (data.sessions !== undefined && !Array.isArray(data.sessions)) {
+        return '`sessions` must be an array.';
+    }
+    if (data.customRanges !== undefined && !Array.isArray(data.customRanges)) {
+        return '`customRanges` must be an array.';
+    }
+    if (data.settings !== undefined && (typeof data.settings !== 'object' || Array.isArray(data.settings))) {
+        return '`settings` must be an object.';
+    }
+    if (data.progress !== undefined && (typeof data.progress !== 'object' || Array.isArray(data.progress))) {
+        return '`progress` must be an object.';
+    }
+    if (data.streak !== undefined && (typeof data.streak !== 'object' || Array.isArray(data.streak))) {
+        return '`streak` must be an object.';
+    }
+
+    if (data.rating !== undefined && (typeof data.rating !== 'object' || Array.isArray(data.rating))) {
+        return '`rating` must be an object.';
+    }
+    if (data.rating && data.rating.current !== undefined && typeof data.rating.current !== 'number') {
+        return '`rating.current` must be a number.';
+    }
+    if (data.rating && data.rating.history !== undefined && !Array.isArray(data.rating.history)) {
+        return '`rating.history` must be an array.';
+    }
+
+    // Light validation of session items to prevent crashes downstream
+    if (Array.isArray(data.sessions)) {
+        for (const s of data.sessions) {
+            if (!s || typeof s !== 'object') return 'A session entry is not an object.';
+            if (typeof s.id !== 'string') return 'A session is missing a string `id`.';
+            if (typeof s.startTime !== 'string') return 'A session is missing `startTime`.';
+            if (s.results !== undefined && !Array.isArray(s.results)) return 'A session `results` must be an array.';
+            if (s.hands !== undefined && !Array.isArray(s.hands)) return 'A session `hands` must be an array.';
+        }
+    }
+
+    return null;
 }
 
 function resetProgress() {

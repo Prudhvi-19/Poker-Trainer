@@ -151,11 +151,12 @@ function checkStraightDraw(r1, r2, boardRanks) {
     }
 
     // Check wheel draw (A-2-3-4-5): A is index 0, but also plays as low
-    if (unique.includes(0)) { // Has an Ace
-        const lowValues = unique.filter(v => v >= 9).map(v => v - 13); // 2=12->-1, 3=11->-2...
-        // Actually let's simplify: check if we have A + some of 2,3,4,5
-        const lowCards = unique.filter(v => v >= 9); // 2(12), 3(11), 4(10), 5(9)
-        if (lowCards.length >= 2) return true; // A + two low cards = gutshot+
+    if (unique.includes(0)) {
+        // Need at least 4 out of 5 cards from {A,2,3,4,5} to have a wheel straight draw.
+        // Using our rank encoding: A=0, 5=9, 4=10, 3=11, 2=12
+        const wheelLow = [9, 10, 11, 12];
+        const lowCount = wheelLow.filter(v => unique.includes(v)).length;
+        if (lowCount >= 3) return true;
     }
 
     return false;

@@ -121,7 +121,8 @@ export const STORAGE_KEYS = {
     PROGRESS: 'poker_trainer_progress',
     CUSTOM_RANGES: 'poker_trainer_custom_ranges',
     LAST_VISIT: 'poker_trainer_last_visit',
-    STREAK: 'poker_trainer_streak'
+    STREAK: 'poker_trainer_streak',
+    RATING: 'poker_trainer_rating'
 };
 
 export const DEFAULT_SETTINGS = {
@@ -135,6 +136,13 @@ export const DEFAULT_SETTINGS = {
     timedMode: false,
     difficulty: DIFFICULTY.MEDIUM,
     maxStoredSessions: 200  // Increased from hardcoded 100
+};
+
+// ENH-001 (ELO): simple rating defaults
+export const DEFAULT_RATING = {
+    current: 1200,
+    history: [],
+    lastUpdated: null
 };
 
 export const POKER_QUOTES = [

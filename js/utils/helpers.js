@@ -9,6 +9,7 @@ export function generateId() {
 
 // Get random item from array
 export function randomItem(array) {
+    if (!Array.isArray(array) || array.length === 0) return null;
     return array[Math.floor(Math.random() * array.length)];
 }
 
@@ -65,7 +66,9 @@ export function formatDuration(ms) {
 
 // Parse hand notation (e.g., "AKs" -> {rank1: 'A', rank2: 'K', suited: true})
 export function parseHand(handString) {
-    if (!handString || handString.length < 2) return null;
+    if (!handString || typeof handString !== 'string') return null;
+    handString = handString.trim();
+    if (handString.length < 2) return null;
 
     const rank1 = handString[0];
     const rank2 = handString[1];
