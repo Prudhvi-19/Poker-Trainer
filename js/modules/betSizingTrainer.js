@@ -6,6 +6,8 @@ import { showToast } from '../utils/helpers.js';
 import { generateBoard, generateHeroHand } from '../utils/deckManager.js';
 import { analyzeBoard as sharedAnalyzeBoard, getSimpleTexture } from '../utils/boardAnalyzer.js';
 import { evaluateHandBoard } from '../utils/handEvaluator.js';
+import storage from '../utils/storage.js';
+import { applyDecisionRating, appendRatingHistory } from '../utils/rating.js';
 
 // Bet sizing categories
 const BET_SIZES = {
@@ -354,10 +356,25 @@ function handleAnswer(answer) {
         stats.correct++;
     }
 
+    // ENH-001: update skill rating after each decision
+    updateRatingAfterDecision(isCorrect);
+
     // Stats tracked in-memory for this session
 
     showFeedback(isCorrect, answer);
     updateStats();
+}
+
+function updateRatingAfterDecision(isCorrect) {
+    const rating = storage.getRating();
+    const next = applyDecisionRating(rating.current, isCorrect, 1500);
+    const updated = {
+        ...rating,
+        current: next,
+        history: appendRatingHistory(rating.history, next),
+        lastUpdated: new Date().toISOString()
+    };
+    storage.saveRating(updated);
 }
 
 function showFeedback(isCorrect, userAnswer) {

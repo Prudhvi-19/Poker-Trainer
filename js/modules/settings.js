@@ -388,6 +388,16 @@ function validateImportedData(data) {
         return '`streak` must be an object.';
     }
 
+    if (data.rating !== undefined && (typeof data.rating !== 'object' || Array.isArray(data.rating))) {
+        return '`rating` must be an object.';
+    }
+    if (data.rating && data.rating.current !== undefined && typeof data.rating.current !== 'number') {
+        return '`rating.current` must be a number.';
+    }
+    if (data.rating && data.rating.history !== undefined && !Array.isArray(data.rating.history)) {
+        return '`rating.history` must be an array.';
+    }
+
     // Light validation of session items to prevent crashes downstream
     if (Array.isArray(data.sessions)) {
         for (const s of data.sessions) {
