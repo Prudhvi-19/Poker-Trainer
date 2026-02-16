@@ -77,6 +77,12 @@ This file tracks **known open bugs, logic/UX issues, and feature enhancements** 
   - Session summary showing total EV lost
 - **Reference:** [Postflop+ trainer](https://apps.apple.com/us/app/postflop-gto-poker-trainer/id1488850006)
 
+- **Status:** ✅ **Implemented** on branch `enh/e0-ev-feedback` (pending merge into `audit/bug-hunt`).
+- **Verification notes:**
+  - Preflop trainer shows 4-tier feedback (Perfect/Good/Mistake/Blunder) with EV loss in bb.
+  - Postflop trainer shows EV loss + tiered grading and tracks session EV lost.
+  - Multi-street trainer shows EV loss + tiered grading per decision and tracks session EV lost.
+
 ### ENH-003 Progressive Web App (PWA) with Offline Support
 
 - **Competitive gap:** [Postflop+](https://www.craftywheel.com/postflopplus) is "the only GTO poker trainer that works without an internet connection." Our app already runs client-side but cannot be installed or used offline after browser cache clears.

@@ -10,6 +10,15 @@ import { analyzeBoard as sharedAnalyzeBoard } from '../utils/boardAnalyzer.js';
 import { evaluateHandBoard } from '../utils/handEvaluator.js';
 import { setPokerShortcutHandler } from '../utils/shortcutManager.js';
 import { applyDecisionRating, appendRatingHistory } from '../utils/rating.js';
+import ranges from '../data/ranges.js';
+import { handCodeToConcreteCards, simulateEquityVsRange } from '../utils/equity.js';
+import {
+    computeEvFeedbackFromEvs,
+    evBetRaise,
+    evCallToShowdown,
+    evCheckToShowdown,
+    evFold
+} from '../utils/evFeedback.js';
 
 let currentSession = null;
 let statsContainerEl = null;
@@ -147,6 +156,7 @@ function updateStats() {
     const totalHands = currentSession.results.length;
     const correct = currentSession.results.filter(r => r.isCorrect).length;
     const accuracy = totalHands > 0 ? correct / totalHands : 0;
+    const totalEvLost = currentSession.results.reduce((sum, r) => sum + (r.evFeedback?.evLossBb || 0), 0);
 
     statsContainerEl.innerHTML = '';
     statsContainerEl.className = 'session-stats';
@@ -154,10 +164,12 @@ function updateStats() {
     const handsEl = createStatBox(totalHands, 'Hands');
     const correctEl = createStatBox(correct, 'Correct');
     const accuracyEl = createStatBox(formatPercentage(accuracy, 0), 'Accuracy');
+    const evEl = createStatBox(`${totalEvLost.toFixed(1)}bb`, 'EV Lost');
 
     statsContainerEl.appendChild(handsEl);
     statsContainerEl.appendChild(correctEl);
     statsContainerEl.appendChild(accuracyEl);
+    statsContainerEl.appendChild(evEl);
 }
 
 function createStatBox(value, label) {
@@ -615,14 +627,18 @@ function handleAnswer(scenario, userAnswer) {
 
     const isCorrect = userAnswer === scenario.correctAction;
 
+    const id = generateId();
+    const evFeedback = computeEvFeedback({ scenario, userAnswer, isCorrect, seed: `postflop:${id}` });
+
     const result = {
-        id: generateId(),
+        id,
         timestamp: new Date().toISOString(),
         scenario,
         userAnswer,
         correctAnswer: scenario.correctAction,
         isCorrect,
-        responseTimeMs
+        responseTimeMs,
+        evFeedback
     };
 
     currentSession.results.push(result);
@@ -630,7 +646,7 @@ function handleAnswer(scenario, userAnswer) {
     // ENH-001: update skill rating after each decision
     updateRatingAfterDecision(isCorrect);
 
-    showFeedback(scenario, userAnswer, isCorrect);
+    showFeedback(result);
     updateStats();
 }
 
@@ -646,9 +662,11 @@ function updateRatingAfterDecision(isCorrect) {
     storage.saveRating(updated);
 }
 
-function showFeedback(scenario, userAnswer, isCorrect) {
+function showFeedback(result) {
     if (!scenarioContainerEl) return;
     const scenarioEl = scenarioContainerEl;
+
+    const { scenario, userAnswer, isCorrect, evFeedback } = result;
 
     const card = scenarioEl.querySelector('.scenario-card');
     if (!card) return;
@@ -659,13 +677,18 @@ function showFeedback(scenario, userAnswer, isCorrect) {
         buttons.style.display = 'none';
     }
 
+    const evLoss = evFeedback?.evLossBb ?? (isCorrect ? 0 : null);
+    const grade = evFeedback?.grade || (isCorrect ? { key: 'perfect', label: 'Perfect', icon: '✅' } : { key: 'blunder', label: 'Blunder', icon: '🔴' });
+
     // Create feedback panel
     const feedback = document.createElement('div');
-    feedback.className = `feedback-panel ${isCorrect ? 'correct' : 'incorrect'}`;
+    feedback.className = `feedback-panel grade-${grade.key}`;
 
     const title = document.createElement('div');
     title.className = 'feedback-title';
-    title.textContent = isCorrect ? '✅ Correct!' : '❌ Incorrect';
+    title.textContent = evLoss === null
+        ? `${isCorrect ? '✅ Correct!' : '❌ Incorrect'}`
+        : `${grade.icon} ${grade.label} (EV loss: ${evLoss.toFixed(2)}bb)`;
 
     const explanation = document.createElement('div');
     explanation.className = 'feedback-explanation';
@@ -683,25 +706,29 @@ function showFeedback(scenario, userAnswer, isCorrect) {
     };
     const handStrengthLabel = scenario.handStrength ? strengthLabels[scenario.handStrength] || scenario.handStrength : null;
 
-    if (!isCorrect) {
-        let correctLabel = scenario.correctAction.toUpperCase();
-        if (scenario.type === TRAINER_TYPES.BOARD_TEXTURE) {
-            correctLabel = scenario.correctAction;
-        }
-
-        explanation.innerHTML = `
-            <p>Your answer: <strong>${userAnswer.toUpperCase()}</strong></p>
-            <p>Correct answer: <strong>${correctLabel}</strong></p>
-            ${handStrengthLabel ? `<p>Your hand strength: <strong>${handStrengthLabel}</strong></p>` : ''}
-            ${scenario.texture ? `<p>Board texture: <strong>${scenario.texture}</strong></p>` : ''}
-        `;
-    } else {
-        explanation.innerHTML = `
-            <p>Great job! Keep going!</p>
-            ${handStrengthLabel ? `<p>Your hand strength: <strong>${handStrengthLabel}</strong></p>` : ''}
-            ${scenario.texture ? `<p>Board texture: <strong>${scenario.texture}</strong></p>` : ''}
-        `;
+    let correctLabel = scenario.correctAction?.toUpperCase?.() ?? String(scenario.correctAction);
+    if (scenario.type === TRAINER_TYPES.BOARD_TEXTURE) {
+        correctLabel = scenario.correctAction;
     }
+
+    const evMeta = evFeedback?.meta;
+    const evDetailsHtml = evMeta
+        ? `<p style="margin-top: 0.5rem; color: var(--color-text-secondary); font-size: 0.95em;">
+                Est. equity vs range: <strong>${Math.round(evMeta.equity * 100)}%</strong>
+                ${Number.isFinite(evMeta.iterations) && evMeta.iterations > 0 ? `(${evMeta.iterations} sims)` : ''}
+           </p>`
+        : '';
+
+    explanation.innerHTML = `
+        ${!isCorrect ? `
+            <p>Your answer: <strong>${userAnswer.toUpperCase()}</strong></p>
+            <p>Recommended: <strong>${correctLabel}</strong></p>
+        ` : `<p>Keep going!</p>`}
+        ${evLoss !== null ? `<p>EV impact: <strong>-${evLoss.toFixed(2)}bb</strong> vs recommended line</p>` : ''}
+        ${handStrengthLabel ? `<p>Your hand strength: <strong>${handStrengthLabel}</strong></p>` : ''}
+        ${scenario.texture ? `<p>Board texture: <strong>${scenario.texture}</strong></p>` : ''}
+        ${evDetailsHtml}
+    `;
 
     // Add next button
     const nextButton = document.createElement('button');
@@ -722,6 +749,96 @@ function showFeedback(scenario, userAnswer, isCorrect) {
     // This ensures sessions are saved even if user plays < 10 hands
     currentSession.endTime = new Date().toISOString();
     storage.saveSession(currentSession);
+}
+
+function computeEvFeedback({ scenario, userAnswer, isCorrect, seed }) {
+    // Do not try to compute EV for quiz-type scenarios.
+    if (!scenario || scenario.type === TRAINER_TYPES.BOARD_TEXTURE) return null;
+    if (!scenario.heroHand || !scenario.board || scenario.board.length < 3) return null;
+
+    const heroHandCode = scenario.heroHand.display;
+    if (!heroHandCode) return null;
+
+    const usedSet = new Set(scenario.board);
+    const heroCards = handCodeToConcreteCards(heroHandCode, usedSet, seed);
+    if (!heroCards) return null;
+
+    // Pick a plausible villain range based on scenario type.
+    // (These trainers are not tied to exact preflop positions, so this is intentionally approximate.)
+    let villainRange = [];
+    if (scenario.type === TRAINER_TYPES.FACING_CBET) {
+        // Villain is preflop raiser
+        villainRange = ranges.RFI_RANGES?.BTN || [];
+    } else {
+        // Villain is preflop caller
+        villainRange = ranges.BB_DEFENSE_RANGES?.vsBTN || [];
+    }
+
+    const equityRes = simulateEquityVsRange({
+        heroCards,
+        villainRange,
+        board: scenario.board,
+        iterations: 1200,
+        seed
+    });
+
+    const equity = equityRes.equity;
+    const meta = { equity, iterations: equityRes.iterations };
+
+    // Simple fold equity heuristics
+    const texture = scenario.texture;
+    const isDry = texture === 'DRY' || texture === 'STATIC';
+    const isWet = texture === 'WET' || texture === 'DYNAMIC';
+
+    const baseFE = isDry ? 0.28 : isWet ? 0.16 : 0.22;
+
+    const evByAction = {};
+    const potNow = Number(scenario.pot) || 0;
+
+    // Determine sizing per trainer type
+    const betPct = scenario.type === TRAINER_TYPES.CBET ? 0.5 :
+        scenario.type === TRAINER_TYPES.TURN_PLAY ? 0.67 :
+            scenario.type === TRAINER_TYPES.RIVER_PLAY ? 0.75 : 0.5;
+
+    // Common action EVs
+    evByAction[ACTIONS.FOLD] = evFold();
+    evByAction[ACTIONS.CHECK] = evCheckToShowdown({ equity, potNow });
+
+    // Bet
+    if (scenario.options?.some(o => o.action === ACTIONS.BET)) {
+        const invest = potNow * betPct;
+        evByAction[ACTIONS.BET] = evBetRaise({
+            equity,
+            potNow,
+            invest,
+            villainCallExtra: invest,
+            foldEquity: baseFE
+        });
+    }
+
+    // Facing a bet (call/raise)
+    if (scenario.options?.some(o => o.action === ACTIONS.CALL) || scenario.options?.some(o => o.action === ACTIONS.RAISE)) {
+        // In facing-cbet scenarios, potNow already includes villain bet in our generator.
+        const callCost = scenario.type === TRAINER_TYPES.FACING_CBET ? 3 : potNow * 0.67;
+        evByAction[ACTIONS.CALL] = evCallToShowdown({ equity, potNow, callCost });
+
+        const raiseTo = callCost * 3;
+        evByAction[ACTIONS.RAISE] = evBetRaise({
+            equity,
+            potNow,
+            invest: raiseTo,
+            villainCallExtra: Math.max(0, raiseTo - callCost),
+            foldEquity: Math.min(0.55, baseFE + 0.12)
+        });
+    }
+
+    return computeEvFeedbackFromEvs({
+        evByAction,
+        correctAction: scenario.correctAction,
+        userAnswer,
+        isCorrect,
+        meta
+    });
 }
 
 export default {
