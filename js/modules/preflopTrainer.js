@@ -346,8 +346,16 @@ function generate4BetScenario() {
 }
 
 function generateColdCallScenario() {
+    // Cold call requires hero to be in position vs the opener.
+    // If villain is the last position (BB), there are no valid hero positions,
+    // so exclude it to avoid empty arrays / recursion crashes (BUG-014).
     const villainPos = randomItem(['UTG', 'HJ', 'CO', 'BTN', 'SB']);
-    const heroPos = randomItem(POSITIONS.filter(p => POSITIONS.indexOf(p) > POSITIONS.indexOf(villainPos)));
+    const validHeroPositions = POSITIONS.filter(p => POSITIONS.indexOf(p) > POSITIONS.indexOf(villainPos));
+    if (validHeroPositions.length === 0) {
+        // Deterministic fallback: regenerate with a new villain position.
+        return generateColdCallScenario();
+    }
+    const heroPos = randomItem(validHeroPositions);
     const hand = randomHand();
 
     const posKey = `vs${villainPos}`;
