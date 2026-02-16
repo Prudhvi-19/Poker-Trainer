@@ -2,7 +2,7 @@
 // Full hand progression: Preflop → Flop → Turn → River
 
 import { ACTIONS, SUITS, STREET } from '../utils/constants.js';
-import { generateId, formatPercentage, randomHand, isInPosition } from '../utils/helpers.js';
+import { generateId, formatPercentage, randomHand, isInPosition, showToast } from '../utils/helpers.js';
 import { createHandDisplay, createCard } from '../components/Card.js';
 import ranges from '../data/ranges.js';
 import storage from '../utils/storage.js';
@@ -18,6 +18,22 @@ let currentHand = null;
 let statsEl = null;
 let handInfoEl = null;
 let scenarioEl = null;
+
+function persistSession() {
+    if (!currentSession) return;
+    currentSession.endTime = new Date().toISOString();
+    storage.saveSession(currentSession);
+}
+
+function upsertCurrentHandIntoSession() {
+    if (!currentSession || !currentHand) return;
+    const idx = currentSession.hands.findIndex(h => h.id === currentHand.id);
+    if (idx === -1) {
+        currentSession.hands.push(currentHand);
+    } else {
+        currentSession.hands[idx] = currentHand;
+    }
+}
 
 function render() {
     const container = document.createElement('div');
@@ -97,15 +113,32 @@ function startNewSession() {
 
     updateStats();
     startNewHand();
+
+    // Persist immediately so rapid navigation doesn't lose the session shell (BUG-017)
+    persistSession();
 }
 
 function startNewHand() {
     currentHand = generateNewHand();
+    if (!currentHand) {
+        showToast('Could not generate a new hand. Retrying...', 'error');
+        currentHand = generateNewHand();
+    }
+    if (!currentHand) {
+        showToast('Could not generate a new hand. Please refresh the page.', 'error', 6000);
+        return;
+    }
+
+    // Track in session immediately so decisions are not lost mid-hand (BUG-017)
+    upsertCurrentHandIntoSession();
+    persistSession();
+
     updateHandInfo();
     showCurrentStreet();
 }
 
 function generateNewHand() {
+    try {
     // For production-grade training determinism and correct range lookups,
     // constrain to a supported, well-defined heads-up configuration (BTN vs BB).
     // We still randomize which seat the hero is in so we can train both:
@@ -124,6 +157,9 @@ function generateNewHand() {
 
     // Pre-generate full board at hand start to ensure consistency
     const fullBoard = generateFullBoard(heroCards);
+    if (!fullBoard || fullBoard.length !== 5) {
+        return null;
+    }
 
     // Heads-up blinds model (BTN is SB in HU)
     const blinds = { BTN: 0.5, BB: 1.0 };
@@ -147,7 +183,8 @@ function generateNewHand() {
         board: [],
         fullBoard, // All 5 cards pre-generated, revealed incrementally
         actions: [],
-        decisions: []
+        decisions: [],
+        isComplete: false
     };
 
     // If villain is opening (hero is BB defending), apply the villain's open
@@ -157,6 +194,10 @@ function generateNewHand() {
     }
 
     return hand;
+    } catch (err) {
+        console.error('Error generating multistreet hand:', err);
+        return null;
+    }
 }
 
 function applyVillainOpen(hand, openSize) {
@@ -518,6 +559,10 @@ function handleDecision(scenario, userAction) {
     // Update pot/stack based on action
     updatePotAndStack(userAction, scenario);
 
+    // Persist in-progress hand after every decision (BUG-017)
+    upsertCurrentHandIntoSession();
+    persistSession();
+
     showDecisionFeedback(scenario, userAction, isCorrect);
     updateStats();
 }
@@ -673,6 +718,11 @@ function showDecisionFeedback(scenario, userAction, isCorrect) {
 
     // Determine next action
     const canContinue = userAction !== ACTIONS.FOLD && canAdvanceStreet();
+    if (!canContinue) {
+        currentHand.isComplete = true;
+        upsertCurrentHandIntoSession();
+        persistSession();
+    }
 
     if (canContinue) {
         const nextBtn = document.createElement('button');
@@ -720,6 +770,10 @@ function advanceStreet() {
 
         updateHandInfo();
         showCurrentStreet();
+
+        // Persist after street advancement so navigation doesn't lose state
+        upsertCurrentHandIntoSession();
+        persistSession();
     }
 }
 
@@ -761,12 +815,10 @@ function createBoardDisplay(board) {
 }
 
 function saveHandToSession() {
-    currentSession.hands.push(currentHand);
-
-    // Save session after every hand (storage handles deduplication by ID)
-    // This ensures sessions are saved even if user plays < 5 hands
-    currentSession.endTime = new Date().toISOString();
-    storage.saveSession(currentSession);
+    // Upsert (avoid duplicates) and persist
+    currentHand.isComplete = true;
+    upsertCurrentHandIntoSession();
+    persistSession();
 }
 
 function updateStats() {
