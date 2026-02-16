@@ -447,6 +447,8 @@ function evaluateHand(cards) {
     const orderedRanks = ranksWithCounts.map(x => x.rank);
 
     // uniqueRanks sorted by rank value only (for straights/flushes)
+    // NOTE: Lower index in RANKS means a higher card (A=0 ... 2=12).
+    // We keep kickers as ascending indices and compare with compareKickers().
     const uniqueRanks = Object.keys(rankCounts).map(Number).sort((a, b) => a - b);
 
     const isFlush = suits.every(s => s === suits[0]);
