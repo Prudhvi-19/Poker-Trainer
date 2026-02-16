@@ -9,6 +9,7 @@ export function generateId() {
 
 // Get random item from array
 export function randomItem(array) {
+    if (!Array.isArray(array) || array.length === 0) return null;
     return array[Math.floor(Math.random() * array.length)];
 }
 
