@@ -1,4 +1,3 @@
-
 # Open Bugs (Audit)
 
 This file tracks **known open business/logic/UX bugs** found during code review.
@@ -16,80 +15,6 @@ This file tracks **known open business/logic/UX bugs** found during code review.
 
 ---
 
-## BUG-001 — Settings can crash if stored settings are missing newer keys
-
-- **Severity:** P0
-- **Area:** `js/utils/storage.js`, `js/modules/settings.js`, `js/app.js`
-- **Status:** OPEN
-
-### Symptoms
-If a user has an older `poker_trainer_settings` object in `localStorage` (missing keys introduced later), the app may crash when rendering Settings.
-
-### Repro
-1. In DevTools, set `localStorage.poker_trainer_settings = "{}"`
-2. Navigate to `#settings`
-3. Observe error risk at `currentSettings.defaultSessionLength.toString()`
-
-### Suspected root cause
-`storage.getSettings()` returns the stored object as-is and **does not merge with `DEFAULT_SETTINGS`**, so required fields can be `undefined`.
-
-### Fix idea
-In `getSettings()`, return `{...DEFAULT_SETTINGS, ...storedSettings}` (and ensure nested defaults if needed).
-Also harden Settings render paths against missing values.
-
----
-
-## BUG-002 — `defaultSessionLength.toString()` can throw
-
-- **Severity:** P0
-- **Area:** `js/modules/settings.js`
-- **Status:** OPEN
-
-### Suspected root cause
-`currentSettings.defaultSessionLength` can be `undefined` if settings are missing/malformed.
-
-### Fix idea
-Use `String(currentSettings.defaultSessionLength ?? DEFAULT_SETTINGS.defaultSessionLength)`.
-
----
-
-## BUG-003 — Navigation helper mutates URL hash (redundant + can cause double navigation)
-
-- **Severity:** P1
-- **Area:** `js/components/Navigation.js`
-- **Status:** OPEN
-
-### Symptoms
-`setActiveNavItem()` both:
-1) updates active CSS class, and
-2) sets `window.location.hash = moduleId`
-
-But navigation click handler already triggers routing via `onNavigate()` (which also sets the hash), and `app.js` also listens to `hashchange` to call `setActiveNavItem()`.
-
-### Risk
-Redundant hash writes, potential weirdness with router generation guard and/or event timing.
-
-### Fix idea
-Make `setActiveNavItem()` **pure UI state** (only class toggling). Leave hash mutation to the router.
-
----
-
-## BUG-004 — Postflop trainer keyboard instructions don’t match actual shortcuts
-
-- **Severity:** P1
-- **Area:** `js/app.js`, `js/modules/postflopTrainer.js`
-- **Status:** OPEN
-
-### Symptoms
-Postflop trainer header says: `B=Bet/Raise`, but `app.js` doesn’t dispatch any shortcut for key `b`.
-
-### Fix idea
-Either:
-- add `case 'b':` in `app.js` to dispatch the same action as raise/bet, or
-- update the UI copy to match the implemented keys.
-
----
-
 ## BUG-005 — Stats “common mistakes” grouping key uses `scenario.action` (field doesn’t exist)
 
 - **Severity:** P2
@@ -100,23 +25,11 @@ Either:
 `getCommonMistakes()` builds a grouping key with `result.scenario.action`, but scenarios use fields like `correctAction`, `type`, etc.
 This leads to poor/incorrect aggregation.
 
-### Fix idea
-Use a stable key like `{module, trainerType/type, position, hand.display, correctAction}`.
-
----
-
-## BUG-006 — Equity calculator: Random hand / Clear board don’t refresh duplicate-card disabling
-
-- **Severity:** P2
-- **Area:** `js/modules/equityCalculator.js`
-- **Status:** OPEN
-
-### Symptoms
-`setRandomHand()` and `clearBoard()` update `<select>.value` programmatically but do not call `updateCardAvailability()`.
-Because programmatic `.value = ...` doesn’t trigger `change`, the UI can show illegal/duplicate cards as “available” until the user manually changes a dropdown.
+### Suspected root cause
+Field mismatch (`scenario.action` not present).
 
 ### Fix idea
-Call `updateCardAvailability()` at the end of `setRandomHand()` and `clearBoard()`.
+Use a stable key like `{ module, trainerType/type, position, hand.display, correctAction }`.
 
 ---
 
@@ -140,7 +53,7 @@ Correct answers can be systematically wrong (mis-trains players).
 
 ### Fix idea
 Use the correct range table based on hero position/situation:
-- blinds: BB defense vs opens, SB defense vs opens (if modeled)
+- blinds: BB defense vs opens (and SB vs opens if modeled)
 - non-blinds: use cold-call / 3-bet ranges
 Also constrain scenario generation so only supported matchups are produced.
 
@@ -177,10 +90,20 @@ Model blind posting explicitly based on player positions OR start pot at 0 and t
 
 ---
 
-## “Already patched on branch but not yet committed/verified”
+## BUG-010 — Scenario container id inconsistencies can break trainer keyboard shortcuts
 
-The following changes exist as local modifications on `audit/bug-hunt` and should be verified + committed:
+- **Severity:** P2
+- **Area:** `js/modules/preflopTrainer.js`, `js/modules/postflopTrainer.js`, `js/modules/multistreetTrainer.js`
+- **Status:** OPEN (fix in working tree; not yet committed)
 
-- **Equity calculator Monte Carlo simulation**: reset `usedCards` per iteration to avoid card-exhaustion/correlation across iterations.
-- **Scenario container IDs**: standardize to `scenario-container` for trainers to avoid DOM lookup inconsistencies.
+### Symptoms
+Keyboard shortcut handlers in multiple trainers call:
 
+```js
+document.getElementById('scenario-container')
+```
+
+If the scenario container element doesn’t have that id, shortcuts silently stop working.
+
+### Fix idea
+Standardize trainers to always set `scenarioContainerEl.id = 'scenario-container'` (or stop using DOM id lookups and use stored refs consistently).
