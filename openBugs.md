@@ -52,39 +52,7 @@ This file tracks **known open bugs, logic/UX issues, and feature enhancements** 
 
 ## E0 -- Must-Ship (Table Stakes vs Competitors)
 
-### ENH-001 ELO / Skill Rating System
-
-- **Status:** ✅ **Shipped (basic v1)** on branch `enh/e0-elo-rating`.
-- **Competitive gap:** [GTO Wizard](https://gtowizard.com/), [Postflop+](https://www.craftywheel.com/postflopplus), and [PeakGTO](https://pokercoaching.com/peakgto) all have ELO rating systems. This is the single biggest differentiator between a "quiz app" and a "training platform."
-- **Description:** Implement a dynamic skill rating that adjusts after every training decision. **v1 uses binary correct/incorrect** (EV-based grading will land in **ENH-002**). Rating and history are stored in localStorage and shown on the Dashboard.
-- **Key components:**
-  - Starting rating (e.g., 1200)
-  - Per-decision rating adjustment (v1: correct/incorrect)
-  - Rating history stored in localStorage
-  - Visual rating widget on dashboard (graph TBD)
-  - Skill tier badges (Bronze/Silver/Gold/Platinum/Diamond/Master)
-  - Tier lock-in -- once achieved, tier title is permanent (GGPoker model)
-- **Reference:** [PeakGTO ELO system](https://pokercoaching.com/blog/peakgto-poker-elo-score/), [ELO vs Glicko comparison](https://pokergamedevelopers.com/elo-vs-glicko-poker-ranking-system/)
-
-### ENH-002 Instant Decision Feedback with EV Impact
-
-- **Competitive gap:** [GTO Wizard](https://gtowizard.com/) and [Simple GTO Trainer](https://simplepoker.com/en/Solutions/Simple_GTO_Trainer) show EV cost of mistakes, not just "correct/incorrect."
-- **Description:** Replace the binary correct/incorrect feedback with a graduated scale: Perfect, Good, Mistake, Blunder (Postflop+ model). Show the EV difference between the user's action and the GTO action. E.g., "Folding here costs you 2.3bb vs the GTO call."
-- **Key components:**
-  - 4-tier feedback system: Perfect (0 EV loss), Good (<0.5bb EV loss), Mistake (0.5-2bb), Blunder (>2bb)
-  - EV cost display for each decision
-  - Color-coded feedback (green/yellow/orange/red)
-  - Session summary showing total EV lost
-- **Reference:** [Postflop+ trainer](https://apps.apple.com/us/app/postflop-gto-poker-trainer/id1488850006)
-
-- **Status:** ✅ **Merged into** `audit/bug-hunt`.
-- **Release note:** EV-based grading now applies to all **poker-action** trainers (Preflop, Postflop, Multi-street, C-Bet, Bet Sizing). Quiz-style modules (Pot Odds/MDF, Board Texture) remain correct/incorrect only.
-- **Verification notes:**
-  - Preflop trainer shows 4-tier feedback (Perfect/Good/Mistake/Blunder) with EV loss in bb.
-  - Postflop trainer shows EV loss + tiered grading and tracks session EV lost.
-  - Multi-street trainer shows EV loss + tiered grading per decision and tracks session EV lost.
-  - C-Bet trainer shows EV loss + tiered grading and tracks session EV lost.
-  - Bet Sizing trainer shows EV loss + tiered grading and tracks session EV lost.
+_Note: shipped enhancements are tracked in_ `closedBugs.md` _(e.g. ENH-001, ENH-002)._ 
 
 ### ENH-003 Progressive Web App (PWA) with Offline Support
 
@@ -332,8 +300,8 @@ This file tracks **known open bugs, logic/UX issues, and feature enhancements** 
 | Postflop Training | 5 modes | Full | Full (offline) | Full | Basic |
 | Multi-Street | Yes | Yes | Yes | Yes | Yes |
 | Equity Calculator | Hand vs Hand | Full solver | Built-in | N/A | Range + Hand |
-| ELO Rating | **Missing** | No | Yes | Yes | No |
-| EV Feedback | Binary only | EV cost | 4-tier | EV + coaching | Basic |
+| ELO Rating | Yes (v1) | No | Yes | Yes | No |
+| EV Feedback | 4-tier + EV loss | EV cost | 4-tier | EV + coaching | Basic |
 | Spaced Repetition | **Missing** | No | No | No | No |
 | Achievements | **Missing** | No | No | No | No |
 | PWA / Offline Install | **Missing** | Web only | Native app | Web only | Native app |
@@ -352,12 +320,10 @@ This file tracks **known open bugs, logic/UX issues, and feature enhancements** 
 
 ## Biggest Gaps to Close (priority order)
 
-1. **ENH-001** ELO Rating System -- table stakes for a training platform
-2. **ENH-002** EV-based feedback -- binary correct/incorrect feels like a quiz, not coaching
-3. **ENH-003** PWA -- users need to install and use offline on mobile
-4. **ENH-004** Spaced Repetition -- unique differentiator, no competitor has this
-5. **ENH-005** Achievements -- drives retention and daily engagement
-6. **ENH-007** Range vs Range -- required for serious poker study
+1. **ENH-003** PWA -- users need to install and use offline on mobile
+2. **ENH-004** Spaced Repetition -- unique differentiator, no competitor has this
+3. **ENH-005** Achievements -- drives retention and daily engagement
+4. **ENH-007** Range vs Range -- required for serious poker study
 
 ---
 
