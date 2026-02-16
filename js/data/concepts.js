@@ -28,92 +28,195 @@ export const CONCEPTS = {
         {
             id: 'position',
             title: 'Position Explained',
-            content: `Position is your seat relative to the button and determines when you act in a hand.
+            content: `Position is your seat relative to the button. It determines who acts first and who acts last.
 
-**Position Order (6-max):**
-- UTG (Under the Gun) - First to act, worst position
-- HJ (Hijack) - Second to act
-- CO (Cutoff) - Third to act
-- BTN (Button) - Last to act preflop and postflop, best position
-- SB (Small Blind) - Acts last preflop, first postflop
-- BB (Big Blind) - Acts last preflop (after SB), second postflop
+**Position order (6-max):**
+- UTG (Under the Gun) - first to act preflop, toughest position
+- HJ (Hijack)
+- CO (Cutoff)
+- BTN (Button) - last to act postflop (best position)
+- SB (Small Blind)
+- BB (Big Blind)
 
-**Why Position Matters:**
-- Acting last gives you information advantage
-- You see what opponents do before making your decision
-- You can control pot size more effectively
-- Late position allows you to play more hands profitably
-- Early position requires tighter ranges to compensate for positional disadvantage
+**In Position (IP) vs Out of Position (OOP):**
+- IP means you act after your opponent on later streets (you get more information)
+- OOP means you act first (you give information and must guess more)
 
-**Key Principle:** The later your position, the wider your range can be.`
+**Why position changes your strategy:**
+- You realize more equity IP (you can check behind and see free cards)
+- You bluff more effectively IP (you can represent strong ranges and choose bet sizes)
+- You value bet thinner IP (you control the final bet sizing and avoid check-raises)
+- OOP you need stronger hands to put money in (harder to realize equity)
+
+**Practical rules of thumb:**
+- Open wider in later positions (CO/BTN) because you will play more pots IP
+- Defend tighter OOP (especially SB) because you realize less equity
+- Most postflop spots are easier IP; the same hand can be a bet IP but a check OOP
+
+**Common mistakes:**
+- Playing the same hand the same way IP and OOP
+- Over-calling OOP with hands that look OK but realize poorly
+
+**Drills (in this app):**
+- Preflop Trainer: compare UTG vs BTN opening ranges
+- Postflop Trainer: compare IP vs OOP c-bet decisions on the same textures`
+        },
+        {
+            id: 'actions-and-sizing',
+            title: 'Action Vocabulary + Bet Sizing Vocabulary',
+            content: `Poker study gets much easier when the words mean the same thing every time.
+
+**Core actions:**
+- Fold: give up the hand
+- Call: match a bet
+- Check: bet 0 when allowed
+- Bet: put money in when nobody has bet yet on this street
+- Raise: increase the bet size after someone bets
+
+**Common preflop terms:**
+- Open / RFI: raise first in
+- Limp: call the big blind preflop (usually avoided in 6-max cash)
+- 3-bet: re-raise preflop
+- 4-bet: re-raise the 3-bet
+- Cold call: call a raise when you were not already in the pot
+- Squeeze: 3-bet after an open and at least one caller
+
+**Sizing language:**
+- bb: big blinds (our trainers use bb)
+- % pot: fraction of the pot (50% pot, 75% pot, etc.)
+- Overbet: bet larger than the pot (for example 125% pot)
+
+**Why sizing matters (high level):**
+- Bigger bets create more fold equity but require stronger (more polarized) ranges
+- Smaller bets let more hands continue and are used with more merged ranges
+
+**Drills (in this app):**
+- Preflop Trainer: practice open / 3-bet / 4-bet decisions
+- Bet Sizing Trainer: practice selecting sizes that match the goal`
         },
         {
             id: 'pot-odds',
             title: 'Pot Odds and Equity',
-            content: `Pot odds are the ratio of the current pot size to the cost of a call.
+            content: `Pot odds tell you the minimum equity you need to call.
+
+**The core formula (break-even call):**
+Required equity = Call Amount / (Pot After You Call)
+
+If the pot is P and you must call C:
+- You call C
+- Final pot becomes P + C
+- Break-even equity is C / (P + C)
 
 **Example:**
-Pot = $100, Bet = $50
-Pot odds = $150:$50 = 3:1
-You need to win 25% of the time to break even (1/(3+1) = 0.25)
+Pot is 100bb, villain bets 50bb, so pot is now 150bb and you must call 50bb.
+Required equity = 50 / 200 = 25%
 
-**Equity** is your percentage chance to win the hand.
+**Quick mental shortcuts (most useful):**
+- Call 1/4 pot: need ~17% equity
+- Call 1/3 pot: need 20% equity
+- Call 1/2 pot: need 25% equity
+- Call 2/3 pot: need ~29% equity
+- Call pot: need 33% equity
+- Call 2x pot: need 40% equity
 
-**The Rule:** Call when your equity > pot odds requirement
+**Pot odds vs equity (what to compare):**
+- Pot odds gives required equity
+- Equity is your chance to win at showdown if all remaining cards were dealt
 
-**Common Scenarios:**
-- Facing half pot bet: Need 25% equity (3:1 odds)
-- Facing 2/3 pot bet: Need 28.5% equity (2.5:1 odds)
-- Facing pot-sized bet: Need 33% equity (2:1 odds)
-- Facing 2x pot overbet: Need 40% equity (1.5:1 odds)
+**Estimating equity quickly (outs + rule of 4 and 2):**
+- Count your outs (cards that improve you to a likely-winning hand)
+- With 2 cards to come (flop → river): equity ≈ outs × 4%
+- With 1 card to come (turn → river): equity ≈ outs × 2%
 
-**Implied Odds:** Future money you can win on later streets
-- Important when drawing to strong hands (flushes, straights)
-- Consider opponent's stack and likelihood to pay you off`
+Examples:
+- Flush draw on flop: ~9 outs → ~36% with two cards to come
+- Open-ended straight draw on flop: ~8 outs → ~32%
+- Gutshot on flop: ~4 outs → ~16%
+
+**Important: equity realization**
+Even if you have enough raw equity, you might not realize it when:
+- You are OOP
+- Your draw is weak and faces big bets
+- You often get forced to fold on later streets
+
+**Implied odds (future money):**
+You can call slightly below break-even if you expect to win more later when you hit.
+Be careful: reverse implied odds happen when your hand improves but is still second best.
+
+**Drills (in this app):**
+- Pot Odds Trainer: practice required equity under different bet sizes
+- Equity Calculator: estimate your equity on different boards`
         },
         {
             id: 'expected-value',
             title: 'Expected Value (EV)',
-            content: `Expected Value is the average amount you win or lose from a decision over the long run.
+            content: `Expected Value (EV) is the long-run average profit of a decision.
 
-**Formula:** EV = (Win% × Win Amount) - (Lose% × Lose Amount)
+**Core idea:**
+- You will not win every hand
+- But you can still make decisions that win money on average
+
+**Simple EV formula (call decisions):**
+EV = (Win% × Amount Won) - (Lose% × Amount Lost)
 
 **Example:**
-You call $50 into $100 pot with 40% equity
-- Win: 40% × $150 = $60
-- Lose: 60% × $50 = -$30
-- EV = $60 - $30 = +$30
+You call 50bb into a pot that will be 200bb after you call. Your equity is 40%.
+- Win: 40% × 200bb = 80bb
+- Lose: 60% × 50bb = 30bb
+- EV = 80bb - 30bb = +50bb
 
-**Positive EV (+EV):** The correct play long-term
-**Negative EV (-EV):** A losing play long-term
-**Zero EV:** Break-even play
+**EV vs accuracy:**
+- Poker is not about always being right
+- It is about choosing the highest EV line among your options
 
-**Key Insight:** Poker decisions should maximize EV, not win rate. Sometimes folding the best hand is +EV if the pot odds aren't right.`
+**EV loss (how this app grades):**
+Many trainers show an EV grade (Perfect / Good / Mistake / Blunder) and an EV loss in bb.
+- EV loss is the difference between the recommended action EV and your action EV
+- A small EV loss can still be a reasonable human decision
+
+**Common mistakes:**
+- Choosing actions because they "feel" safe rather than comparing EV
+- Ignoring how position and future streets change realized EV
+
+**Drills (in this app):**
+- Preflop / Postflop trainers: focus on reducing EV loss, not just being correct
+- Smart Practice: let SRS bring back the spots where your EV loss is highest`
         },
         {
             id: 'ranges',
             title: 'Ranges and Range Advantage',
-            content: `A range is all possible hands a player could have in a situation.
+            content: `A range is the set of hands a player can reasonably have in a spot.
 
-**Range vs Hand:**
-- Beginners think: "I have AK"
-- Advanced players think: "Villain's range is..."
+**Why ranges matter:**
+- You rarely know an exact hand
+- The correct play depends on how your hand performs against the opponent's entire range
 
-**Range Advantage:**
-The player whose range contains more strong hands on a particular board has range advantage.
+**Combos (very important):**
+- A pair has 6 combos (for example QQ)
+- A suited hand has 4 combos (for example AK suited)
+- An offsuit hand has 12 combos (for example AK offsuit)
+
+**Blockers (removal effects):**
+Cards in your hand remove combos from the opponent.
+- Having an Ace removes some strong Ace-x combos from villain
+- This matters a lot for bluff selection and thin value
+
+**Range advantage vs nut advantage:**
+- Range advantage: one player has more overall strong hands on average
+- Nut advantage: one player has more of the very best hands (top sets, straights, etc.)
 
 **Example:**
-Board: K♥ 7♠ 2♦
-- Raiser has range advantage (has more KK, 77, 22, AK, KQ)
-- Caller has fewer premium hands, more middle pairs and draws
+Board: K high dry flop
+- Preflop raiser often has range advantage (more strong broadways)
+- Caller often has more medium pairs and suited connectors
 
-**How to Use Range Advantage:**
-- With advantage: Bet frequently (c-bet)
-- Without advantage: Check more, call when priced in
-- As ranges evolve (flop → turn → river), advantage can shift
+**How to use this concept:**
+- If you have range advantage, you can often bet smaller and more frequently
+- If you lack nut advantage, you should be careful with big bets and stacks
 
-**Polarization:**
-A polarized range contains very strong hands and bluffs, but few medium-strength hands.`
+**Drills (in this app):**
+- C-bet Trainer: practice betting frequencies on different textures
+- Equity Calculator: compare a hand vs a range to build intuition`
         }
     ],
 

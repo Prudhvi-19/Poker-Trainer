@@ -51,11 +51,11 @@ To keep quality high, every chapter will follow a consistent template:
 
 ### A. Foundations (required for every trainer)
 
-- [ ] A1. Positions & table geometry (6-max, BTN/SB/BB/UTG/HJ/CO)
-- [ ] A2. Action vocabulary + bet sizing vocabulary (open/3b/4b/call/fold/check/raise)
-- [ ] A3. Ranges & combos (169 hands, combos, blockers, suited vs offsuit)
-- [ ] A4. Equity, pot odds, and required equity (call thresholds)
-- [ ] A5. Expected value (EV) basics (chip EV, bb EV; why EV loss matters)
+- [x] A1. Positions & table geometry (6-max, BTN/SB/BB/UTG/HJ/CO)
+- [x] A2. Action vocabulary + bet sizing vocabulary (open/3b/4b/call/fold/check/raise)
+- [x] A3. Ranges & combos (169 hands, combos, blockers, suited vs offsuit)
+- [x] A4. Equity, pot odds, and required equity (call thresholds)
+- [x] A5. Expected value (EV) basics (chip EV, bb EV; why EV loss matters)
 - [ ] A6. Fold equity (what it is; what drives it; where our models approximate)
 - [ ] A7. Initiative & range advantage vs nut advantage
 - [ ] A8. SPR (stack-to-pot ratio) and how it changes strategy
@@ -108,7 +108,7 @@ To keep quality high, every chapter will follow a consistent template:
 
 ### G. Pot odds & calling thresholds (maps to Pot Odds Trainer)
 
-- [ ] G1. Pot odds math (quick mental shortcuts)
+- [x] G1. Pot odds math (quick mental shortcuts)
 - [ ] G2. Implied odds / reverse implied odds
 - [ ] G3. Equity realization: why 30% raw equity isn’t always 30% realized
 - [ ] G4. Multiway pot odds adjustments
@@ -130,10 +130,12 @@ To keep quality high, every chapter will follow a consistent template:
 
 ## First implementation milestone (Phase 1)
 
-When you approve, I’ll start by implementing **A1–A5** plus **G1** (pot odds math) because they underpin nearly every trainer and will make the rest easier.
+Phase 1 implemented: **A1–A5** plus **G1** (pot odds math).
 
 Deliverables for Phase 1:
 
 - Expand `js/data/concepts.js` with new sections for A1–A5 and G1
 - Add “Drills” links pointing to the relevant trainer modules
 - Ensure the Concepts UI still renders smoothly
+
+Next up (Phase 2 suggestion): A6 (Fold equity), A7 (range vs nut advantage), and A8 (SPR).
