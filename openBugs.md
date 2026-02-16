@@ -69,6 +69,8 @@ _Note: shipped enhancements are tracked in_ `closedBugs.md` _(e.g. ENH-001, ENH-
   - Install prompt handling
 - **Reference:** [MDN PWA Guide](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps), [PWABuilder](https://www.pwabuilder.com/)
 
+- **Status:** ✅ Shipped (see `closedBugs.md`)
+
 ### ENH-004 Spaced Repetition System for Weak Spots
 
 - **Competitive gap:** No major poker trainer has SRS built in. This would be a first-mover advantage. [Preflop AI](https://apps.apple.com/us/app/gto-poker-trainer-preflop-ai/id6747779080) uses "Duolingo-style" learning but without true SRS scheduling.
@@ -80,6 +82,8 @@ _Note: shipped enhancements are tracked in_ `closedBugs.md` _(e.g. ENH-001, ENH-
   - Visual progress bars showing mastery per hand category
   - Daily review queue with estimated session length
 - **Reference:** [Spaced repetition for poker ranges](https://www.pokerstrategy.com/news/content/How-to-memorise-a-poker-range_115334/), [FSRS algorithm](https://github.com/open-spaced-repetition/fsrs4anki/wiki/spaced-repetition-algorithm:-a-three%E2%80%90day-journey-from-novice-to-expert), [BBZ Poker study techniques](https://bbzpoker.com/5-proven-techniques-to-help-you-study-poker-charts/)
+
+- **Status:** ✅ Shipped (see `closedBugs.md`)
 
 ---
 

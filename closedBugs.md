@@ -227,3 +227,17 @@
 - **Fix/Feature:** Added Monte Carlo equity (`js/utils/equity.js`) + EV grading utilities (`js/utils/evFeedback.js`) and integrated tiered feedback + EV loss (bb) into Preflop, Postflop, Multi-street, C-Bet, and Bet Sizing trainers. Added feedback tier styling.
 - **Verification:** Manual smoke test (app loads; feedback renders; no console errors).
 
+### SHIPPED — ENH-003 Progressive Web App (PWA) with Offline Support
+
+- **Severity:** E0 (Must-Ship)
+- **Commit:** `5924809`
+- **Fix/Feature:** Added `manifest.webmanifest`, placeholder icons, and a service worker with precaching + cache-first fetch strategy. Added service worker registration in `js/app.js`.
+- **Verification:** Loaded app via `http://127.0.0.1:5173` and confirmed `service-worker.js`/manifest/icons were served. Offline behavior should be validated via DevTools (Application → Service Workers/Cache).
+
+### SHIPPED — ENH-004 Smart Practice (Spaced Repetition)
+
+- **Severity:** E0 (Must-Ship)
+- **Commit:** `03cf4e3`
+- **Fix/Feature:** Implemented a simplified SM-2 scheduler in `js/utils/srs.js`, stored in localStorage. Added Dashboard “Smart Practice” section to start a review queue. Integrated SRS result recording into Preflop/Postflop/Multi-street/C-bet/Bet Sizing trainers and added cross-module session routing via `js/utils/smartPracticeSession.js`.
+- **Verification:** Manual smoke test (app loads; Smart Practice card renders; trainers compile). Full end-to-end SRS queue replay should be verified interactively.
+
