@@ -94,3 +94,122 @@
 - **Fix:** Show toast warnings before truncating sessions and on save failure so user is informed about data loss / action needed.
 - **Verification:** Code inspection; manual storage-fill test recommended.
 
+## 2026-02-16
+
+### FIXED — BUG-014 Infinite recursion in cold call scenario generation
+
+- **Severity:** P1
+- **Commit:** `2841aa2`
+- **Fix:** Avoid empty filtered position arrays during cold-call scenario generation (prevents recursion crash).
+- **Verification:** Code inspection; scenario generation no longer recurses on empty pools.
+
+### FIXED — BUG-015 Keyboard shortcuts fire through modals / feedback (double-action)
+
+- **Severity:** P1
+- **Commits:** `76f8897`, `11d9197`, `a5f1568`
+- **Fix:** Centralized shortcut handling and added guards so Space on focused feedback buttons doesn’t also dispatch a global “next” shortcut.
+- **Verification:** Code inspection; manual in-UI test recommended.
+
+### FIXED — BUG-016 Multi-street trainer crash on hand generation failures
+
+- **Severity:** P1
+- **Commit:** `7efdcf3`
+- **Fix:** Guard `generateNewHand()` failures; retry once, toast on failure, and avoid dereferencing null hand.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-017 Session save not guaranteed on rapid navigation
+
+- **Severity:** P1
+- **Commit:** `7efdcf3`
+- **Fix:** Persist session shell immediately, and persist in-progress hand/session after each decision and street advancement.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-018 Incorrect straight draw detection logic
+
+- **Severity:** P1
+- **Commit:** `445e2a5`
+- **Fix:** Correct wheel straight-draw detection to require the specific wheel ranks rather than a permissive low-card count.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-019 `randomItem()` returns undefined on empty arrays
+
+- **Severity:** P2
+- **Commit:** `e4d5d15`
+- **Fix:** `randomItem([])` now returns `null`.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-020 No schema validation on imported JSON data
+
+- **Severity:** P2
+- **Commit:** `e31b8db`
+- **Fix:** Validate imported JSON structure before importing; reject invalid types; avoid forced reload and refresh streak UI in-place.
+- **Verification:** Code inspection.
+
+### VERIFIED — BUG-021 Hand replayer index-zero false-negative check
+
+- **Severity:** P2
+- **Status:** No change required
+- **Notes:** Current code uses `currentSessionIndex === null` so index `0` is handled correctly.
+
+### FIXED — BUG-022 No progress indicator for Monte Carlo equity calculation
+
+- **Severity:** P2
+- **Commit:** `b6122d4`
+- **Fix:** Show spinner and disable Calculate button while simulation runs.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-023 Settings font-size silently falls back on invalid values
+
+- **Severity:** P2
+- **Commit:** `52f4d9b`
+- **Fix:** Validate stored `fontSize` on startup; reset invalid values to Medium and show a toast.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-024 Equity calculator kicker sorting ambiguity
+
+- **Severity:** P2
+- **Commit:** `9d03a33`
+- **Fix:** Document rank-index encoding assumptions so kicker ordering is explicit.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-025 Streak display not updated on data import
+
+- **Severity:** P2
+- **Commit:** `e31b8db`
+- **Fix:** Refresh in-memory settings and update streak display after import; no page reload required.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-026 Missing ARIA labels on navigation links
+
+- **Severity:** P3
+- **Commit:** `b8be37f`
+- **Fix:** Add `aria-label` to nav links and `role="navigation"` landmark.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-027 No input trimming on hand string parsing
+
+- **Severity:** P3
+- **Commit:** `6c2489b`
+- **Fix:** Trim whitespace in `parseHand()`.
+- **Verification:** Code inspection.
+
+### VERIFIED — BUG-028 Inline styles reference CSS variables that may not exist
+
+- **Severity:** P3
+- **Status:** No change required
+- **Notes:** `--border-radius` is defined in `css/variables.css`.
+
+### FIXED — BUG-029 Action buttons matched by textContent substring (fragile)
+
+- **Severity:** P3
+- **Commits:** `3f000b8`, `091845a`
+- **Fix:** Set `data-action` on buttons and match deterministically; supports raise/bet and call/check aliasing.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-030 Private method `_getSessionCounts()` called from dashboard
+
+- **Severity:** P3
+- **Commit:** `df30357`
+- **Fix:** Exposed public `stats.getSessionCounts()` and updated dashboard to use it.
+- **Verification:** Code inspection.
+

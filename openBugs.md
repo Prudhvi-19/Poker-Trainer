@@ -32,132 +32,19 @@ This file tracks **known open bugs, logic/UX issues, and feature enhancements** 
 
 ## P1 -- High
 
-### BUG-014 Infinite recursion in cold call scenario generation
-
-- **File:** `js/modules/preflopTrainer.js:265-266`
-- **Description:** When generating cold call scenarios, `heroPos` is selected from positions later than `villainPos`. If `villainPos` resolves to `'BB'` (the last position), the filter returns an empty array, `randomItem([])` returns `undefined`, and the function calls itself recursively with no exit condition, causing a stack overflow crash.
-- **Impact:** App crash (unrecoverable). Requires page reload. Current session data lost.
-- **Suggested fix:** Guard the recursive call with a max-depth counter, or exclude `'BB'` from villain position pool for cold call scenarios.
-
-### BUG-015 Keyboard shortcuts fire through modals (double-action)
-
-- **Files:** `js/app.js:132-170`, `js/modules/preflopTrainer.js:40-70`
-- **Description:** Both `app.js` (global handler) and individual trainers check for `.modal-overlay` presence to suppress shortcuts. However, the checks are redundant and have timing gaps. When feedback panels are visible, pressing Space can trigger both the feedback button click handler AND the `poker-shortcut` event, advancing two hands instead of one.
-- **Impact:** User accidentally skips hands. Session accuracy tracking corrupted with phantom entries.
-- **Suggested fix:** Use `e.stopPropagation()` and `e.preventDefault()` at the trainer level. Centralize modal/feedback state into a single guard.
-
-### BUG-016 Multi-street trainer crash on deck exhaustion
-
-- **File:** `js/modules/multistreetTrainer.js:105-107`
-- **Description:** `generateNewHand()` is called without checking its return value. After many consecutive hands in a single session, the deck manager can exhaust available cards (especially with board + hole card exclusions). A `null`/`undefined` return causes `updateHandInfo()` to throw.
-- **Impact:** App crash mid-session. Session data up to that point may not be saved.
-- **Suggested fix:** Add null-check on `generateNewHand()` return. Re-shuffle a fresh deck when exhausted.
-
-### BUG-017 Session save not guaranteed on rapid navigation
-
-- **Files:** `js/modules/postflopTrainer.js:703`, `js/modules/multistreetTrainer.js:771`
-- **Description:** When ending a session, `storage.saveSession(currentSession)` is called synchronously but relies on the DOM being intact for session metadata. If the user navigates away (hashchange fires) before the save completes, the session may be partially written or lost entirely.
-- **Impact:** Lost training sessions. User completes 20 hands of practice but session never appears in history.
-- **Suggested fix:** Save session state on every hand completion (incremental save), not just on session end.
-
-### BUG-018 Incorrect straight draw detection logic
-
-- **File:** `js/utils/handEvaluator.js:153-159`
-- **Description:** Wheel (A-2-3-4-5) straight draw detection uses `lowCards.length >= 2` as threshold. This is too permissive -- a hand like A-9-8-7 on a board with one low card would be flagged as having a wheel draw when it doesn't. The condition should verify that the specific A-2-3-4-5 cards are present.
-- **Impact:** Incorrect hand strength evaluation leads to wrong GTO recommendations in postflop trainers. Users learn incorrect play in some board textures.
-- **Suggested fix:** Check for specific wheel cards (A + at least 3 of {2,3,4,5}) rather than generic count of low cards.
+✅ No open **P1** issues currently (as of 2026-02-16). See `closedBugs.md` for details.
 
 ---
 
 ## P2 -- Medium
 
-### BUG-019 `randomItem()` returns undefined on empty arrays
-
-- **File:** `js/utils/helpers.js:11-12`
-- **Description:** `randomItem(array)` does `array[Math.floor(Math.random() * array.length)]`. When array is empty, `Math.floor(Math.random() * 0)` = 0, accessing `array[0]` = `undefined`. Multiple callers pass filtered arrays without checking for emptiness first.
-- **Impact:** Cascading undefined errors in scenario generation. Manifests as "Cannot read property 'X' of undefined" in trainers.
-- **Suggested fix:** Return `null` explicitly for empty arrays and add guards at call sites.
-
-### BUG-020 No schema validation on imported JSON data
-
-- **File:** `js/modules/settings.js:340-348`
-- **Description:** After parsing imported JSON, the data is passed directly to `storage.importData()` with no structural validation. Malformed data (wrong types, missing required fields, extra fields) is silently accepted and can corrupt the entire localStorage state.
-- **Impact:** Corrupted training history, broken stats, crashes in dashboard and session history.
-- **Suggested fix:** Implement a schema validator that checks required fields, types, and value ranges before import. Show detailed error messages for invalid data.
-
-### BUG-021 Hand replayer index-zero false-negative check
-
-- **File:** `js/modules/handReplayer.js:117`
-- **Description:** `if (!replayArea || currentSessionIndex === null) return;` -- when `currentSessionIndex` is `0` (the first session), this check doesn't fail since `0 !== null`. However, similar patterns elsewhere using `!currentSessionIndex` would fail for index 0. The codebase is inconsistent in how it checks for "no selection."
-- **Impact:** Potential silent failures when first session is selected in replayer.
-- **Suggested fix:** Standardize all index checks to use `=== null` or `=== undefined` explicitly.
-
-### BUG-022 No progress indicator for Monte Carlo equity calculation
-
-- **File:** `js/modules/equityCalculator.js:289-302`
-- **Description:** The 10,000-iteration Monte Carlo simulation runs in a `setTimeout` callback with no progress feedback. On slower devices this can take 500ms+ during which the UI appears frozen with no indication of work happening.
-- **Impact:** Users think the app has crashed. Some users click "Calculate" multiple times, queueing redundant calculations.
-- **Suggested fix:** Show a spinner/progress bar. Optionally use `requestAnimationFrame` or web workers for non-blocking computation.
-
-### BUG-023 Settings font-size silently falls back on invalid values
-
-- **Files:** `js/app.js:119-126`, `js/modules/settings.js:302-309`
-- **Description:** Font size lookup uses `fontSizes[savedSettings.fontSize] || '16px'`. If the stored value is corrupted (e.g., `'medim'` typo), it silently defaults to medium without notifying the user. The user's setting preference is effectively ignored.
-- **Impact:** User confusion -- they set a font size but it doesn't apply. No feedback about why.
-- **Suggested fix:** Validate against allowed values. If invalid, reset to default and show a toast.
-
-### BUG-024 Equity calculator kicker sorting ambiguity
-
-- **File:** `js/modules/equityCalculator.js:437-439`
-- **Description:** `uniqueRanks` is sorted ascending (`a - b`), but kicker comparison for high-card hands conceptually requires descending order (highest kicker wins). The current code happens to work because lower rank indices map to higher card values, but this is an implicit assumption that breaks if the rank encoding ever changes.
-- **Impact:** Potential equity miscalculation if rank encoding is refactored. Code is confusing and error-prone for future contributors.
-- **Suggested fix:** Add explicit comments documenting the encoding, or normalize to descending sort with clear semantics.
-
-### BUG-025 Streak display not updated on data import
-
-- **File:** `js/modules/settings.js:345`
-- **Description:** After importing data, a toast says "Data imported successfully! Reloading..." with a 1.5s `setTimeout` before `location.reload()`. The user can navigate during this delay, preventing the reload. Even when reload happens, the full-page reload is jarring and loses navigation context.
-- **Impact:** Imported data (streaks, progress, sessions) may not reflect in UI until manual refresh.
-- **Suggested fix:** Use in-memory state refresh instead of full page reload. Update streak widget, dashboard, and nav immediately.
+✅ No open **P2** issues currently (as of 2026-02-16). See `closedBugs.md` for details.
 
 ---
 
 ## P3 -- Minor / Polish
 
-### BUG-026 Missing ARIA labels on navigation links
-
-- **File:** `js/components/Navigation.js:34-46`
-- **Description:** Sidebar navigation links lack `aria-label` attributes. Screen readers announce the raw link text without context about the destination module.
-- **Impact:** Accessibility failure. Screen-reader users cannot navigate the app effectively.
-- **Suggested fix:** Add `aria-label="Navigate to ${item.label}"` and `role="navigation"` to the sidebar container.
-
-### BUG-027 No input trimming on hand string parsing
-
-- **File:** `js/utils/helpers.js:66-80`
-- **Description:** `parseHand(handString)` reads characters by index (`handString[0]`, `handString[1]`) without calling `.trim()` first. Whitespace in form inputs (e.g., `"AK "` or `" AKs"`) causes incorrect parsing.
-- **Impact:** Hand parsing failures from form inputs with accidental whitespace.
-- **Suggested fix:** Add `handString = handString.trim()` at the start of `parseHand`.
-
-### BUG-028 Inline styles reference CSS variables that may not exist
-
-- **File:** `js/modules/multistreetTrainer.js:287-291`
-- **Description:** Inline styles use `var(--border-radius)` but the CSS variables file defines `--border-radius-sm`, `--border-radius-md`, and `--border-radius-lg` -- not a bare `--border-radius`. Falls back to browser default (0) instead of the intended rounding.
-- **Impact:** Missing border-radius on history cards in multi-street trainer.
-- **Suggested fix:** Use the correct variable name (`--border-radius-md`) or define `--border-radius` as an alias.
-
-### BUG-029 Action buttons matched by textContent substring (fragile)
-
-- **File:** `js/modules/postflopTrainer.js:62-65`
-- **Description:** Keyboard shortcut handler matches buttons by `btn.textContent.toLowerCase().includes(action)`. This is fragile -- a button labeled "Fold Equity" would match for action "fold." Should use `data-action` attributes for deterministic matching.
-- **Impact:** Potential wrong button activation if button labels change or overlap.
-- **Suggested fix:** Add `data-action="raise|call|fold"` attributes to action buttons and match on those.
-
-### BUG-030 Private method `_getSessionCounts()` called from dashboard
-
-- **File:** `js/modules/dashboard.js:186-195`
-- **Description:** Dashboard directly calls `stats._getSessionCounts()` (a private/internal method). If the stats utility refactors this method, the dashboard silently breaks. Coupling to internal API.
-- **Impact:** Maintenance hazard. Dashboard stats may diverge from actual stats module calculations.
-- **Suggested fix:** Expose a public `stats.getSessionCounts()` method or use the existing `calculateSessionStats()` uniformly.
+✅ No open **P3** issues currently (as of 2026-02-16). See `closedBugs.md` for details.
 
 ---
 
