@@ -65,7 +65,7 @@ To keep quality high, every chapter will follow a consistent template:
 
 - [x] B1. RFI strategy by position (goals, construction, why BTN widens)
 - [x] B2. 3-bet strategy (value vs bluff, linear vs polarized)
-- [ ] B3. 4-bet strategy (ranges, blockers, sizing, when to call)
+- [x] B3. 4-bet strategy (ranges, blockers, sizing, when to call)
 - [ ] B4. Cold calling (when it’s allowed, why it’s often tight, multiway effects)
 - [ ] B5. Squeezes (fold equity vs two players, sizing, when not to squeeze)
 - [ ] B6. BB defense (MDF intuition, pot odds, suited hands realization)

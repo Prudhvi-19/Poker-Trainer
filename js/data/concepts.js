@@ -450,6 +450,50 @@ Board: K high dry flop
 - Preflop Trainer → 4-Bet: learn which hands can continue after you 3-bet`
         },
         {
+            id: '4betting',
+            title: '4-Betting Theory (vs 3-Bets)',
+            content: `A 4-bet is a re-raise of a 3-bet.
+
+This is one of the most important preflop spots because ranges are tight and stacks can go in quickly.
+
+**Your three options vs a 3-bet:**
+- Fold
+- Call (flat)
+- 4-bet
+
+**Why 4-bet?**
+- Value: build the pot with premium hands
+- Bluff: win the pot immediately using blockers + fold equity
+- Deny equity: prevent villain from realizing equity with hands that call 3-bets well
+
+**4-bet range composition:**
+
+**Value 4-bets** often include:
+- AA, KK, QQ, AK (depends on positions and pool tendencies)
+
+**Bluff 4-bets** often include:
+- hands with strong blockers (especially Ax)
+- hands that are too weak to call profitably but can win immediately if villain folds
+
+**Calling the 3-bet instead (why call):**
+- Some hands are too strong to fold but not ideal to 4-bet
+- Calling keeps villain’s bluffs in and avoids getting 5-bet shoved off equity
+- IP you realize equity better; OOP calling becomes tougher
+
+**Sizing intuition:**
+- IP 4-bets are smaller than OOP 4-bets
+- OOP you typically size bigger to compensate for positional disadvantage
+
+**Common mistakes:**
+- 4-betting only AA/KK (becomes face-up)
+- 4-bet bluffing hands without blockers
+- calling 3-bets OOP with dominated hands that realize poorly
+
+**Drills (in this app):**
+- Preflop Trainer → 4-Bet vs 3-Bet: practice the fold/call/4-bet decision
+- Equity Calculator: compare AK vs QQ on different runouts to build intuition for all-in equity`
+        },
+        {
             id: 'bb-defense',
             title: 'Blind Defense Principles',
             content: `The BB is the most important position to defend correctly.
