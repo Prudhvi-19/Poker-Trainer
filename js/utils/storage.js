@@ -1,6 +1,7 @@
 // localStorage wrapper with error handling and default values
 
 import { STORAGE_KEYS, DEFAULT_SETTINGS } from './constants.js';
+import { showToast } from './helpers.js';
 
 class Storage {
     get(key, defaultValue = null) {
@@ -26,6 +27,13 @@ class Storage {
                 if (key === STORAGE_KEYS.SESSIONS) {
                     const sessions = this.getSessions();
                     if (sessions.length > 50) {
+                        // WARNING: This deletes user data. Inform the user.
+                        showToast(
+                            'Storage is full. Deleting older sessions to make room. Export your data to avoid loss.',
+                            'warning',
+                            6000
+                        );
+
                         // Keep only 50 most recent sessions
                         sessions.length = 50;
                         try {
@@ -33,12 +41,22 @@ class Storage {
                             return true;
                         } catch (retryError) {
                             console.error('Failed to save even after cleanup:', retryError);
+                            showToast(
+                                'Storage is full and Poker Trainer could not save your session. Please export data and clear history.',
+                                'error',
+                                8000
+                            );
                             return false;
                         }
                     }
                 }
 
                 console.error(`Storage full and cleanup failed for ${key}`);
+                showToast(
+                    'Storage is full and Poker Trainer could not save data. Please export data and clear history.',
+                    'error',
+                    8000
+                );
                 return false;
             }
 
