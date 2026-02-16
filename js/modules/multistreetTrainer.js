@@ -1,8 +1,8 @@
 // Multi-Street Trainer Module
 // Full hand progression: Preflop → Flop → Turn → River
 
-import { POSITIONS, ACTIONS, TRAINER_TYPES, RANKS, SUITS, STREET } from '../utils/constants.js';
-import { randomItem, generateId, formatPercentage, randomHand, isInPosition } from '../utils/helpers.js';
+import { ACTIONS, SUITS, STREET } from '../utils/constants.js';
+import { generateId, formatPercentage, randomHand, isInPosition } from '../utils/helpers.js';
 import { createHandDisplay, createCard } from '../components/Card.js';
 import ranges from '../data/ranges.js';
 import storage from '../utils/storage.js';
@@ -108,8 +108,15 @@ function startNewHand() {
 }
 
 function generateNewHand() {
-    const heroPosition = randomItem(POSITIONS);
-    const villainPosition = randomItem(POSITIONS.filter(p => p !== heroPosition));
+    // For production-grade training determinism and correct range lookups,
+    // constrain to a supported, well-defined heads-up configuration (BTN vs BB).
+    // We still randomize which seat the hero is in so we can train both:
+    // - BTN RFI (open) and
+    // - BB defense vs BTN open
+
+    const heroIsAggressor = Math.random() > 0.5;
+    const heroPosition = heroIsAggressor ? 'BTN' : 'BB';
+    const villainPosition = heroIsAggressor ? 'BB' : 'BTN';
 
     // Generate hero hand
     const heroHand = randomHand();
@@ -117,13 +124,15 @@ function generateNewHand() {
     // Generate actual cards with suits for the hero hand
     const heroCards = generateHeroCards(heroHand);
 
-    // Determine who is preflop aggressor
-    const heroIsAggressor = Math.random() > 0.5;
-
     // Pre-generate full board at hand start to ensure consistency
     const fullBoard = generateFullBoard(heroCards);
 
-    return {
+    // Heads-up blinds model (BTN is SB in HU)
+    const blinds = { BTN: 0.5, BB: 1.0 };
+    const heroBlind = blinds[heroPosition] ?? 0;
+    const villainBlind = blinds[villainPosition] ?? 0;
+
+    const hand = {
         id: generateId(),
         heroPosition,
         villainPosition,
@@ -131,14 +140,35 @@ function generateNewHand() {
         heroCards,
         heroIsAggressor,
         currentStreet: STREET.PREFLOP,
-        pot: 1.5, // Blinds posted
-        heroStack: 100,
-        villainStack: 100,
+        // Keep pot/stacks internally consistent (fixes BUG-009)
+        pot: heroBlind + villainBlind,
+        heroStack: 100 - heroBlind,
+        villainStack: 100 - villainBlind,
+        heroContribution: heroBlind,
+        villainContribution: villainBlind,
         board: [],
         fullBoard, // All 5 cards pre-generated, revealed incrementally
         actions: [],
         decisions: []
     };
+
+    // If villain is opening (hero is BB defending), apply the villain's open
+    // immediately so the displayed pot/stack state matches the scenario text.
+    if (!heroIsAggressor) {
+        applyVillainOpen(hand, 2.5);
+    }
+
+    return hand;
+}
+
+function applyVillainOpen(hand, openSize) {
+    const add = openSize - (hand.villainContribution ?? 0);
+    if (add > 0) {
+        hand.pot += add;
+        hand.villainStack -= add;
+        hand.villainContribution = openSize;
+    }
+    hand.actions.push(`${hand.villainPosition} raises to ${openSize}bb`);
 }
 
 function generateHeroCards(hand) {
@@ -304,6 +334,7 @@ function generatePreflopDecision() {
     // Simplified: just practice opening or facing a raise
     if (currentHand.heroIsAggressor) {
         // Hero opens
+        const openSize = 2.5;
         const correctAction = ranges.getRecommendedAction(
             currentHand.heroHand.display,
             currentHand.heroPosition,
@@ -314,32 +345,29 @@ function generatePreflopDecision() {
             street: STREET.PREFLOP,
             correctAction,
             description: `You are ${currentHand.heroPosition}. Folded to you. What do you do?`,
+            openSize,
             options: [
                 { action: ACTIONS.RAISE, label: 'Raise 2.5bb' },
                 { action: ACTIONS.FOLD, label: 'Fold' }
             ]
         };
     } else {
-        // Hero faces a raise - check for 3-bet or call/fold
-        const posKey = `vs${currentHand.villainPosition}`;
-
-        // Determine correct action: 3-bet, call, or fold
-        let correctAction = ACTIONS.FOLD;
-
-        // Check if ranges exist for this position matchup
-        const threeBetRange = ranges.THREE_BET_RANGES[posKey];
-        const defenseRange = ranges.BB_DEFENSE_RANGES[posKey];
-
-        if (threeBetRange && ranges.isInRange(currentHand.heroHand.display, threeBetRange)) {
-            correctAction = ACTIONS.RAISE;
-        } else if (defenseRange && ranges.isInRange(currentHand.heroHand.display, defenseRange)) {
-            correctAction = ACTIONS.CALL;
-        }
+        // Hero faces a raise (villain open). Since we constrain to BTN vs BB,
+        // the correct response is BB defense vs BTN open.
+        const openSize = 2.5;
+        const threeBetSize = 9;
+        const correctAction = ranges.getRecommendedAction(
+            currentHand.heroHand.display,
+            currentHand.villainPosition, // BTN
+            'bb-defense'
+        );
 
         return {
             street: STREET.PREFLOP,
             correctAction,
             description: `${currentHand.villainPosition} raises to 2.5bb. You are ${currentHand.heroPosition}. What do you do?`,
+            openSize,
+            threeBetSize,
             options: [
                 { action: ACTIONS.CALL, label: 'Call 2.5bb' },
                 { action: ACTIONS.RAISE, label: '3-Bet to 9bb' },
@@ -497,27 +525,71 @@ function handleDecision(scenario, userAction) {
 }
 
 function updatePotAndStack(action, scenario) {
-    if (action === ACTIONS.RAISE && currentHand.currentStreet === STREET.PREFLOP) {
-        // Hero raises, villain will call (simplified)
-        const raiseSize = 2.5;
-        currentHand.pot += raiseSize; // Hero's raise goes to pot
-        currentHand.heroStack -= raiseSize;
-        // Villain calls
-        currentHand.pot += raiseSize;
-        currentHand.villainStack -= raiseSize;
-        currentHand.actions.push(`${currentHand.heroPosition} raises ${raiseSize}bb, Villain calls`);
-    } else if (action === ACTIONS.CALL) {
-        // Hero calls a bet/raise
-        const callSize = currentHand.currentStreet === STREET.PREFLOP ? 2.5 : currentHand.pot * 0.67;
-        // Add villain's bet first (it wasn't added when the scenario was generated)
-        if (currentHand.currentStreet !== STREET.PREFLOP) {
-            currentHand.pot += callSize; // Villain's bet
-            currentHand.villainStack -= callSize;
-        } else {
-            // Preflop: villain already raised 2.5, add their raise
-            currentHand.pot += callSize;
-            currentHand.villainStack -= callSize;
+    if (currentHand.currentStreet === STREET.PREFLOP) {
+        const openSize = scenario?.openSize ?? 2.5;
+        const threeBetSize = scenario?.threeBetSize ?? 9;
+
+        const putInTotal = (player, total) => {
+            if (player === 'hero') {
+                const already = currentHand.heroContribution ?? 0;
+                const add = total - already;
+                if (add > 0) {
+                    currentHand.pot += add;
+                    currentHand.heroStack -= add;
+                    currentHand.heroContribution = total;
+                }
+            } else {
+                const already = currentHand.villainContribution ?? 0;
+                const add = total - already;
+                if (add > 0) {
+                    currentHand.pot += add;
+                    currentHand.villainStack -= add;
+                    currentHand.villainContribution = total;
+                }
+            }
+        };
+
+        if (action === ACTIONS.RAISE) {
+            if (currentHand.heroIsAggressor) {
+                // Hero opens, villain calls (simplified)
+                putInTotal('hero', openSize);
+                putInTotal('villain', openSize);
+                currentHand.actions.push(`${currentHand.heroPosition} raises to ${openSize}bb, ${currentHand.villainPosition} calls`);
+            } else {
+                // Villain opened, hero 3-bets, villain calls (simplified)
+                // Villain open already applied before the decision (see generateNewHand)
+                putInTotal('hero', threeBetSize);
+                putInTotal('villain', threeBetSize);
+                currentHand.actions.push(`${currentHand.heroPosition} 3-bets to ${threeBetSize}bb, ${currentHand.villainPosition} calls`);
+            }
+            return;
         }
+
+        if (action === ACTIONS.CALL) {
+            // Facing an open, hero calls (simplified)
+            // Villain open already applied before the decision (see generateNewHand)
+            putInTotal('hero', openSize);
+            currentHand.actions.push(`${currentHand.heroPosition} calls`);
+            return;
+        }
+
+        if (action === ACTIONS.FOLD) {
+            // If it was folded to hero, they simply fold and lose their blind.
+            // If hero was facing an open, villain open was already applied.
+            currentHand.actions.push(`${currentHand.heroPosition} folds`);
+            return;
+        }
+
+        // Check shouldn't be possible preflop in our scenarios
+        return;
+    }
+
+    if (action === ACTIONS.CALL) {
+        // Hero calls a bet/raise postflop
+        const callSize = currentHand.pot * 0.67;
+        // Add villain's bet first (it wasn't added when the scenario was generated)
+        currentHand.pot += callSize;
+        currentHand.villainStack -= callSize;
         // Then add hero's call
         currentHand.pot += callSize;
         currentHand.heroStack -= callSize;
