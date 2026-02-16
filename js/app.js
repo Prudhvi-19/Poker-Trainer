@@ -32,6 +32,9 @@ import potOddsTrainer from './modules/potOddsTrainer.js';
 function init() {
     console.log('🃏 GTO Poker Trainer - Initializing...');
 
+    // ENH-003: Register PWA service worker (GitHub Pages + local static hosting)
+    registerServiceWorker();
+
     // Global error handler for uncaught errors
     window.addEventListener('error', (event) => {
         console.error('Global error caught:', event.error);
@@ -98,6 +101,35 @@ function init() {
     initKeyboardShortcuts();
 
     console.log('✅ GTO Poker Trainer - Ready!');
+}
+
+function registerServiceWorker() {
+    try {
+        if (!('serviceWorker' in navigator)) return;
+        // Service workers require a secure context (https) OR localhost.
+        const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        const isSecure = location.protocol === 'https:';
+        if (!isSecure && !isLocalhost) return;
+
+        navigator.serviceWorker.register('./service-worker.js')
+            .then((reg) => {
+                // Optional: listen for updates.
+                reg.addEventListener?.('updatefound', () => {
+                    const newWorker = reg.installing;
+                    if (!newWorker) return;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            console.log('[pwa] New version available (refresh to update).');
+                        }
+                    });
+                });
+            })
+            .catch((err) => {
+                console.warn('[pwa] service worker registration failed:', err);
+            });
+    } catch (e) {
+        console.warn('[pwa] service worker registration error:', e);
+    }
 }
 
 /**

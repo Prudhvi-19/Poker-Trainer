@@ -6,6 +6,9 @@ import { getRandomQuote, formatPercentage, formatDuration } from '../utils/helpe
 import router from '../router.js';
 import { MODULES } from '../utils/constants.js';
 import { getRatingTier } from '../utils/rating.js';
+import { getDueScenarioKeys } from '../utils/srs.js';
+import { startSession, navigateToCurrentKeyRoute } from '../utils/smartPracticeSession.js';
+import { showModal } from '../components/Modal.js';
 
 function render() {
     const container = document.createElement('div');
@@ -43,7 +46,59 @@ function render() {
     const quickStart = createQuickStartSection();
     container.appendChild(quickStart);
 
+    // Smart practice
+    const smartPractice = createSmartPracticeSection();
+    container.appendChild(smartPractice);
+
     return container;
+}
+
+function createSmartPracticeSection() {
+    const dueKeys = getDueScenarioKeys({ limit: 20 });
+    const count = dueKeys.length;
+
+    const section = document.createElement('div');
+    section.className = 'card';
+    section.innerHTML = `
+        <h2 style="margin-bottom: 0.75rem;">🧠 Smart Practice</h2>
+        <p class="text-muted" style="margin-bottom: 1rem;">
+            Review your weak spots with spaced repetition. Due now: <strong>${count}</strong>
+        </p>
+    `;
+
+    const row = document.createElement('div');
+    row.style.display = 'flex';
+    row.style.gap = '0.75rem';
+    row.style.flexWrap = 'wrap';
+
+    const startBtn = document.createElement('button');
+    startBtn.className = 'btn btn-primary';
+    startBtn.textContent = count > 0 ? 'Start Smart Practice' : 'No Reviews Due';
+    startBtn.disabled = count === 0;
+
+    startBtn.addEventListener('click', () => {
+        const keys = getDueScenarioKeys({ limit: 25 });
+        const ok = startSession({ keys });
+        if (ok) {
+            navigateToCurrentKeyRoute();
+        }
+    });
+
+    const learnMore = document.createElement('button');
+    learnMore.className = 'btn btn-secondary';
+    learnMore.textContent = 'How it works';
+    learnMore.addEventListener('click', () => {
+        showModal({
+            title: '🧠 Smart Practice (Spaced Repetition)',
+            content: 'Smart Practice schedules review items based on your mistakes and EV loss. Items you miss come back sooner; items you nail return later.',
+            buttons: [{ text: 'OK', className: 'btn btn-primary' }]
+        });
+    });
+
+    row.appendChild(startBtn);
+    row.appendChild(learnMore);
+    section.appendChild(row);
+    return section;
 }
 
 function createRatingWidget() {

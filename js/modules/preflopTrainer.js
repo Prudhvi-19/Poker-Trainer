@@ -1,7 +1,7 @@
 // Preflop Trainer Module
 
 import { POSITIONS, ACTIONS, TRAINER_TYPES, MODULES } from '../utils/constants.js';
-import { randomItem, generateId, formatPercentage, showToast, randomHand } from '../utils/helpers.js';
+import { randomItem, generateId, formatPercentage, showToast, randomHand, parseHand } from '../utils/helpers.js';
 import { createHandDisplay } from '../components/Card.js';
 import ranges from '../data/ranges.js';
 import storage from '../utils/storage.js';
@@ -9,10 +9,14 @@ import { setPokerShortcutHandler } from '../utils/shortcutManager.js';
 import { applyDecisionRating, appendRatingHistory } from '../utils/rating.js';
 import { handCodeToConcreteCards, simulateEquityVsRange } from '../utils/equity.js';
 import { gradeFromEvLoss, evBetRaise, evCallToShowdown, evFold, evLossBb } from '../utils/evFeedback.js';
+import { buildScenarioKeyFromResult, upsertSrsResult } from '../utils/srs.js';
+import { getCurrentKey, isSessionActive, advanceSession, incrementSessionStats } from '../utils/smartPracticeSession.js';
 
 let currentSession = null;
 let statsContainerEl = null;
 let scenarioContainerEl = null;
+
+let smartPracticeActiveKey = null;
 
 function render() {
     const container = document.createElement('div');
@@ -48,9 +52,10 @@ function render() {
 
         // Check if we're in feedback mode
         if (scenarioEl.querySelector('.feedback-panel')) {
-            // In feedback mode, space advances
+            // In feedback mode, let the rendered Next button handle smart-practice routing.
             if (action === 'next') {
-                showNextScenario();
+                const nextBtn = scenarioEl.querySelector('.feedback-panel .btn-primary');
+                if (nextBtn) nextBtn.click();
             }
             return;
         }
@@ -130,6 +135,25 @@ function startNewSession(trainerType) {
         startTime: new Date().toISOString(),
         results: []
     };
+
+    // ENH-004: if Smart Practice is active, force the trainer type for the due item.
+    // We only support preflop due items in this module.
+    const activeKey = isSessionActive() ? getCurrentKey() : null;
+    smartPracticeActiveKey = activeKey;
+    if (activeKey) {
+        try {
+            const keyObj = JSON.parse(activeKey);
+            if (keyObj?.module && typeof keyObj.module === 'string' && keyObj.module.startsWith('preflop-')) {
+                const dueType = keyObj.module.replace('preflop-', '');
+                currentSession.trainerType = dueType;
+                currentSession.module = `preflop-${dueType}`;
+                const select = document.getElementById('trainer-type-select');
+                if (select) select.value = dueType;
+            }
+        } catch {
+            // ignore
+        }
+    }
 
     updateStats();
     showNextScenario();
@@ -226,7 +250,64 @@ function showNextScenario() {
     scenarioEl.appendChild(card);
 }
 
+function getSmartPracticeTarget() {
+    if (!smartPracticeActiveKey) return null;
+    try {
+        return JSON.parse(smartPracticeActiveKey);
+    } catch {
+        return null;
+    }
+}
+
 function generateScenario(trainerType) {
+    const target = getSmartPracticeTarget();
+    // If we have a specific preflop target, generate that exact spot.
+    if (target?.family === 'preflop' && target?.hand) {
+        const hand = parseHand(target.hand) || randomHand();
+        const position = target.position || null;
+        const villainPosition = target.villainPosition || null;
+        const callerPosition = target.callerPosition || null;
+
+        switch (trainerType) {
+            case TRAINER_TYPES.RFI: {
+                const pos = position && POSITIONS.includes(position) ? position : randomItem(POSITIONS.filter(p => p !== 'BB'));
+                const correctAction = ranges.getRecommendedAction(hand.display, pos, 'rfi');
+                return {
+                    type: TRAINER_TYPES.RFI,
+                    position: pos,
+                    hand,
+                    description: `You are ${pos}. Folded to you. What do you do?`,
+                    options: [ACTIONS.RAISE, ACTIONS.FOLD],
+                    correctAction
+                };
+            }
+
+            case TRAINER_TYPES.BB_DEFENSE: {
+                const v = villainPosition || randomItem(['UTG', 'HJ', 'CO', 'BTN', 'SB']);
+                const posKey = `vs${v}`;
+                let correctAction = ACTIONS.FOLD;
+                if (ranges.BB_3BET_RANGES && ranges.isInRange(hand.display, ranges.BB_3BET_RANGES[posKey])) {
+                    correctAction = ACTIONS.RAISE;
+                } else if (ranges.isInRange(hand.display, ranges.BB_DEFENSE_RANGES[posKey])) {
+                    correctAction = ACTIONS.CALL;
+                }
+                return {
+                    type: TRAINER_TYPES.BB_DEFENSE,
+                    position: 'BB',
+                    villainPosition: v,
+                    hand,
+                    description: `You are BB. ${v} raises to 2.5bb. What do you do?`,
+                    options: [ACTIONS.RAISE, ACTIONS.CALL, ACTIONS.FOLD],
+                    correctAction
+                };
+            }
+
+            // For other preflop modes, fall back to random scenario generation for now.
+            default:
+                break;
+        }
+    }
+
     switch (trainerType) {
         case TRAINER_TYPES.RFI:
             return generateRFIScenario();
@@ -444,6 +525,30 @@ function handleAnswer(scenario, userAnswer) {
 
     currentSession.results.push(result);
 
+    // ENH-004: record spaced repetition outcome
+    const scenarioKey = smartPracticeActiveKey || buildScenarioKeyFromResult({
+        module: currentSession.module,
+        trainerType: currentSession.trainerType,
+        scenario
+    });
+    upsertSrsResult({
+        scenarioKey,
+        isCorrect,
+        evFeedback,
+        timestamp: result.timestamp,
+        payload: {
+            module: currentSession.module,
+            trainerType: currentSession.trainerType,
+            // Keep payload small but actionable
+            position: scenario.position || null,
+            villainPosition: scenario.villainPosition || null,
+            hand: scenario.hand?.display || null
+        }
+    });
+    if (isSessionActive() && smartPracticeActiveKey) {
+        incrementSessionStats({ isCorrect, evFeedback });
+    }
+
     // ENH-001: update skill rating after each decision
     updateRatingAfterDecision(isCorrect);
 
@@ -578,9 +683,17 @@ function showFeedback(result) {
     // Add next button
     const nextButton = document.createElement('button');
     nextButton.className = 'btn btn-primary';
-    nextButton.textContent = 'Next Hand (Space)';
+    nextButton.textContent = smartPracticeActiveKey ? 'Next Review (Space)' : 'Next Hand (Space)';
     nextButton.style.marginTop = '1rem';
     nextButton.addEventListener('click', () => {
+        if (isSessionActive() && smartPracticeActiveKey) {
+            const { done, nextRoute } = advanceSession();
+            if (!done) {
+                window.location.hash = nextRoute;
+                return;
+            }
+        }
+        smartPracticeActiveKey = isSessionActive() ? getCurrentKey() : null;
         showNextScenario();
     });
 
