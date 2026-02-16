@@ -52,3 +52,24 @@
 - **Fix:** Corrected the aggregation key to use stable scenario fields instead of nonexistent `scenario.action`.
 - **Verification:** Code inspection.
 
+### FIXED — BUG-007 Multi-street trainer: incorrect defense ranges used when facing a raise
+
+- **Severity:** P1
+- **Commit:** `615f7e0`
+- **Fix:** Constrained multistreet preflop to supported heads-up BTN/BB scenarios and uses `getRecommendedAction(..., 'bb-defense')` for BB vs BTN opens.
+- **Verification:** Loaded `#multistreet-trainer` in browser; no console errors.
+
+### FIXED — BUG-008 Multi-street trainer: unsupported matchup generation (missing `vs...` keys)
+
+- **Severity:** P2
+- **Commit:** `615f7e0`
+- **Fix:** Scenario generation no longer produces unsupported position matchups; constrained to BTN/BB.
+- **Verification:** Loaded `#multistreet-trainer` in browser.
+
+### FIXED — BUG-009 Multi-street trainer: pot/stacks inconsistent with blinds posting
+
+- **Severity:** P2
+- **Commit:** `615f7e0`
+- **Fix:** Added heads-up blind posting + tracked contributions so pot/stack updates are consistent with scenario actions.
+- **Verification:** Loaded `#multistreet-trainer` in browser and interacted with actions.
+
