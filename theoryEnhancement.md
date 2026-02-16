@@ -101,10 +101,10 @@ To keep quality high, every chapter will follow a consistent template:
 
 ### F. Bet sizing (maps to Bet Sizing Trainer)
 
-- [ ] F1. Why size matters (fold equity + value extraction + denial)
-- [ ] F2. Small vs big bets on different textures
-- [ ] F3. Sizing with value vs bluffs (keeping ranges coherent)
-- [ ] F4. Common sizing heuristics in SRP and 3bp
+- [x] F1. Why size matters (fold equity + value extraction + denial)
+- [x] F2. Small vs big bets on different textures
+- [x] F3. Sizing with value vs bluffs (keeping ranges coherent)
+- [x] F4. Common sizing heuristics in SRP and 3bp
 
 ### G. Pot odds & calling thresholds (maps to Pot Odds Trainer)
 

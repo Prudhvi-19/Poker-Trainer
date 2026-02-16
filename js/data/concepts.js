@@ -978,35 +978,63 @@ Backdoor = you need two running cards to complete.
         {
             id: 'bet-sizing',
             title: 'Bet Sizing Theory',
-            content: `Bet sizing should achieve specific goals and stay balanced.
+            content: `Bet sizing is strategy. It changes:
+- pot odds (what villain must defend)
+- fold equity (how often bluffs work)
+- SPR (how committed stacks become)
 
-**General Principles:**
-1. Bigger bets = More polarized range
-2. Smaller bets = More merged range
-3. Match sizing to goal
+**F1. Why size matters (goals):**
+- Value extraction: win more when ahead
+- Denial/protection: charge draws and overcards
+- Fold equity: make bluffs profitable
+- Range shaping: big bets force polarization; small bets allow merging
 
-**Flop Sizing:**
-- 25-33%: Very merged range, inducing calls
-- 50-67%: Standard, balanced
-- 75-100%: Polarized, denying equity
-- 125%+: Nuts or air
+**General principles:**
+1) Bigger bets = more polarized (strong value + bluffs)
+2) Smaller bets = more merged (many medium-strength hands can bet)
+3) Sizing should match board texture and range advantage
 
-**Turn Sizing:**
-- Usually 50-75% pot
-- Can overbet with very strong hands or as bluffs
-- Smaller with marginal made hands (pot control)
+**F2. Small vs big bets on different textures:**
 
-**River Sizing:**
-- 33-50%: Thin value, inducing
-- 67-75%: Standard value
-- 100%+: Polarized (nuts or bluff)
+**Small bets (25–33% pot):**
+- Good on dry boards where you have range advantage
+- Lets you bet many hands (range-bet style)
+- Gives villain good odds (so expect more calls)
 
-**Geometric Sizing:**
-Size your bets to get all-in by river with a consistent fraction
-- Allows for maximum pressure across three streets
+**Big bets (60–100% pot):**
+- Good on wet/dynamic boards to deny equity
+- Good when you want to build a pot with strong value
+- Requires a tighter, more polarized betting range
 
-**Balance:**
-Use same sizing with both value and bluffs to avoid being exploitable`
+**Overbets (125%+):**
+- Usually only when you have nut advantage or villain is capped
+
+**Turn sizing (common intuition):**
+- Many turns use 50–75% pot
+- Bigger sizes pressure draws and set up river shoves
+- Smaller sizes can be used for thin value or to keep bluffs alive
+
+**River sizing (common intuition):**
+- Small: thin value and inducing
+- Big: polarized value/bluffs
+
+**F3. Sizing with value vs bluffs:**
+- If you use a big size for value, you need bluffs in that same size
+- If you only big-bet with value, opponents over-fold vs big bets
+
+**F4. Common sizing heuristics (SRP vs 3-bet pots):**
+- Single-raised pots (SRP): often more small c-bets on A/K-high dry boards
+- 3-bet pots: ranges are tighter, SPR is lower → fewer streets and more commitment
+
+**Common mistakes:**
+- Using big bets with medium-strength “thin value” hands
+- Betting small on very wet boards where denial is important
+- Changing size based on hand strength (telegraphing)
+
+**Drills (in this app):**
+- Bet Sizing Trainer: choose sizes that match your goal
+- Pot Odds Trainer: connect villain’s price to your sizing
+- Multi-street Trainer: plan sizing so river outcomes make sense`
         }
     ],
 
