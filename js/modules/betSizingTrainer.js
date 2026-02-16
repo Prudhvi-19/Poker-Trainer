@@ -15,6 +15,8 @@ import {
     evBetRaise,
     evCheckToShowdown
 } from '../utils/evFeedback.js';
+import { buildScenarioKeyFromResult, upsertSrsResult } from '../utils/srs.js';
+import { getCurrentKey, isSessionActive, advanceSession, incrementSessionStats } from '../utils/smartPracticeSession.js';
 
 // Bet sizing categories
 const BET_SIZES = {
@@ -32,6 +34,8 @@ let stats = { correct: 0, total: 0, evLostBb: 0 };
 let container = null;
 let mainAreaEl = null;
 let statsBarEl = null;
+
+let smartPracticeActiveKey = null;
 
 function render() {
     container = document.createElement('div');
@@ -103,10 +107,21 @@ function render() {
     container.appendChild(mainAreaEl);
 
     // Start first scenario
+    smartPracticeActiveKey = isSessionActive() ? getCurrentKey() : null;
     generateScenario();
     updateStats();
 
     return container;
+}
+
+function getSmartPracticeOverrideScenario() {
+    if (!smartPracticeActiveKey) return null;
+    const srs = storage.getSrsState();
+    const item = srs?.items?.[smartPracticeActiveKey] || null;
+    const payload = item?.payload || null;
+    const scenario = payload?.scenario || null;
+    if (!scenario || typeof scenario !== 'object') return null;
+    return scenario;
 }
 
 // Hand types for different scenario contexts
@@ -137,6 +152,15 @@ const BOARD_SIZES = {
 };
 
 function generateScenario() {
+    smartPracticeActiveKey = isSessionActive() ? getCurrentKey() : null;
+
+    const override = getSmartPracticeOverrideScenario();
+    if (override) {
+        currentScenario = override;
+        renderScenario();
+        return;
+    }
+
     const scenarioType = SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)];
     const numCards = BOARD_SIZES[scenarioType] || 3;
     const board = generateBoard(numCards);
@@ -376,6 +400,30 @@ function handleAnswer(answer) {
     });
     stats.evLostBb += evFeedback?.evLossBb || 0;
 
+    // ENH-004: record spaced repetition outcome
+    const scenarioKey = smartPracticeActiveKey || buildScenarioKeyFromResult({
+        module: 'bet-sizing-trainer',
+        trainerType: 'bet-sizing',
+        scenario: {
+            type: currentScenario?.type || null,
+            texture: currentScenario?.analysis?.texture || null,
+            handStrength: currentScenario?.analysis?.strength || null
+        }
+    });
+    upsertSrsResult({
+        scenarioKey,
+        isCorrect,
+        evFeedback,
+        timestamp: new Date().toISOString(),
+        payload: {
+            module: 'bet-sizing-trainer',
+            scenario: currentScenario
+        }
+    });
+    if (isSessionActive() && smartPracticeActiveKey) {
+        incrementSessionStats({ isCorrect, evFeedback });
+    }
+
     showFeedback(isCorrect, answer, evFeedback);
     updateStats();
 }
@@ -439,9 +487,18 @@ function showFeedback(isCorrect, userAnswer, evFeedback) {
     // Next button
     const nextBtn = document.createElement('button');
     nextBtn.className = 'btn btn-primary';
-    nextBtn.textContent = 'Next Scenario';
+    nextBtn.textContent = smartPracticeActiveKey ? 'Next Review' : 'Next Scenario';
     nextBtn.style.marginTop = '1rem';
-    nextBtn.addEventListener('click', generateScenario);
+    nextBtn.addEventListener('click', () => {
+        if (isSessionActive() && smartPracticeActiveKey) {
+            const { done, nextRoute } = advanceSession();
+            if (!done) {
+                window.location.hash = nextRoute;
+                return;
+            }
+        }
+        generateScenario();
+    });
     feedback.appendChild(nextBtn);
 
     mainArea.appendChild(feedback);

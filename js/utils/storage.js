@@ -196,6 +196,21 @@ class Storage {
         return this.set(STORAGE_KEYS.RATING, rating);
     }
 
+    // --- ENH-004: Spaced Repetition System (SRS) ---
+    getSrsState() {
+        const stored = this.get(STORAGE_KEYS.SRS, null);
+        // Keep schema flexible; we'll store a version + items map.
+        return {
+            version: 1,
+            items: {},
+            ...(stored && typeof stored === 'object' ? stored : {})
+        };
+    }
+
+    saveSrsState(state) {
+        return this.set(STORAGE_KEYS.SRS, state);
+    }
+
     updateStreak() {
         const streak = this.getStreak();
         const today = new Date().toDateString();
@@ -239,6 +254,7 @@ class Storage {
             customRanges: this.getCustomRanges(),
             streak: this.getStreak(),
             rating: this.getRating(),
+            srs: this.getSrsState(),
             exportDate: new Date().toISOString()
         };
     }
@@ -252,6 +268,7 @@ class Storage {
             if (data.customRanges) this.set(STORAGE_KEYS.CUSTOM_RANGES, data.customRanges);
             if (data.streak) this.set(STORAGE_KEYS.STREAK, data.streak);
             if (data.rating) this.set(STORAGE_KEYS.RATING, data.rating);
+            if (data.srs) this.set(STORAGE_KEYS.SRS, data.srs);
             return true;
         } catch (error) {
             console.error('Error importing data:', error);
