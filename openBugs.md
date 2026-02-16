@@ -77,7 +77,8 @@ This file tracks **known open bugs, logic/UX issues, and feature enhancements** 
   - Session summary showing total EV lost
 - **Reference:** [Postflop+ trainer](https://apps.apple.com/us/app/postflop-gto-poker-trainer/id1488850006)
 
-- **Status:** ✅ **Implemented** on branch `enh/e0-ev-feedback` (pending merge into `audit/bug-hunt`).
+- **Status:** ✅ **Merged into** `audit/bug-hunt`.
+- **Release note:** EV-based grading now applies to all **poker-action** trainers (Preflop, Postflop, Multi-street, C-Bet, Bet Sizing). Quiz-style modules (Pot Odds/MDF, Board Texture) remain correct/incorrect only.
 - **Verification notes:**
   - Preflop trainer shows 4-tier feedback (Perfect/Good/Mistake/Blunder) with EV loss in bb.
   - Postflop trainer shows EV loss + tiered grading and tracks session EV lost.
