@@ -75,14 +75,14 @@ To keep quality high, every chapter will follow a consistent template:
 
 ### C. Postflop single-street (maps to Postflop Trainer + Cbet Trainer)
 
-- [ ] C1. Board texture taxonomy (dry/wet/static/dynamic) + examples
-- [ ] C2. C-betting: when to bet vs check (range betting vs split strategy)
-- [ ] C3. Facing c-bets: call/raise/fold heuristics (equity + realization)
-- [ ] C4. Draws: strong vs weak; implied odds; semi-bluffing logic
-- [ ] C5. Protection vs value vs bluff (what each means)
-- [ ] C6. Overcards and backdoors (when they matter)
-- [ ] C7. Position: IP vs OOP play patterns
-- [ ] C8. Common flop mistakes (over-bluffing wet boards, slowplaying wrong spots)
+- [x] C1. Board texture taxonomy (dry/wet/static/dynamic) + examples
+- [x] C2. C-betting: when to bet vs check (range betting vs split strategy)
+- [x] C3. Facing c-bets: call/raise/fold heuristics (equity + realization)
+- [x] C4. Draws: strong vs weak; implied odds; semi-bluffing logic
+- [x] C5. Protection vs value vs bluff (what each means)
+- [x] C6. Overcards and backdoors (when they matter)
+- [x] C7. Position: IP vs OOP play patterns
+- [x] C8. Common flop mistakes (over-bluffing wet boards, slowplaying wrong spots)
 
 ### D. Turn & River (maps to Postflop Trainer)
 

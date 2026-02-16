@@ -699,67 +699,281 @@ Use a sizing that makes your value hands happy and doesn’t allow opponents to 
         {
             id: 'cbet-theory',
             title: 'Continuation Betting Theory',
-            content: `C-betting is betting on the flop after you were the preflop aggressor.
+            content: `A continuation bet (c-bet) is betting the flop after you were the preflop aggressor.
 
-**Why C-Bet?**
-- Range advantage on many flops
-- Initiative advantage (aggression)
-- Fold equity (opponent might fold)
-- Build pot with strong hands
+**Why c-bet?**
+- Fold equity (you win the pot immediately when villain folds)
+- Value (worse hands can call)
+- Protection / denial (charge draws and overcards)
+- Initiative (your line is credible because you raised preflop)
 
-**When to C-Bet Frequently:**
-- Dry boards (K72, A84)
-- Boards that favor your range
-- Against opponents who fold too much
-- When in position
+**Two common strategies:**
 
-**When to Check Frequently:**
-- Wet coordinated boards (JT8, 987)
-- Boards that favor caller's range
-- Against calling stations
-- When out of position with nothing
+**Range-bet (bet very frequently):**
+- Works best on boards where the preflop raiser has clear range advantage
+- Often uses small sizing to let many hands continue
 
-**C-Bet Sizing:**
-- Small (25-33%): With range advantage, encourages calls from worse
-- Medium (50-67%): Standard, balanced
-- Large (75-100%): Deny equity to draws, polarized
-- Overbet (125%+): Nuts or air, very polarized
+**Split strategy (bet some, check some):**
+- Used on more dynamic boards or boards that hit the caller
+- You check hands that don’t benefit from betting (or want to protect checking range)
 
-**GTO Approach:** Mix bet and check with all hand types to stay balanced`
+**When to c-bet more often:**
+- Dry, high-card boards (Axx, Kxx) that favor the raiser
+- When you are in position
+- Against opponents who over-fold
+
+**When to check more often:**
+- Low connected boards that favor the caller’s range (987, 876)
+- Very wet boards where villain has many strong draws
+- When OOP and your hand doesn’t benefit from building the pot
+
+**Sizing concepts (why size changes):**
+- Small (25–33% pot): good for range-bets on advantage boards
+- Medium (50–75% pot): good for charging draws and building pots with value
+- Big (75%+ / overbet): usually more polarized (strong value + bluffs)
+
+**Common mistakes:**
+- C-betting automatically because “I raised preflop”
+- Betting big on boards where you don’t have the nut advantage
+- Never checking strong hands (your checking range becomes weak)
+
+**Drills (in this app):**
+- C-bet Trainer: practice choosing bet vs check by texture and position
+- Board Texture Trainer: learn which boards favor raiser vs caller`
         },
         {
             id: 'board-texture',
             title: 'Board Texture Analysis',
-            content: `Board texture determines who has range advantage and how to proceed.
+            content: `Board texture tells you how ranges interact with the flop.
 
-**Dry vs Wet:**
+It answers:
+- Who has range advantage?
+- Who has nut advantage?
+- How much should we bet (small vs big)?
 
-**Dry Boards:**
+**Dry vs wet (draw density):**
+
+**Dry boards:**
 - Few draws available
-- Cards don't connect well
-- Examples: K♠ 7♦ 2♣, A♥ 8♣ 4♠, Q♦ 6♠ 2♥
-- Favors: Preflop raiser (range advantage)
-- Strategy: C-bet frequently, medium sizing
+- Example: K♠ 7♦ 2♣
+- Strategy: often smaller bets, higher frequency
 
-**Wet Boards:**
+**Wet boards:**
 - Many draws available
-- Cards connect
-- Examples: J♠ T♥ 9♠, 8♦ 7♦ 6♣, K♥ Q♠ J♦
-- Favors: Calling range (more connected hands)
-- Strategy: Check more often, larger sizing when betting
+- Example: J♠ T♥ 9♠ (straight + flush draws)
+- Strategy: more checking, or larger bets when betting (deny equity)
 
-**Static vs Dynamic:**
+**Static vs dynamic (runout sensitivity):**
 
-**Static:** Few turn cards change board significantly
-Example: K♠ 7♦ 2♣ → Not many scary turns
+**Static:** turn/river cards don’t change equities much
+- Example: A♣ 7♦ 2♠
 
-**Dynamic:** Many turn cards change equity
-Example: J♠ T♥ 8♠ → Tons of straight and flush possibilities
+**Dynamic:** many turns/rivers change who is ahead
+- Example: 9♠ 8♦ 7♠
 
-**High vs Low:**
-- High: K+ high card (favors raiser)
-- Middle: 9-J high card (neutral)
-- Low: 8- high card (can favor caller - setmining range)`
+**Paired vs unpaired:**
+- Paired boards (K K 4) often reduce nut combinations and can increase bluffing
+- Unpaired boards can create many strong value combos (sets, two pair)
+
+**High-card vs low-card:**
+- High-card boards (Axx/Kxx/Qxx) often favor the preflop raiser
+- Low connected boards often favor the caller
+
+**Worked examples:**
+- A♠ 8♦ 3♣ (dry, high): raiser often has advantage → frequent small c-bets
+- J♦ T♦ 8♣ (wet, dynamic): caller has more strong draws → check more / size up when betting
+- 7♠ 7♥ 2♦ (paired): fewer nut hands exist → small bets can work often
+
+**Drills (in this app):**
+- Board Texture Trainer: classify boards and predict who has advantage
+- Postflop Trainer: practice adjusting bet/check and sizing by texture`
+        },
+        {
+            id: 'facing-cbets',
+            title: 'Facing C-Bets: Call / Raise / Fold',
+            content: `When you face a c-bet, your job is to continue with hands that can profitably realize equity.
+
+**Three options:**
+- Fold
+- Call
+- Raise
+
+**The two big factors:**
+- Pot odds (required equity)
+- Equity realization (how likely you are to see showdown / improve)
+
+**When calling is attractive:**
+- You have a made hand with showdown value (top pair, second pair in some spots)
+- You have a strong draw that realizes well
+- You are in position (easier to realize equity)
+
+**When raising is attractive:**
+- Value: you have a strong made hand that wants to build the pot
+- Semi-bluff: you have a strong draw and benefit from fold equity
+- Villain’s range is capped and your line is credible
+
+**When folding is correct:**
+- You have insufficient equity for the price
+- Your hand is dominated and realizes poorly (weak offsuit hands)
+- The board/runout is bad for your continuing range
+
+**Common mistakes:**
+- Calling too wide OOP “because it’s only one bet”
+- Raising too many weak draws with no fold equity
+- Folding too much vs small c-bets on boards that favor the raiser (you get exploited)
+
+**Drills (in this app):**
+- Postflop Trainer: practice defending vs different c-bet sizes
+- Pot Odds Trainer: connect bet size to required equity`
+        },
+        {
+            id: 'draws',
+            title: 'Draws and Semi-Bluffs',
+            content: `A draw is a hand that is behind now but can improve on future streets.
+
+**Common draw types:**
+- Flush draws (9 outs)
+- Open-ended straight draws (8 outs)
+- Gutshots (4 outs)
+- Two overcards (sometimes 6 outs, but can be dominated)
+- Backdoor draws (need two running cards)
+
+**Made hand vs draw:**
+- Made hands win now
+- Draws win later; they need either pot odds or fold equity (semi-bluffing)
+
+**Semi-bluffing:**
+When you bet/raise a draw, you can win in two ways:
+- Villain folds now
+- Villain calls and you improve later
+
+**Strong vs weak draws:**
+- Nut draws (A-high flush draw) realize better and can play bigger pots
+- Weak draws (low flush draw) can be dominated and suffer reverse implied odds
+
+**Key concept: implied odds vs reverse implied odds**
+- Implied odds: you win extra when you hit
+- Reverse implied odds: you lose extra when you hit a second-best hand
+
+**Common mistakes:**
+- Over-playing weak draws OOP
+- Ignoring that some outs are not clean (pairing board, dominated flushes)
+
+**Drills (in this app):**
+- Equity Calculator: compare different draw strengths on various boards
+- Postflop Trainer: practice when to call vs semi-bluff with draws`
+        },
+        {
+            id: 'value-bluff-protection',
+            title: 'Value vs Bluff vs Protection (What Your Bet Accomplishes)',
+            content: `Most bets fall into one (or more) of these buckets.
+
+**Value bet:**
+You expect worse hands to call.
+- Goal: extract chips from worse hands
+- Example: top pair betting vs second pair / draws
+
+**Bluff:**
+You expect better hands to fold.
+- Goal: win the pot without showdown
+- Bluff EV depends heavily on fold equity and credible lines
+
+**Protection / denial:**
+You bet to charge hands that have equity but are currently behind.
+- Goal: make draws and overcards pay to realize their equity
+- Important on wet boards (many turn cards change the winner)
+
+**Merged vs polarized betting ranges:**
+- Merged: many medium-strength hands bet (common with small sizes)
+- Polarized: mostly strong value + bluffs bet (common with large sizes)
+
+**Common mistakes:**
+- Calling a bet “protection” when worse hands never call
+- Bluffing into ranges that are too strong to fold
+- Value betting too big with medium hands and getting raised off equity
+
+**Drills (in this app):**
+- Bet Sizing Trainer: practice matching sizing to goal (merged vs polarized)
+- Postflop Trainer: identify whether your hand is value, bluff-catcher, or bluff`
+        },
+        {
+            id: 'overcards-backdoors',
+            title: 'Overcards and Backdoor Equity',
+            content: `Some hands look like “nothing” but still have meaningful equity.
+
+**Overcards:**
+If you have two overcards to the board (like A♠K♣ on 7♦4♠2♥), you can improve to top pair.
+- Overcards are stronger when:
+  - the opponent’s range contains many folds
+  - you have backdoors (backdoor flush/straight)
+  - you are in position
+
+**Backdoor draws (BDFD / BDSD):**
+Backdoor = you need two running cards to complete.
+- Example: you have A♦Q♦ on K♣7♦2♠ (backdoor flush draw)
+- These add semi-bluffing potential because turn cards can give you strong equity
+
+**Why backdoors matter:**
+- They allow you to continue more hands vs small bets
+- They make bluffing turns more credible when equity improves
+
+**Common mistakes:**
+- Over-calling with overcards OOP on wet boards (realization is poor)
+- Ignoring that some overcards are dominated (AJ vs AK)
+
+**Drills (in this app):**
+- Postflop Trainer: practice continuing with overcards + backdoors vs folding total air
+- Equity Calculator: compare overcards with and without backdoor draws`
+        },
+        {
+            id: 'ip-vs-oop-postflop',
+            title: 'Position Postflop: IP vs OOP Patterns',
+            content: `Many postflop mistakes come from ignoring how much position changes equity realization.
+
+**In Position (IP):**
+- You get information first (villain acts before you)
+- You can realize equity more often (check behind, take free cards)
+- You can apply pressure efficiently (you control bet sizes and river decisions)
+
+**Out of Position (OOP):**
+- You must act first and reveal information
+- You face more difficult turn/river decisions
+- Your bluffs need to be more selective because realization is worse
+
+**Practical consequences:**
+- IP you can call more often (better realization)
+- OOP you often prefer 3-bet/fold preflop and check/raise more selectively postflop
+- IP you can value bet thinner; OOP you should be careful with medium hands
+
+**Common mistakes:**
+- Defending too wide OOP and then “guessing” across streets
+- Using the same c-bet frequency IP and OOP
+
+**Drills (in this app):**
+- Postflop Trainer: compare the same flop spot IP vs OOP
+- Multi-street Trainer: notice how IP gets easier river decisions`
+        },
+        {
+            id: 'common-flop-mistakes',
+            title: 'Common Flop Mistakes (Quick Checklist)',
+            content: `A fast checklist to reduce EV loss.
+
+**On the flop, avoid:**
+- Auto c-betting every flop
+- Betting big on boards that smash the caller
+- Calling too wide OOP vs medium/large bets
+- Over-raising weak draws with no fold equity
+- Slowplaying when the board is dynamic (you give free cards)
+
+**Do more often:**
+- Use small bets on boards where you have range advantage
+- Size up on wet boards when you want denial
+- Think in ranges (what does villain have here?)
+- Consider SPR and whether the hand should play for stacks
+
+**Drills (in this app):**
+- EV feedback: identify which flop textures create your biggest EV loss
+- Smart Practice: repeat the textures and lines you misplay`
         },
         {
             id: 'bet-sizing',
