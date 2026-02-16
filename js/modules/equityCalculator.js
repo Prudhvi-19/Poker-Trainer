@@ -499,9 +499,11 @@ function checkStraight(ranks) {
 }
 
 function compareKickers(kickers1, kickers2) {
+    // Lower index in RANKS = higher rank (A=0, K=1, ..., 2=12)
+    // So a LOWER kicker value means a BETTER hand
     for (let i = 0; i < Math.min(kickers1.length, kickers2.length); i++) {
-        if (kickers1[i] > kickers2[i]) return 1;
-        if (kickers1[i] < kickers2[i]) return -1;
+        if (kickers1[i] < kickers2[i]) return 1;  // hand1 has higher rank
+        if (kickers1[i] > kickers2[i]) return -1;  // hand2 has higher rank
     }
     return 0;
 }

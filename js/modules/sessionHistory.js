@@ -115,11 +115,37 @@ function createSessionsList() {
     return section;
 }
 
+/**
+ * Get session stats handling both results (preflop/postflop) and hands (multistreet) formats
+ */
+function getSessionStats(session) {
+    if (session.results && session.results.length > 0) {
+        return stats.calculateSessionStats(session.results);
+    } else if (session.hands && session.hands.length > 0) {
+        let totalDecisions = 0;
+        let correct = 0;
+        session.hands.forEach(hand => {
+            if (hand.decisions) {
+                totalDecisions += hand.decisions.length;
+                correct += hand.decisions.filter(d => d.isCorrect).length;
+            }
+        });
+        return {
+            totalHands: session.hands.length,
+            correct,
+            incorrect: totalDecisions - correct,
+            accuracy: totalDecisions > 0 ? correct / totalDecisions : 0,
+            averageResponseTime: 0
+        };
+    }
+    return { totalHands: 0, correct: 0, incorrect: 0, accuracy: 0, averageResponseTime: 0 };
+}
+
 function createSessionItem(session) {
     const item = document.createElement('div');
     item.className = 'session-item';
 
-    const sessionStats = stats.calculateSessionStats(session.results);
+    const sessionStats = getSessionStats(session);
 
     const info = document.createElement('div');
     info.className = 'session-info';
@@ -153,9 +179,41 @@ function createSessionItem(session) {
 }
 
 function showSessionDetail(session) {
-    const sessionStats = stats.calculateSessionStats(session.results);
+    const sessionStats = getSessionStats(session);
 
     const content = document.createElement('div');
+
+    // Build results table rows based on session format
+    let tableRows = '';
+    if (session.results) {
+        tableRows = session.results.map(result => `
+            <tr>
+                <td>${result.scenario?.hand?.display || 'N/A'}</td>
+                <td>${result.userAnswer}</td>
+                <td>${result.correctAnswer}</td>
+                <td>${result.isCorrect ?
+                    '<span class="badge badge-success">&#10003;</span>' :
+                    '<span class="badge badge-error">&#10007;</span>'
+                }</td>
+            </tr>
+        `).join('');
+    } else if (session.hands) {
+        // Multistreet format: show each decision within each hand
+        tableRows = session.hands.map((hand, idx) => {
+            if (!hand.decisions || hand.decisions.length === 0) return '';
+            return hand.decisions.map(d => `
+                <tr>
+                    <td>Hand ${idx + 1} (${d.street || 'N/A'})</td>
+                    <td>${d.action}</td>
+                    <td>${d.correctAction}</td>
+                    <td>${d.isCorrect ?
+                        '<span class="badge badge-success">&#10003;</span>' :
+                        '<span class="badge badge-error">&#10007;</span>'
+                    }</td>
+                </tr>
+            `).join('');
+        }).join('');
+    }
 
     content.innerHTML = `
         <div style="margin-bottom: 1.5rem;">
@@ -184,7 +242,7 @@ function showSessionDetail(session) {
             </div>
         </div>
 
-        <h4 style="margin-bottom: 1rem;">Hand Results</h4>
+        <h4 style="margin-bottom: 1rem;">${session.hands ? 'Decision Results' : 'Hand Results'}</h4>
         <div style="max-height: 400px; overflow-y: auto;">
             <table class="table">
                 <thead>
@@ -196,17 +254,7 @@ function showSessionDetail(session) {
                     </tr>
                 </thead>
                 <tbody>
-                    ${session.results.map(result => `
-                        <tr>
-                            <td>${result.scenario.hand?.display || 'N/A'}</td>
-                            <td>${result.userAnswer}</td>
-                            <td>${result.correctAnswer}</td>
-                            <td>${result.isCorrect ?
-                                '<span class="badge badge-success">✓</span>' :
-                                '<span class="badge badge-error">✗</span>'
-                            }</td>
-                        </tr>
-                    `).join('')}
+                    ${tableRows}
                 </tbody>
             </table>
         </div>

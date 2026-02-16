@@ -101,15 +101,17 @@ export function showModal({
         });
     }
 
-    // Close on Escape key
+    // Close on Escape key - store handler reference for cleanup
     const escapeHandler = (e) => {
         if (e.key === 'Escape') {
             closeModal();
             if (onClose) onClose();
-            document.removeEventListener('keydown', escapeHandler);
         }
     };
     document.addEventListener('keydown', escapeHandler);
+
+    // Store handler reference on overlay for cleanup in closeModal()
+    overlay._escapeHandler = escapeHandler;
 
     // Prevent body scroll when modal is open
     document.body.style.overflow = 'hidden';
@@ -123,6 +125,10 @@ export function showModal({
 export function closeModal() {
     const modal = document.getElementById('active-modal');
     if (modal) {
+        // Clean up escape handler to prevent memory leak
+        if (modal._escapeHandler) {
+            document.removeEventListener('keydown', modal._escapeHandler);
+        }
         modal.remove();
         document.body.style.overflow = '';
     }

@@ -3,10 +3,9 @@
 
 import { createCard } from '../components/Card.js';
 import { showToast } from '../utils/helpers.js';
-import storage from '../utils/storage.js';
-
-const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
-const SUITS = ['h', 'd', 'c', 's'];
+import { generateBoard, generateHeroHand } from '../utils/deckManager.js';
+import { analyzeBoard as sharedAnalyzeBoard, getSimpleTexture } from '../utils/boardAnalyzer.js';
+import { evaluateHandBoard } from '../utils/handEvaluator.js';
 
 // Bet sizing categories
 const BET_SIZES = {
@@ -22,6 +21,8 @@ const SCENARIOS = ['flop-cbet', 'turn-bet', 'river-value', 'river-bluff'];
 let currentScenario = null;
 let stats = { correct: 0, total: 0 };
 let container = null;
+let mainAreaEl = null;
+let statsBarEl = null;
 
 function render() {
     container = document.createElement('div');
@@ -83,16 +84,14 @@ function render() {
     container.appendChild(theoryCard);
 
     // Stats display
-    const statsEl = document.createElement('div');
-    statsEl.id = 'sizing-stats';
-    statsEl.className = 'stats-bar';
-    container.appendChild(statsEl);
+    statsBarEl = document.createElement('div');
+    statsBarEl.className = 'stats-bar';
+    container.appendChild(statsBarEl);
 
     // Main training area
-    const mainArea = document.createElement('div');
-    mainArea.className = 'card training-card';
-    mainArea.id = 'sizing-main';
-    container.appendChild(mainArea);
+    mainAreaEl = document.createElement('div');
+    mainAreaEl.className = 'card training-card';
+    container.appendChild(mainAreaEl);
 
     // Start first scenario
     generateScenario();
@@ -101,10 +100,39 @@ function render() {
     return container;
 }
 
+// Hand types for different scenario contexts
+const SCENARIO_HAND_TYPES = {
+    'river-value': [
+        ['A', 'A'], ['K', 'K'], ['Q', 'Q'],
+        ['A', 'K'], ['A', 'Q'], ['K', 'Q'],
+        ['J', 'J'], ['T', 'T']
+    ],
+    'river-bluff': [
+        ['A', '5'], ['A', '4'], ['K', '7'],
+        ['Q', '8'], ['J', '7'], ['T', '6'],
+        ['9', '8'], ['8', '7'], ['7', '6']
+    ],
+    default: [
+        ['A', 'A'], ['K', 'K'], ['A', 'K'],
+        ['Q', 'Q'], ['J', 'J'], ['A', 'Q'],
+        ['T', '9'], ['9', '8'], ['7', '6']
+    ]
+};
+
+// Map scenario type to number of board cards
+const BOARD_SIZES = {
+    'flop-cbet': 3,
+    'turn-bet': 4,
+    'river-value': 5,
+    'river-bluff': 5
+};
+
 function generateScenario() {
     const scenarioType = SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)];
-    const board = generateBoard(scenarioType);
-    const heroHand = generateHeroHand(board, scenarioType);
+    const numCards = BOARD_SIZES[scenarioType] || 3;
+    const board = generateBoard(numCards);
+    const handTypes = SCENARIO_HAND_TYPES[scenarioType] || SCENARIO_HAND_TYPES.default;
+    const heroHand = generateHeroHand(board, handTypes);
     const potSize = Math.floor(Math.random() * 30 + 10);
 
     const analysis = analyzeScenario(scenarioType, board, heroHand);
@@ -122,141 +150,35 @@ function generateScenario() {
     renderScenario();
 }
 
-function generateBoard(scenarioType) {
-    const deck = createDeck();
-    shuffleDeck(deck);
-
-    let numCards;
-    switch (scenarioType) {
-        case 'flop-cbet':
-            numCards = 3;
-            break;
-        case 'turn-bet':
-            numCards = 4;
-            break;
-        case 'river-value':
-        case 'river-bluff':
-            numCards = 5;
-            break;
-        default:
-            numCards = 3;
-    }
-
-    return deck.slice(0, numCards);
-}
-
-function createDeck() {
-    const deck = [];
-    for (const rank of RANKS) {
-        for (const suit of SUITS) {
-            deck.push({ rank, suit });
-        }
-    }
-    return deck;
-}
-
-function shuffleDeck(deck) {
-    for (let i = deck.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [deck[i], deck[j]] = [deck[j], deck[i]];
-    }
-}
-
-function generateHeroHand(board, scenarioType) {
-    const usedCards = new Set(board.map(c => `${c.rank}${c.suit}`));
-    const deck = createDeck().filter(c => !usedCards.has(`${c.rank}${c.suit}`));
-    shuffleDeck(deck);
-
-    // Generate contextual hands based on scenario
-    let handTypes;
-    switch (scenarioType) {
-        case 'river-value':
-            handTypes = [
-                ['A', 'A'], ['K', 'K'], ['Q', 'Q'], // Overpairs
-                ['A', 'K'], ['A', 'Q'], ['K', 'Q'], // Top pairs
-                ['J', 'J'], ['T', 'T'] // Sets potential
-            ];
-            break;
-        case 'river-bluff':
-            handTypes = [
-                ['A', '5'], ['A', '4'], ['K', '7'], // Missed draws
-                ['Q', '8'], ['J', '7'], ['T', '6'], // Air
-                ['9', '8'], ['8', '7'], ['7', '6'] // Busted straights
-            ];
-            break;
-        default:
-            handTypes = [
-                ['A', 'A'], ['K', 'K'], ['A', 'K'],
-                ['Q', 'Q'], ['J', 'J'], ['A', 'Q'],
-                ['T', '9'], ['9', '8'], ['7', '6']
-            ];
-    }
-
-    const selectedType = handTypes[Math.floor(Math.random() * handTypes.length)];
-
-    // Find matching cards
-    const hand = [];
-    for (const targetRank of selectedType) {
-        const idx = deck.findIndex(c => c.rank === targetRank);
-        if (idx !== -1) {
-            hand.push(deck.splice(idx, 1)[0]);
-        } else {
-            hand.push(deck.shift());
-        }
-    }
-
-    return hand;
+/**
+ * Map shared hand evaluator output to bet sizing strength categories
+ */
+function mapToLocalStrength(handEval) {
+    const { strength } = handEval;
+    if (strength === 'MONSTER') return 'monster';
+    if (strength === 'STRONG' || strength === 'MEDIUM_STRONG') return 'strong';
+    return 'weak';
 }
 
 function analyzeScenario(type, board, hand) {
-    const boardRanks = board.map(c => RANKS.indexOf(c.rank));
-    const boardSuits = board.map(c => c.suit);
-    const handRanks = hand.map(c => RANKS.indexOf(c.rank));
+    // Use shared board analyzer
+    const boardAnalysis = sharedAnalyzeBoard(board);
+    const simpleTexture = getSimpleTexture(boardAnalysis);
 
-    // Board texture
-    const isPaired = hasDuplicate(boardRanks);
-    const isMonotone = new Set(boardSuits).size === 1;
-    const isTwoTone = new Set(boardSuits).size === 2;
-    const maxRank = Math.max(...boardRanks);
-    const isHighBoard = maxRank >= 9;
-    const spread = Math.max(...boardRanks) - Math.min(...boardRanks);
-    const isConnected = spread <= 4;
+    // Use shared hand evaluator
+    const handEval = evaluateHandBoard(hand, board);
+    const strength = mapToLocalStrength(handEval);
 
-    // Texture classification
-    let texture;
-    if (isPaired || (!isTwoTone && !isMonotone && !isConnected)) {
-        texture = 'dry';
-    } else if (isMonotone || (isTwoTone && isConnected)) {
-        texture = 'wet';
-    } else {
-        texture = 'semi-wet';
-    }
-
-    // Hand strength
-    const allRanks = [...handRanks, ...boardRanks];
-    const rankCounts = {};
-    allRanks.forEach(r => rankCounts[r] = (rankCounts[r] || 0) + 1);
-
-    const hasSet = Object.values(rankCounts).includes(3);
-    const hasTwoPair = Object.values(rankCounts).filter(c => c >= 2).length >= 2;
-    const hasOverpair = handRanks[0] === handRanks[1] && handRanks[0] > maxRank;
-    const hasTopPair = handRanks.some(r => r === maxRank);
-
-    let strength;
-    if (hasSet || hasTwoPair) strength = 'monster';
-    else if (hasOverpair || hasTopPair) strength = 'strong';
-    else strength = 'weak';
-
-    // Determine sizing based on scenario type and texture
+    // Determine sizing based on scenario type, texture, and hand strength
     let recommendedSize;
     let reason;
 
     switch (type) {
         case 'flop-cbet':
-            if (texture === 'dry') {
+            if (simpleTexture === 'dry') {
                 recommendedSize = 'SMALL';
                 reason = 'Dry flop - small c-bet is efficient. Few draws threaten you, villain folds same hands to any size.';
-            } else if (texture === 'wet') {
+            } else if (simpleTexture === 'wet') {
                 recommendedSize = 'LARGE';
                 reason = 'Wet flop - large bet protects against draws and charges maximum for equity. Villain has many draws.';
             } else {
@@ -267,7 +189,7 @@ function analyzeScenario(type, board, hand) {
 
         case 'turn-bet':
             if (strength === 'monster') {
-                if (texture === 'wet') {
+                if (simpleTexture === 'wet') {
                     recommendedSize = 'LARGE';
                     reason = 'Monster on wet turn - bet large for protection and value. Draws need to pay.';
                 } else {
@@ -297,7 +219,7 @@ function analyzeScenario(type, board, hand) {
             break;
 
         case 'river-bluff':
-            if (isPaired || texture === 'dry') {
+            if (boardAnalysis.isPaired || simpleTexture === 'dry') {
                 recommendedSize = 'OVERBET';
                 reason = 'Bluff on static river - overbet applies maximum pressure. Villain\'s bluff-catchers are uncomfortable.';
             } else {
@@ -308,23 +230,19 @@ function analyzeScenario(type, board, hand) {
     }
 
     return {
-        texture,
+        texture: boardAnalysis.texture,
         strength,
-        isPaired,
-        isHighBoard,
-        isConnected,
+        isPaired: boardAnalysis.isPaired,
+        isHighBoard: boardAnalysis.isHigh,
+        isConnected: boardAnalysis.isConnected,
         recommendedSize,
         reason
     };
 }
 
-function hasDuplicate(arr) {
-    return new Set(arr).size !== arr.length;
-}
-
 function renderScenario() {
-    const mainArea = document.getElementById('sizing-main');
-    if (!mainArea) return;
+    if (!mainAreaEl) return;
+    const mainArea = mainAreaEl;
 
     mainArea.innerHTML = '';
 
@@ -358,7 +276,7 @@ function renderScenario() {
     const handCards = document.createElement('div');
     handCards.className = 'hand-cards';
     currentScenario.heroHand.forEach(card => {
-        const cardEl = createCard(card.rank, card.suit);
+        const cardEl = createCard(card);
         handCards.appendChild(cardEl);
     });
     handSection.appendChild(handCards);
@@ -382,7 +300,7 @@ function renderScenario() {
     const boardCards = document.createElement('div');
     boardCards.className = 'board-cards';
     currentScenario.board.forEach((card, idx) => {
-        const cardEl = createCard(card.rank, card.suit);
+        const cardEl = createCard(card);
         cardEl.classList.add('board-card');
         // Highlight latest card
         if (idx === currentScenario.board.length - 1 && currentScenario.board.length > 3) {
@@ -436,15 +354,15 @@ function handleAnswer(answer) {
         stats.correct++;
     }
 
-    storage.saveTrainerStats('betSizing', stats);
+    // Stats tracked in-memory for this session
 
     showFeedback(isCorrect, answer);
     updateStats();
 }
 
 function showFeedback(isCorrect, userAnswer) {
-    const mainArea = document.getElementById('sizing-main');
-    if (!mainArea) return;
+    if (!mainAreaEl) return;
+    const mainArea = mainAreaEl;
 
     // Disable buttons
     mainArea.querySelectorAll('.option-btn').forEach(btn => {
@@ -493,12 +411,11 @@ function showFeedback(isCorrect, userAnswer) {
 }
 
 function updateStats() {
-    const statsEl = document.getElementById('sizing-stats');
-    if (!statsEl) return;
+    if (!statsBarEl) return;
 
     const accuracy = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
 
-    statsEl.innerHTML = `
+    statsBarEl.innerHTML = `
         <div class="stat-item">
             <span class="stat-value">${stats.correct}</span>
             <span class="stat-label">Correct</span>

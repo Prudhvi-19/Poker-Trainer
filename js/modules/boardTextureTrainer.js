@@ -3,42 +3,15 @@
 
 import { createCard } from '../components/Card.js';
 import { showToast } from '../utils/helpers.js';
-import storage from '../utils/storage.js';
-
-// Board texture categories
-const TEXTURE_TYPES = {
-    DRY: 'dry',
-    WET: 'wet',
-    SEMI_WET: 'semi-wet'
-};
-
-// Who the board favors
-const BOARD_FAVOR = {
-    RAISER: 'raiser',      // Preflop aggressor (opener/3-bettor)
-    CALLER: 'caller',      // Preflop caller (defender)
-    NEUTRAL: 'neutral'     // Neither has significant advantage
-};
-
-// Board characteristics
-const CHARACTERISTICS = {
-    PAIRED: 'paired',
-    MONOTONE: 'monotone',         // 3 of same suit
-    TWO_TONE: 'two-tone',         // 2 of same suit
-    RAINBOW: 'rainbow',           // 3 different suits
-    CONNECTED: 'connected',       // 3 cards within 4 ranks
-    DISCONNECTED: 'disconnected', // Gaps between cards
-    HIGH: 'high',                 // Contains 2+ broadway cards
-    LOW: 'low',                   // All cards 8 or below
-    MIXED: 'mixed'                // Mix of high and low
-};
-
-const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
-const SUITS = ['h', 'd', 'c', 's'];
+import { generateBoard } from '../utils/deckManager.js';
+import { analyzeBoard as sharedAnalyzeBoard } from '../utils/boardAnalyzer.js';
 
 let currentBoard = null;
 let currentQuestion = null;
 let stats = { correct: 0, total: 0 };
 let container = null;
+let mainAreaEl = null;
+let statsBarEl = null;
 
 function render() {
     container = document.createElement('div');
@@ -54,16 +27,14 @@ function render() {
     container.appendChild(header);
 
     // Stats display
-    const statsEl = document.createElement('div');
-    statsEl.id = 'texture-stats';
-    statsEl.className = 'stats-bar';
-    container.appendChild(statsEl);
+    statsBarEl = document.createElement('div');
+    statsBarEl.className = 'stats-bar';
+    container.appendChild(statsBarEl);
 
     // Main training area
-    const mainArea = document.createElement('div');
-    mainArea.className = 'card training-card';
-    mainArea.id = 'texture-main';
-    container.appendChild(mainArea);
+    mainAreaEl = document.createElement('div');
+    mainAreaEl.className = 'card training-card';
+    container.appendChild(mainAreaEl);
 
     // Start first question
     generateQuestion();
@@ -73,11 +44,11 @@ function render() {
 }
 
 function generateQuestion() {
-    // Generate a random flop
-    currentBoard = generateRandomFlop();
+    // Generate a random flop using shared deck manager
+    currentBoard = generateBoard(3);
 
-    // Analyze the board
-    const analysis = analyzeBoard(currentBoard);
+    // Analyze the board using shared analyzer
+    const analysis = sharedAnalyzeBoard(currentBoard);
 
     // Pick a random question type
     const questionTypes = ['texture', 'favor', 'characteristics'];
@@ -92,117 +63,31 @@ function generateQuestion() {
     renderQuestion();
 }
 
-function generateRandomFlop() {
-    const deck = [];
-    for (const rank of RANKS) {
-        for (const suit of SUITS) {
-            deck.push({ rank, suit });
-        }
-    }
-
-    // Shuffle and pick 3
-    for (let i = deck.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [deck[i], deck[j]] = [deck[j], deck[i]];
-    }
-
-    return deck.slice(0, 3);
+// Map shared texture categories to display-friendly format
+function mapSuitType(analysis) {
+    if (analysis.isMonotone) return 'monotone';
+    if (analysis.isTwoTone) return 'two-tone';
+    return 'rainbow';
 }
 
-function analyzeBoard(board) {
-    const ranks = board.map(c => RANKS.indexOf(c.rank));
-    const suits = board.map(c => c.suit);
+function mapHeightType(analysis) {
+    if (analysis.isHigh) return 'high';
+    if (analysis.isLow) return 'low';
+    return 'mixed';
+}
 
-    // Sort ranks descending
-    ranks.sort((a, b) => b - a);
-
-    // Check for pair
-    const isPaired = ranks[0] === ranks[1] || ranks[1] === ranks[2] || ranks[0] === ranks[2];
-
-    // Check suit distribution
-    const suitCounts = {};
-    suits.forEach(s => suitCounts[s] = (suitCounts[s] || 0) + 1);
-    const maxSuitCount = Math.max(...Object.values(suitCounts));
-
-    let suitType;
-    if (maxSuitCount === 3) suitType = CHARACTERISTICS.MONOTONE;
-    else if (maxSuitCount === 2) suitType = CHARACTERISTICS.TWO_TONE;
-    else suitType = CHARACTERISTICS.RAINBOW;
-
-    // Check connectivity (gaps between cards)
-    const spread = ranks[0] - ranks[2];
-    const isConnected = spread <= 4 && !isPaired;
-
-    // Check high/low
-    const highCards = ranks.filter(r => r >= 9).length; // T or higher
-    let heightType;
-    if (highCards >= 2) heightType = CHARACTERISTICS.HIGH;
-    else if (ranks[0] <= 7) heightType = CHARACTERISTICS.LOW;
-    else heightType = CHARACTERISTICS.MIXED;
-
-    // Determine overall texture
-    let texture;
-    let textureReason;
-
-    if (isPaired) {
-        texture = TEXTURE_TYPES.DRY;
-        textureReason = 'Paired boards reduce drawing possibilities';
-    } else if (suitType === CHARACTERISTICS.MONOTONE) {
-        texture = TEXTURE_TYPES.WET;
-        textureReason = 'Monotone boards have flush possibilities';
-    } else if (suitType === CHARACTERISTICS.TWO_TONE && isConnected) {
-        texture = TEXTURE_TYPES.WET;
-        textureReason = 'Two-tone and connected = many draws possible';
-    } else if (suitType === CHARACTERISTICS.RAINBOW && !isConnected) {
-        texture = TEXTURE_TYPES.DRY;
-        textureReason = 'Rainbow and disconnected = few draws';
-    } else if (suitType === CHARACTERISTICS.TWO_TONE || isConnected) {
-        texture = TEXTURE_TYPES.SEMI_WET;
-        textureReason = 'Some drawing possibilities exist';
-    } else {
-        texture = TEXTURE_TYPES.DRY;
-        textureReason = 'Limited drawing possibilities';
-    }
-
-    // Determine who the board favors
-    let favor;
-    let favorReason;
-
-    if (heightType === CHARACTERISTICS.HIGH) {
-        favor = BOARD_FAVOR.RAISER;
-        favorReason = 'High boards hit preflop raiser\'s range (AK, AQ, KQ, etc.)';
-    } else if (heightType === CHARACTERISTICS.LOW && isConnected) {
-        favor = BOARD_FAVOR.CALLER;
-        favorReason = 'Low connected boards hit caller\'s range (suited connectors, small pairs)';
-    } else if (isPaired && ranks[0] >= 9) {
-        favor = BOARD_FAVOR.RAISER;
-        favorReason = 'High paired boards favor raiser\'s broadway holdings';
-    } else if (isPaired && ranks[0] <= 6) {
-        favor = BOARD_FAVOR.CALLER;
-        favorReason = 'Low paired boards favor caller\'s wider range';
-    } else {
-        favor = BOARD_FAVOR.NEUTRAL;
-        favorReason = 'Neither player has a significant range advantage';
-    }
-
-    return {
-        texture,
-        textureReason,
-        favor,
-        favorReason,
-        isPaired,
-        suitType,
-        isConnected,
-        heightType,
-        spread
-    };
+// Map shared texture to simple dry/semi-wet/wet for this trainer's quiz
+function mapTextureForQuiz(analysis) {
+    const tex = analysis.texture;
+    if (tex === 'DRY' || tex === 'STATIC') return 'dry';
+    if (tex === 'WET' || tex === 'DYNAMIC') return 'wet';
+    return 'semi-wet';
 }
 
 function renderQuestion() {
-    const mainArea = document.getElementById('texture-main');
-    if (!mainArea) return;
+    if (!mainAreaEl) return;
 
-    mainArea.innerHTML = '';
+    mainAreaEl.innerHTML = '';
 
     // Board display
     const boardSection = document.createElement('div');
@@ -216,13 +101,13 @@ function renderQuestion() {
     const boardCards = document.createElement('div');
     boardCards.className = 'board-cards';
     currentBoard.forEach(card => {
-        const cardEl = createCard(card.rank, card.suit);
+        const cardEl = createCard(card);
         cardEl.classList.add('board-card');
         boardCards.appendChild(cardEl);
     });
     boardSection.appendChild(boardCards);
 
-    mainArea.appendChild(boardSection);
+    mainAreaEl.appendChild(boardSection);
 
     // Question
     const questionSection = document.createElement('div');
@@ -235,18 +120,18 @@ function renderQuestion() {
         case 'texture':
             questionText = 'What is the texture of this board?';
             options = [
-                { value: TEXTURE_TYPES.DRY, label: 'Dry', desc: 'Few draws possible' },
-                { value: TEXTURE_TYPES.SEMI_WET, label: 'Semi-Wet', desc: 'Some draws possible' },
-                { value: TEXTURE_TYPES.WET, label: 'Wet', desc: 'Many draws possible' }
+                { value: 'dry', label: 'Dry', desc: 'Few draws possible' },
+                { value: 'semi-wet', label: 'Semi-Wet', desc: 'Some draws possible' },
+                { value: 'wet', label: 'Wet', desc: 'Many draws possible' }
             ];
             break;
 
         case 'favor':
             questionText = 'Who does this board favor?';
             options = [
-                { value: BOARD_FAVOR.RAISER, label: 'Preflop Raiser', desc: 'Opener/3-bettor' },
-                { value: BOARD_FAVOR.CALLER, label: 'Preflop Caller', desc: 'Defender' },
-                { value: BOARD_FAVOR.NEUTRAL, label: 'Neutral', desc: 'Neither has advantage' }
+                { value: 'raiser', label: 'Preflop Raiser', desc: 'Opener/3-bettor' },
+                { value: 'caller', label: 'Preflop Caller', desc: 'Defender' },
+                { value: 'neutral', label: 'Neutral', desc: 'Neither has advantage' }
             ];
             break;
 
@@ -280,7 +165,7 @@ function renderQuestion() {
     });
 
     questionSection.appendChild(optionsEl);
-    mainArea.appendChild(questionSection);
+    mainAreaEl.appendChild(questionSection);
 }
 
 function handleAnswer(answer) {
@@ -290,17 +175,19 @@ function handleAnswer(answer) {
     let correctAnswer = '';
     let explanation = '';
 
+    const simpleTexture = mapTextureForQuiz(currentQuestion.analysis);
+
     switch (currentQuestion.type) {
         case 'texture':
-            isCorrect = answer === currentQuestion.analysis.texture;
-            correctAnswer = currentQuestion.analysis.texture.toUpperCase();
+            isCorrect = answer === simpleTexture;
+            correctAnswer = simpleTexture.toUpperCase();
             explanation = currentQuestion.analysis.textureReason;
             break;
 
         case 'favor':
             isCorrect = answer === currentQuestion.analysis.favor;
-            correctAnswer = currentQuestion.analysis.favor === BOARD_FAVOR.RAISER ? 'PREFLOP RAISER' :
-                           currentQuestion.analysis.favor === BOARD_FAVOR.CALLER ? 'PREFLOP CALLER' : 'NEUTRAL';
+            correctAnswer = currentQuestion.analysis.favor === 'raiser' ? 'PREFLOP RAISER' :
+                           currentQuestion.analysis.favor === 'caller' ? 'PREFLOP CALLER' : 'NEUTRAL';
             explanation = currentQuestion.analysis.favorReason;
             break;
 
@@ -319,7 +206,7 @@ function handleAnswer(answer) {
     }
 
     // Save stats
-    storage.saveTrainerStats('boardTexture', stats);
+    // Stats tracked in-memory for this session
 
     // Show feedback
     showFeedback(isCorrect, correctAnswer, explanation);
@@ -327,11 +214,10 @@ function handleAnswer(answer) {
 }
 
 function showFeedback(isCorrect, correctAnswer, explanation) {
-    const mainArea = document.getElementById('texture-main');
-    if (!mainArea) return;
+    if (!mainAreaEl) return;
 
     // Disable buttons
-    mainArea.querySelectorAll('.option-btn').forEach(btn => {
+    mainAreaEl.querySelectorAll('.option-btn').forEach(btn => {
         btn.disabled = true;
         btn.style.pointerEvents = 'none';
     });
@@ -352,15 +238,16 @@ function showFeedback(isCorrect, correctAnswer, explanation) {
     // Board breakdown
     const breakdown = document.createElement('div');
     breakdown.className = 'board-breakdown';
+    const a = currentQuestion.analysis;
     breakdown.innerHTML = `
         <h4>Board Analysis:</h4>
         <ul>
-            <li><strong>Texture:</strong> ${currentQuestion.analysis.texture}</li>
-            <li><strong>Suit:</strong> ${currentQuestion.analysis.suitType}</li>
-            <li><strong>Height:</strong> ${currentQuestion.analysis.heightType}</li>
-            <li><strong>Paired:</strong> ${currentQuestion.analysis.isPaired ? 'Yes' : 'No'}</li>
-            <li><strong>Connected:</strong> ${currentQuestion.analysis.isConnected ? 'Yes' : 'No'} (spread: ${currentQuestion.analysis.spread})</li>
-            <li><strong>Favors:</strong> ${currentQuestion.analysis.favor}</li>
+            <li><strong>Texture:</strong> ${a.texture}</li>
+            <li><strong>Suit:</strong> ${mapSuitType(a)}</li>
+            <li><strong>Height:</strong> ${mapHeightType(a)}</li>
+            <li><strong>Paired:</strong> ${a.isPaired ? 'Yes' : 'No'}</li>
+            <li><strong>Connected:</strong> ${a.isConnected ? 'Yes' : 'No'} (spread: ${a.spread})</li>
+            <li><strong>Favors:</strong> ${a.favor}</li>
         </ul>
     `;
     feedback.appendChild(breakdown);
@@ -373,19 +260,18 @@ function showFeedback(isCorrect, correctAnswer, explanation) {
     nextBtn.addEventListener('click', generateQuestion);
     feedback.appendChild(nextBtn);
 
-    mainArea.appendChild(feedback);
+    mainAreaEl.appendChild(feedback);
 
     // Scroll to feedback
     feedback.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function updateStats() {
-    const statsEl = document.getElementById('texture-stats');
-    if (!statsEl) return;
+    if (!statsBarEl) return;
 
     const accuracy = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
 
-    statsEl.innerHTML = `
+    statsBarEl.innerHTML = `
         <div class="stat-item">
             <span class="stat-value">${stats.correct}</span>
             <span class="stat-label">Correct</span>

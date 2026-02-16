@@ -7,6 +7,8 @@ import ranges from '../data/ranges.js';
 import storage from '../utils/storage.js';
 
 let currentSession = null;
+let statsContainerEl = null;
+let scenarioContainerEl = null;
 
 function render() {
     const container = document.createElement('div');
@@ -23,14 +25,12 @@ function render() {
     container.appendChild(typeSelector);
 
     // Session stats
-    const statsContainer = document.createElement('div');
-    statsContainer.id = 'session-stats';
-    container.appendChild(statsContainer);
+    statsContainerEl = document.createElement('div');
+    container.appendChild(statsContainerEl);
 
     // Scenario area
-    const scenarioContainer = document.createElement('div');
-    scenarioContainer.id = 'scenario-container';
-    container.appendChild(scenarioContainer);
+    scenarioContainerEl = document.createElement('div');
+    container.appendChild(scenarioContainerEl);
 
     // Initialize session
     startNewSession(TRAINER_TYPES.RFI);
@@ -135,23 +135,22 @@ function startNewSession(trainerType) {
 }
 
 function updateStats() {
-    const statsEl = document.getElementById('session-stats');
-    if (!statsEl) return;
+    if (!statsContainerEl) return;
 
     const totalHands = currentSession.results.length;
     const correct = currentSession.results.filter(r => r.isCorrect).length;
     const accuracy = totalHands > 0 ? correct / totalHands : 0;
 
-    statsEl.innerHTML = '';
-    statsEl.className = 'session-stats';
+    statsContainerEl.innerHTML = '';
+    statsContainerEl.className = 'session-stats';
 
     const handsEl = createStatBox(totalHands, 'Hands');
     const correctEl = createStatBox(correct, 'Correct');
     const accuracyEl = createStatBox(formatPercentage(accuracy, 0), 'Accuracy');
 
-    statsEl.appendChild(handsEl);
-    statsEl.appendChild(correctEl);
-    statsEl.appendChild(accuracyEl);
+    statsContainerEl.appendChild(handsEl);
+    statsContainerEl.appendChild(correctEl);
+    statsContainerEl.appendChild(accuracyEl);
 }
 
 function createStatBox(value, label) {
@@ -176,8 +175,8 @@ function createStatBox(value, label) {
 let scenarioStartTime = null;
 
 function showNextScenario() {
-    const scenarioEl = document.getElementById('scenario-container');
-    if (!scenarioEl) return;
+    if (!scenarioContainerEl) return;
+    const scenarioEl = scenarioContainerEl;
 
     scenarioEl.innerHTML = '';
 
@@ -255,7 +254,7 @@ function generateRFIScenario() {
         type: TRAINER_TYPES.RFI,
         position,
         hand,
-        description: `You are ${position}. First to act. What do you do?`,
+        description: `You are ${position}. Folded to you. What do you do?`,
         options: [ACTIONS.RAISE, ACTIONS.FOLD],
         correctAction
     };
@@ -406,9 +405,10 @@ function generateSqueezeScenario() {
         type: TRAINER_TYPES.SQUEEZE,
         position: heroPos,
         villainPosition: raiserPos,
+        callerPosition: callerPos,
         hand,
         description: `You are ${heroPos}. ${raiserPos} raises to 2.5bb, ${callerPos} calls. What do you do?`,
-        options: [ACTIONS.RAISE, ACTIONS.CALL, ACTIONS.FOLD],
+        options: [ACTIONS.RAISE, ACTIONS.FOLD],
         correctAction
     };
 }
@@ -436,8 +436,8 @@ function handleAnswer(scenario, userAnswer) {
 }
 
 function showFeedback(scenario, userAnswer, isCorrect) {
-    const scenarioEl = document.getElementById('scenario-container');
-    if (!scenarioEl) return;
+    if (!scenarioContainerEl) return;
+    const scenarioEl = scenarioContainerEl;
 
     const card = scenarioEl.querySelector('.scenario-card');
     if (!card) return;
@@ -487,9 +487,33 @@ function showFeedback(scenario, userAnswer, isCorrect) {
                     return `${hand} is a 3-bet for value or as a bluff with blockers vs ${villainPos}.`;
                 }
                 if (action === 'CALL') {
-                    return `${hand} plays well multiway. Cold call to see a flop in position.`;
+                    return `${hand} plays well postflop. Cold call to see a flop vs ${villainPos}'s range.`;
                 }
                 return `${hand} is not strong enough to continue vs ${villainPos}'s opening range.`;
+
+            case TRAINER_TYPES.FOUR_BET:
+                if (action === 'RAISE') {
+                    return `${hand} is strong enough to 4-bet vs ${villainPos}'s 3-bet. Build the pot with premium value or blocker bluffs.`;
+                }
+                if (action === 'CALL') {
+                    return `${hand} has enough equity to call ${villainPos}'s 3-bet. Too strong to fold, but not strong enough to 4-bet.`;
+                }
+                return `${hand} cannot profitably continue vs ${villainPos}'s 3-bet range. Fold and save chips.`;
+
+            case TRAINER_TYPES.COLD_CALL:
+                if (action === 'RAISE') {
+                    return `${hand} is strong enough to 3-bet vs ${villainPos}. Raise for value or as a bluff with blockers.`;
+                }
+                if (action === 'CALL') {
+                    return `${hand} plays well postflop vs ${villainPos}'s range. Cold call to see a flop.`;
+                }
+                return `${hand} is too weak to continue vs ${villainPos}'s opening range from ${pos}.`;
+
+            case TRAINER_TYPES.SQUEEZE:
+                if (action === 'RAISE') {
+                    return `${hand} is strong enough to squeeze vs ${villainPos}'s raise + caller. The dead money makes raising profitable.`;
+                }
+                return `${hand} is not strong enough to squeeze. With a raiser and caller, you need a strong hand to enter the pot.`;
 
             default:
                 return action === 'RAISE' ? 'This hand is in your raising range.' :

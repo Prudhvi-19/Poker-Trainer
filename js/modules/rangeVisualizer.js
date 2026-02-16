@@ -67,10 +67,10 @@ function createPresetsSection() {
     const rangePresets = [
         // RFI Ranges
         { label: 'UTG RFI (~15%)', range: ranges.RFI_RANGES.UTG, category: 'RFI' },
-        { label: 'HJ RFI (~18%)', range: ranges.RFI_RANGES.HJ, category: 'RFI' },
-        { label: 'CO RFI (~28%)', range: ranges.RFI_RANGES.CO, category: 'RFI' },
+        { label: 'HJ RFI (~20%)', range: ranges.RFI_RANGES.HJ, category: 'RFI' },
+        { label: 'CO RFI (~29%)', range: ranges.RFI_RANGES.CO, category: 'RFI' },
         { label: 'BTN RFI (~48%)', range: ranges.RFI_RANGES.BTN, category: 'RFI' },
-        { label: 'SB RFI (~45%)', range: ranges.RFI_RANGES.SB, category: 'RFI' },
+        { label: 'SB RFI (~41%)', range: ranges.RFI_RANGES.SB, category: 'RFI' },
 
         // 3-Bet Ranges (comprehensive!)
         { label: '3-Bet vs UTG', range: ranges.THREE_BET_RANGES.vsUTG, category: '3-Bet' },
@@ -86,11 +86,25 @@ function createPresetsSection() {
         { label: 'BB vs BTN', range: ranges.BB_DEFENSE_RANGES.vsBTN, category: 'BB Defense' },
         { label: 'BB vs SB', range: ranges.BB_DEFENSE_RANGES.vsSB, category: 'BB Defense' },
 
+        // BB 3-Bet Ranges
+        { label: 'BB 3-Bet vs UTG', range: ranges.BB_3BET_RANGES.vsUTG, category: 'BB 3-Bet' },
+        { label: 'BB 3-Bet vs HJ', range: ranges.BB_3BET_RANGES.vsHJ, category: 'BB 3-Bet' },
+        { label: 'BB 3-Bet vs CO', range: ranges.BB_3BET_RANGES.vsCO, category: 'BB 3-Bet' },
+        { label: 'BB 3-Bet vs BTN', range: ranges.BB_3BET_RANGES.vsBTN, category: 'BB 3-Bet' },
+        { label: 'BB 3-Bet vs SB', range: ranges.BB_3BET_RANGES.vsSB, category: 'BB 3-Bet' },
+
         // 4-Bet Ranges
         { label: '4-Bet vs UTG', range: ranges.FOUR_BET_RANGES.vsUTG, category: '4-Bet' },
         { label: '4-Bet vs HJ', range: ranges.FOUR_BET_RANGES.vsHJ, category: '4-Bet' },
         { label: '4-Bet vs CO', range: ranges.FOUR_BET_RANGES.vsCO, category: '4-Bet' },
         { label: '4-Bet vs BTN', range: ranges.FOUR_BET_RANGES.vsBTN, category: '4-Bet' },
+
+        // Call 3-Bet Ranges
+        { label: 'Call 3-Bet vs UTG', range: ranges.CALL_3BET_RANGES.vsUTG, category: 'Call 3-Bet' },
+        { label: 'Call 3-Bet vs HJ', range: ranges.CALL_3BET_RANGES.vsHJ, category: 'Call 3-Bet' },
+        { label: 'Call 3-Bet vs CO', range: ranges.CALL_3BET_RANGES.vsCO, category: 'Call 3-Bet' },
+        { label: 'Call 3-Bet vs BTN', range: ranges.CALL_3BET_RANGES.vsBTN, category: 'Call 3-Bet' },
+        { label: 'Call 3-Bet vs SB', range: ranges.CALL_3BET_RANGES.vsSB, category: 'Call 3-Bet' },
 
         // Cold Call Ranges
         { label: 'Cold Call vs UTG', range: ranges.COLD_CALL_RANGES.vsUTG, category: 'Cold Call' },
@@ -106,7 +120,7 @@ function createPresetsSection() {
     ];
 
     // Group presets by category
-    const categories = ['RFI', '3-Bet', 'BB Defense', '4-Bet', 'Cold Call', 'Squeeze'];
+    const categories = ['RFI', '3-Bet', 'BB Defense', 'BB 3-Bet', '4-Bet', 'Call 3-Bet', 'Cold Call', 'Squeeze'];
 
     categories.forEach(category => {
         const categoryPresets = rangePresets.filter(p => p.category === category);

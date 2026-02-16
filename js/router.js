@@ -9,6 +9,7 @@ class Router {
         this.currentModule = null;
         this.container = null;
         this.hashChangeHandler = null;
+        this._routeGeneration = 0; // Guard against concurrent route handling
     }
 
     /**
@@ -28,7 +29,14 @@ class Router {
         this.hashChangeHandler = () => this.handleRoute();
         window.addEventListener('hashchange', this.hashChangeHandler);
 
-        // Handle initial route
+        // NOTE: Do NOT call handleRoute() here. Routes are not registered yet.
+        // The caller (app.js) must call router.start() after all routes are registered.
+    }
+
+    /**
+     * Start routing after all routes have been registered
+     */
+    start() {
         this.handleRoute();
     }
 
@@ -57,30 +65,27 @@ class Router {
         const hash = window.location.hash.slice(1); // Remove '#'
         const module = hash || MODULES.DASHBOARD; // Default to dashboard
 
-        console.log(`🔍 Looking for route: "${module}"`);
-        console.log(`📋 Available routes:`, Object.keys(this.routes));
-
         // Check if route exists
         if (!this.routes[module]) {
-            console.warn(`❌ Route not found: ${module}`);
             this.navigate(MODULES.DASHBOARD);
             return;
         }
 
-        console.log(`✅ Route found: ${module}`);
+        // Guard against concurrent route handling (rapid navigation)
+        const generation = ++this._routeGeneration;
 
         // Call the route handler
         try {
             this.currentModule = module;
-
-            // Clear container
-            this.container.innerHTML = '';
 
             // Show loading
             this.container.innerHTML = '<div style="text-align: center; padding: 2rem;"><div class="spinner"></div></div>';
 
             // Get module content
             const content = await this.routes[module]();
+
+            // If another route was triggered while we were loading, abort
+            if (generation !== this._routeGeneration) return;
 
             // Clear loading and render content
             this.container.innerHTML = '';
@@ -95,17 +100,37 @@ class Router {
             scrollToTop(true);
 
         } catch (error) {
+            // If another route was triggered, don't show error for stale route
+            if (generation !== this._routeGeneration) return;
+
             console.error(`Error loading module ${module}:`, error);
-            this.container.innerHTML = `
-                <div class="card" style="text-align: center; padding: 2rem;">
-                    <h2>⚠️ Error Loading Module</h2>
-                    <p>Sorry, there was an error loading this module.</p>
-                    <p class="text-muted">${error.message}</p>
-                    <button class="btn btn-primary" onclick="window.location.hash='dashboard'">
-                        Go to Dashboard
-                    </button>
-                </div>
-            `;
+            // Safely escape error message to prevent XSS
+            const errorMsg = document.createElement('p');
+            errorMsg.className = 'text-muted';
+            errorMsg.textContent = error.message;
+
+            const errorCard = document.createElement('div');
+            errorCard.className = 'card';
+            errorCard.style.textAlign = 'center';
+            errorCard.style.padding = '2rem';
+
+            const heading = document.createElement('h2');
+            heading.textContent = 'Error Loading Module';
+            errorCard.appendChild(heading);
+
+            const desc = document.createElement('p');
+            desc.textContent = 'Sorry, there was an error loading this module.';
+            errorCard.appendChild(desc);
+            errorCard.appendChild(errorMsg);
+
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-primary';
+            btn.textContent = 'Go to Dashboard';
+            btn.addEventListener('click', () => { window.location.hash = 'dashboard'; });
+            errorCard.appendChild(btn);
+
+            this.container.innerHTML = '';
+            this.container.appendChild(errorCard);
         }
     }
 

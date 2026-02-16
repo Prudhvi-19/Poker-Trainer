@@ -183,23 +183,27 @@ function createSessionSummary(session, sessionHands) {
     const totalHands = sessionHands.length;
     let correct = 0;
 
+    let totalDecisions = totalHands;
+
     if (session.results) {
         // Preflop/Postflop format
         correct = sessionHands.filter(r => r.isCorrect).length;
     } else if (session.hands) {
-        // Multistreet format - count correct decisions
+        // Multistreet format - count correct decisions out of total decisions
+        totalDecisions = 0;
         sessionHands.forEach(hand => {
             if (hand.decisions) {
+                totalDecisions += hand.decisions.length;
                 correct += hand.decisions.filter(d => d.isCorrect).length;
             }
         });
     }
 
-    const accuracy = totalHands > 0 ? correct / totalHands : 0;
+    const accuracy = totalDecisions > 0 ? correct / totalDecisions : 0;
 
     const handsBox = createStatBox(totalHands, 'Total Hands');
     const correctBox = createStatBox(correct, 'Correct');
-    const wrongBox = createStatBox(totalHands - correct, 'Incorrect');
+    const wrongBox = createStatBox(totalDecisions - correct, 'Incorrect');
     const accuracyBox = createStatBox(formatPercentage(accuracy, 0), 'Accuracy');
 
     statsGrid.appendChild(handsBox);

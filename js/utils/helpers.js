@@ -147,33 +147,20 @@ export function handsEqual(hand1, hand2) {
     return formatHand(hand1) === formatHand(hand2);
 }
 
-// Check if position1 is in position (acts after) position2
+// Check if position1 is in position (acts after) position2 postflop
 export function isInPosition(position1, position2) {
-    // Import POSITIONS from constants
-    const positions = ['UTG', 'HJ', 'CO', 'BTN', 'SB', 'BB'];
+    // Postflop acting order: SB, BB, UTG, HJ, CO, BTN
+    // Higher index = acts later = has position
+    const postflopOrder = ['SB', 'BB', 'UTG', 'HJ', 'CO', 'BTN'];
 
-    const pos1Index = positions.indexOf(position1);
-    const pos2Index = positions.indexOf(position2);
+    const pos1Index = postflopOrder.indexOf(position1);
+    const pos2Index = postflopOrder.indexOf(position2);
 
     if (pos1Index === -1 || pos2Index === -1) {
         return false;
     }
 
-    // Postflop: SB acts first, then BB, then UTG through BTN
-    // So order is: SB, BB, UTG, HJ, CO, BTN
-    // Button has position over everyone postflop
-    // Higher index in original array = better position postflop (except blinds)
-
-    // For simplicity: later position in array has position over earlier (UTG to BTN)
-    // Blinds (SB/BB) are OOP against all other positions postflop
-    if (position1 === 'SB' || position1 === 'BB') {
-        return false; // Blinds always OOP postflop
-    }
-    if (position2 === 'SB' || position2 === 'BB') {
-        return true; // IP vs blinds
-    }
-
-    // Among non-blind positions, higher index = better position
+    // BB is in position vs SB postflop (BB acts after SB)
     return pos1Index > pos2Index;
 }
 
@@ -297,14 +284,19 @@ export function showToast(message, type = 'info', duration = 3000) {
     };
 
     const toast = createElement('div', `toast ${type}`);
-    toast.innerHTML = `
-        <span class="toast-icon">${icons[type] || icons.info}</span>
-        <span class="toast-message">${message}</span>
-        <button class="toast-close" aria-label="Close">×</button>
-    `;
+    // Use textContent to prevent XSS from message content
+    const iconSpan = createElement('span', 'toast-icon');
+    iconSpan.textContent = icons[type] || icons.info;
+    const messageSpan = createElement('span', 'toast-message');
+    messageSpan.textContent = message;
+    const closeBtn = createElement('button', 'toast-close');
+    closeBtn.setAttribute('aria-label', 'Close');
+    closeBtn.textContent = '\u00d7';
+    toast.appendChild(iconSpan);
+    toast.appendChild(messageSpan);
+    toast.appendChild(closeBtn);
 
-    const closeButton = toast.querySelector('.toast-close');
-    closeButton.addEventListener('click', () => {
+    closeBtn.addEventListener('click', () => {
         toast.remove();
     });
 

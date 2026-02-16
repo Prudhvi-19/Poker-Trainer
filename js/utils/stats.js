@@ -4,6 +4,30 @@ import { calculateAccuracy } from './helpers.js';
 import storage from './storage.js';
 
 class Stats {
+    /**
+     * Extract total and correct counts from a session, handling both formats:
+     * - results format: [{isCorrect, scenario, ...}] (preflop/postflop trainers)
+     * - hands format: [{decisions: [{isCorrect, ...}]}] (multistreet trainer)
+     */
+    _getSessionCounts(session) {
+        if (session.results && session.results.length > 0) {
+            const total = session.results.length;
+            const correct = session.results.filter(r => r.isCorrect).length;
+            return { total, correct };
+        } else if (session.hands && session.hands.length > 0) {
+            let total = 0;
+            let correct = 0;
+            session.hands.forEach(hand => {
+                if (hand.decisions) {
+                    total += hand.decisions.length;
+                    correct += hand.decisions.filter(d => d.isCorrect).length;
+                }
+            });
+            return { total, correct };
+        }
+        return { total: 0, correct: 0 };
+    }
+
     // Get today's practice statistics
     getTodayStats() {
         const sessions = storage.getSessions();
@@ -18,10 +42,9 @@ class Stats {
         let correctAnswers = 0;
 
         todaySessions.forEach(session => {
-            if (session.results) {
-                totalHands += session.results.length;
-                correctAnswers += session.results.filter(r => r.isCorrect).length;
-            }
+            const { total, correct } = this._getSessionCounts(session);
+            totalHands += total;
+            correctAnswers += correct;
         });
 
         return {
@@ -42,19 +65,20 @@ class Stats {
         const byPosition = {};
 
         sessions.forEach(session => {
+            const { total, correct } = this._getSessionCounts(session);
+            totalHands += total;
+            correctAnswers += correct;
+
+            // By module
+            const module = session.module;
+            if (!byModule[module]) {
+                byModule[module] = { total: 0, correct: 0 };
+            }
+            byModule[module].total += total;
+            byModule[module].correct += correct;
+
+            // By position (if available) - results format
             if (session.results) {
-                totalHands += session.results.length;
-                correctAnswers += session.results.filter(r => r.isCorrect).length;
-
-                // By module
-                const module = session.module;
-                if (!byModule[module]) {
-                    byModule[module] = { total: 0, correct: 0 };
-                }
-                byModule[module].total += session.results.length;
-                byModule[module].correct += session.results.filter(r => r.isCorrect).length;
-
-                // By position (if available)
                 session.results.forEach(result => {
                     if (result.scenario && result.scenario.position) {
                         const pos = result.scenario.position;
@@ -65,6 +89,21 @@ class Stats {
                         if (result.isCorrect) {
                             byPosition[pos].correct++;
                         }
+                    }
+                });
+            }
+            // Multistreet hands don't have position-per-decision, tracked at hand level
+            if (session.hands) {
+                session.hands.forEach(hand => {
+                    if (hand.heroPosition && hand.decisions) {
+                        const pos = hand.heroPosition;
+                        if (!byPosition[pos]) {
+                            byPosition[pos] = { total: 0, correct: 0 };
+                        }
+                        hand.decisions.forEach(d => {
+                            byPosition[pos].total++;
+                            if (d.isCorrect) byPosition[pos].correct++;
+                        });
                     }
                 });
             }
@@ -88,10 +127,9 @@ class Stats {
         let correct = 0;
 
         moduleSessions.forEach(session => {
-            if (session.results) {
-                total += session.results.length;
-                correct += session.results.filter(r => r.isCorrect).length;
-            }
+            const counts = this._getSessionCounts(session);
+            total += counts.total;
+            correct += counts.correct;
         });
 
         return {
@@ -181,10 +219,9 @@ class Stats {
                 byDate[date] = { total: 0, correct: 0 };
             }
 
-            if (session.results) {
-                byDate[date].total += session.results.length;
-                byDate[date].correct += session.results.filter(r => r.isCorrect).length;
-            }
+            const counts = this._getSessionCounts(session);
+            byDate[date].total += counts.total;
+            byDate[date].correct += counts.correct;
         });
 
         // Convert to array and calculate accuracy
@@ -229,6 +266,22 @@ class Stats {
         const sessions = storage.getSessions();
         const mistakes = {};
 
+        const trackMistake = (key, scenario, correctAnswer, wrongAnswer) => {
+            if (!mistakes[key]) {
+                mistakes[key] = {
+                    count: 0,
+                    scenario,
+                    correctAnswer,
+                    commonWrongAnswer: {}
+                };
+            }
+            mistakes[key].count++;
+            if (!mistakes[key].commonWrongAnswer[wrongAnswer]) {
+                mistakes[key].commonWrongAnswer[wrongAnswer] = 0;
+            }
+            mistakes[key].commonWrongAnswer[wrongAnswer]++;
+        };
+
         sessions.forEach(session => {
             if (session.results) {
                 session.results.forEach(result => {
@@ -238,24 +291,22 @@ class Stats {
                             position: result.scenario.position,
                             action: result.scenario.action
                         });
-
-                        if (!mistakes[key]) {
-                            mistakes[key] = {
-                                count: 0,
-                                scenario: result.scenario,
-                                correctAnswer: result.correctAnswer,
-                                commonWrongAnswer: {}
-                            };
-                        }
-
-                        mistakes[key].count++;
-
-                        // Track common wrong answers
-                        const wrongAnswer = result.userAnswer;
-                        if (!mistakes[key].commonWrongAnswer[wrongAnswer]) {
-                            mistakes[key].commonWrongAnswer[wrongAnswer] = 0;
-                        }
-                        mistakes[key].commonWrongAnswer[wrongAnswer]++;
+                        trackMistake(key, result.scenario, result.correctAnswer, result.userAnswer);
+                    }
+                });
+            }
+            if (session.hands) {
+                session.hands.forEach(hand => {
+                    if (hand.decisions) {
+                        hand.decisions.forEach(d => {
+                            if (!d.isCorrect) {
+                                const key = JSON.stringify({
+                                    street: d.street,
+                                    position: hand.heroPosition
+                                });
+                                trackMistake(key, { position: hand.heroPosition, street: d.street }, d.correctAction, d.action);
+                            }
+                        });
                     }
                 });
             }

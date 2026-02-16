@@ -106,7 +106,7 @@ function initSidebarToggle() {
 
     // Close sidebar when clicking outside on mobile
     document.addEventListener('click', (e) => {
-        if (window.innerWidth <= 600) {
+        if (window.innerWidth <= 768) {
             if (!sidebar.contains(e.target) && sidebar.classList.contains('open')) {
                 sidebar.classList.remove('open');
             }
@@ -118,7 +118,7 @@ function initSidebarToggle() {
  * Close sidebar on mobile after navigation
  */
 function closeSidebarOnMobile() {
-    if (window.innerWidth <= 600) {
+    if (window.innerWidth <= 768) {
         const sidebar = document.getElementById('sidebar');
         if (sidebar) {
             sidebar.classList.remove('open');
