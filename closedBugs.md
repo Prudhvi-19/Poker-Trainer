@@ -45,3 +45,10 @@
 - **Fix:** Standardized trainer scenario containers to use `id="scenario-container"`.
 - **Verification:** Code inspection; interactive regression test pending.
 
+### FIXED — BUG-005 Stats “common mistakes” grouping key uses `scenario.action` (field doesn’t exist)
+
+- **Severity:** P2
+- **Commit:** `41e32a3`
+- **Fix:** Corrected the aggregation key to use stable scenario fields instead of nonexistent `scenario.action`.
+- **Verification:** Code inspection.
+

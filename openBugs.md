@@ -19,17 +19,10 @@ This file tracks **known open business/logic/UX bugs** found during code review.
 
 - **Severity:** P2
 - **Area:** `js/utils/stats.js`
-- **Status:** OPEN
+- **Status:** FIXED (commit `41e32a3`)
 
-### Symptoms
-`getCommonMistakes()` builds a grouping key with `result.scenario.action`, but scenarios use fields like `correctAction`, `type`, etc.
-This leads to poor/incorrect aggregation.
-
-### Suspected root cause
-Field mismatch (`scenario.action` not present).
-
-### Fix idea
-Use a stable key like `{ module, trainerType/type, position, hand.display, correctAction }`.
+### Notes
+Fixed the mistake-grouping key to use stable scenario fields (`type`, `position`, normalized `hand`, and `correctAnswer`).
 
 ---
 
