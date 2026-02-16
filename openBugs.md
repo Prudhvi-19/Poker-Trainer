@@ -4,7 +4,7 @@ This file tracks **known open bugs, logic/UX issues, and feature enhancements** 
 
 - **Repo:** Poker-Trainer
 - **Working branch:** `audit/bug-hunt`
-- **Last updated:** 2026-02-16
+- **Last updated:** 2026-02-15
 
 ## Severity scale
 
@@ -32,19 +32,19 @@ This file tracks **known open bugs, logic/UX issues, and feature enhancements** 
 
 ## P1 -- High
 
-✅ No open **P1** issues currently (as of 2026-02-16). See `closedBugs.md` for details.
+✅ No open **P1** issues currently (as of 2026-02-15). See `closedBugs.md` for details.
 
 ---
 
 ## P2 -- Medium
 
-✅ No open **P2** issues currently (as of 2026-02-16). See `closedBugs.md` for details.
+✅ No open **P2** issues currently (as of 2026-02-15). See `closedBugs.md` for details.
 
 ---
 
 ## P3 -- Minor / Polish
 
-✅ No open **P3** issues currently (as of 2026-02-16). See `closedBugs.md` for details.
+✅ No open **P3** issues currently (as of 2026-02-15). See `closedBugs.md` for details.
 
 ---
 
@@ -52,38 +52,12 @@ This file tracks **known open bugs, logic/UX issues, and feature enhancements** 
 
 ## E0 -- Must-Ship (Table Stakes vs Competitors)
 
-_Note: shipped enhancements are tracked in_ `closedBugs.md` _(e.g. ENH-001, ENH-002)._ 
+_Note: shipped enhancements are tracked in_ `closedBugs.md`.
 
-### ENH-003 Progressive Web App (PWA) with Offline Support
+✅ **Shipped (see** `closedBugs.md`**):**
 
-- **Competitive gap:** [Postflop+](https://www.craftywheel.com/postflopplus) is "the only GTO poker trainer that works without an internet connection." Our app already runs client-side but cannot be installed or used offline after browser cache clears.
-- **Description:** Convert the app into a full PWA with service worker, web app manifest, and installability. This gives us:
-  - "Add to Home Screen" on mobile (feels like a native app)
-  - True offline support (service worker caches all assets)
-  - Push notification capability (for streak reminders)
-  - App-store-like discoverability via PWABuilder
-- **Key components:**
-  - `manifest.json` with app name, icons (192px, 512px), theme color, display: standalone
-  - Service worker with cache-first strategy for all static assets
-  - Offline fallback page
-  - Install prompt handling
-- **Reference:** [MDN PWA Guide](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps), [PWABuilder](https://www.pwabuilder.com/)
-
-- **Status:** ✅ Shipped (see `closedBugs.md`)
-
-### ENH-004 Spaced Repetition System for Weak Spots
-
-- **Competitive gap:** No major poker trainer has SRS built in. This would be a first-mover advantage. [Preflop AI](https://apps.apple.com/us/app/gto-poker-trainer-preflop-ai/id6747779080) uses "Duolingo-style" learning but without true SRS scheduling.
-- **Description:** Track which hand types, positions, and scenarios the user consistently gets wrong. Use a spaced repetition algorithm (SM-2 or FSRS) to schedule targeted practice sessions. Hands the user struggles with appear more frequently; mastered hands appear less often.
-- **Key components:**
-  - Per-hand-type difficulty rating (based on historical accuracy)
-  - Review interval scheduling (1 day, 3 days, 7 days, 14 days, 30 days)
-  - "Smart Practice" mode that prioritizes weak spots
-  - Visual progress bars showing mastery per hand category
-  - Daily review queue with estimated session length
-- **Reference:** [Spaced repetition for poker ranges](https://www.pokerstrategy.com/news/content/How-to-memorise-a-poker-range_115334/), [FSRS algorithm](https://github.com/open-spaced-repetition/fsrs4anki/wiki/spaced-repetition-algorithm:-a-three%E2%80%90day-journey-from-novice-to-expert), [BBZ Poker study techniques](https://bbzpoker.com/5-proven-techniques-to-help-you-study-poker-charts/)
-
-- **Status:** ✅ Shipped (see `closedBugs.md`)
+- **ENH-003** Progressive Web App (PWA) + offline support
+- **ENH-004** Smart Practice (Spaced Repetition)
 
 ---
 
@@ -306,9 +280,9 @@ _Note: shipped enhancements are tracked in_ `closedBugs.md` _(e.g. ENH-001, ENH-
 | Equity Calculator | Hand vs Hand | Full solver | Built-in | N/A | Range + Hand |
 | ELO Rating | Yes (v1) | No | Yes | Yes | No |
 | EV Feedback | 4-tier + EV loss | EV cost | 4-tier | EV + coaching | Basic |
-| Spaced Repetition | **Missing** | No | No | No | No |
+| Spaced Repetition | Yes | No | No | No | No |
 | Achievements | **Missing** | No | No | No | No |
-| PWA / Offline Install | **Missing** | Web only | Native app | Web only | Native app |
+| PWA / Offline Install | Yes (PWA) | Web only | Native app | Web only | Native app |
 | ICM / Tournament | **Missing** | Yes (premium) | Yes | Yes | No |
 | Hand History Import | **Missing** | Yes | No | No | No |
 | Range vs Range | **Missing** | Yes | Yes | Yes | Yes |
@@ -324,11 +298,10 @@ _Note: shipped enhancements are tracked in_ `closedBugs.md` _(e.g. ENH-001, ENH-
 
 ## Biggest Gaps to Close (priority order)
 
-1. **ENH-003** PWA -- users need to install and use offline on mobile
-2. **ENH-004** Spaced Repetition -- unique differentiator, no competitor has this
-3. **ENH-005** Achievements -- drives retention and daily engagement
-4. **ENH-007** Range vs Range -- required for serious poker study
+1. **ENH-005** Achievements -- drives retention and daily engagement
+2. **ENH-007** Range vs Range -- required for serious poker study
+3. **ENH-006** Study Plan -- turns leak detection into an actionable plan
 
 ---
 
-*Last reviewed: 2026-02-16 | Reviewer: Code audit + competitive analysis*
+*Last reviewed: 2026-02-15 | Reviewer: Code audit + competitive analysis*
