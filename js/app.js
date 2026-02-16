@@ -97,12 +97,14 @@ function init() {
     // Update navigation active state on route change
     // NOTE: This listener persists for app lifetime (intentional, not a memory leak)
     window.addEventListener('hashchange', () => {
-        const hash = window.location.hash.slice(1) || MODULES.DASHBOARD;
-        setActiveNavItem(hash);
+        const fullHash = window.location.hash.slice(1) || MODULES.DASHBOARD;
+        const [module] = fullHash.split('/');
+        setActiveNavItem(module);
     });
 
     // Set initial active state
-    const initialModule = window.location.hash.slice(1) || MODULES.DASHBOARD;
+    const initialHash = window.location.hash.slice(1) || MODULES.DASHBOARD;
+    const [initialModule] = initialHash.split('/');
     setActiveNavItem(initialModule);
 
     // Apply saved settings

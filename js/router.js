@@ -64,7 +64,10 @@ class Router {
      */
     async handleRoute() {
         const hash = window.location.hash.slice(1); // Remove '#'
-        const module = hash || MODULES.DASHBOARD; // Default to dashboard
+        // Support simple subroutes like "concepts/4betting".
+        // The module is always the first segment.
+        const [moduleSegment] = (hash || '').split('/');
+        const module = moduleSegment || MODULES.DASHBOARD; // Default to dashboard
 
         // Ensure shortcuts never leak from a previous module.
         // Trainers will re-register a handler during render.
@@ -86,8 +89,8 @@ class Router {
             // Show loading
             this.container.innerHTML = '<div style="text-align: center; padding: 2rem;"><div class="spinner"></div></div>';
 
-            // Get module content
-            const content = await this.routes[module]();
+            // Get module content (handler can inspect window.location.hash for subroutes)
+            const content = await this.routes[module]({ hash });
 
             // If another route was triggered while we were loading, abort
             if (generation !== this._routeGeneration) return;
