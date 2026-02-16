@@ -59,7 +59,7 @@ To keep quality high, every chapter will follow a consistent template:
 - [x] A6. Fold equity (what it is; what drives it; where our models approximate)
 - [x] A7. Initiative & range advantage vs nut advantage
 - [x] A8. SPR (stack-to-pot ratio) and how it changes strategy
-- [ ] A9. Why GTO is a baseline + when exploit deviations are reasonable
+- [x] A9. Why GTO is a baseline + when exploit deviations are reasonable
 
 ### B. Preflop (maps to Preflop Trainer)
 

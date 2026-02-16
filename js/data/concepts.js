@@ -284,6 +284,35 @@ SPR heavily influences which hands are strong enough to stack off.
 - Bet Sizing Trainer: see how different sizing sequences change the end-of-hand pot geometry`
         },
         {
+            id: 'gto-baseline',
+            title: 'GTO as a Baseline (and When to Exploit)',
+            content: `GTO is best thought of as a strong default strategy, not a religion.
+
+**What GTO gives you:**
+- Balanced ranges (you have value hands and bluffs in the right mix)
+- You are harder to exploit if opponents fight back
+- A clear baseline to measure your decisions (EV loss)
+
+**What GTO does NOT guarantee:**
+- That you maximize profit against a specific weak opponent
+- That the same frequencies are best at every stake / player pool
+
+**Exploit = intentional deviation with a reason:**
+Examples:
+- Villain over-folds: bluff more, steal more, c-bet more
+- Villain over-calls: bluff less, value bet thinner, size up value
+- Villain under-defends BB: open wider
+
+**How to use this app correctly:**
+- Use trainers to build a strong baseline (reduce EV loss)
+- Use Smart Practice to fix your repeated mistakes
+- In real games, deviate exploitatively only when you have evidence
+
+**Drills (in this app):**
+- Any trainer: focus on EV loss over “right/wrong”
+- Session History + Hand Replayer: review patterns in your mistakes`
+        },
+        {
             id: 'ranges',
             title: 'Ranges and Range Advantage',
             content: `A range is the set of hands a player can reasonably have in a spot.
@@ -325,29 +354,51 @@ Board: K high dry flop
         {
             id: 'rfi-strategy',
             title: 'RFI Strategy by Position',
-            content: `RFI = Raise First In. The action when you're first to enter the pot.
+            content: `RFI = Raise First In (you open the pot).
 
-**Never Limp in 6-Max:** Always raise or fold (except SB can complete sometimes)
+**Default in 6-max cash:** raise or fold. Limping is usually avoided because it:
+- gives everyone great odds
+- creates multiway pots
+- makes it harder to realize equity
 
-**Why Raise?**
-1. Steal the blinds immediately
-2. Build a pot when you have the best hand
-3. Take initiative (aggression advantage postflop)
-4. Play fewer pots out of position
+**Why opening works (what you win):**
+- You can win the blinds immediately
+- You get initiative, which creates fold equity postflop
+- You often get to play heads-up (simpler decisions)
 
-**RFI Range Sizes:**
-- UTG: ~15% (tight, strong hands)
-- HJ: ~18%
-- CO: ~28%
-- BTN: ~48% (very wide)
-- SB: ~45% (vs BB only)
+**Why ranges widen by position:**
+- Later position plays more pots IP
+- Blinds are forced to defend wider vs steals
+- You can profitably open more “thin” hands because you realize more equity
 
-**Standard Sizing:** 2.5bb from all positions
+**Typical RFI sizes (broad intuition):**
+- UTG: tight (strong broadways, strong pairs, suited aces)
+- HJ: slightly wider
+- CO: wider (more suited connectors / broadways)
+- BTN: widest (many suited hands, more offsuit broadways)
+- SB: wide but tricky (you are OOP postflop vs BB)
 
-**Adjust Based On:**
-- Table dynamics (tighter if players are 3-betting a lot)
-- Stack sizes (wider with deeper stacks)
-- Player tendencies (exploit weak players)`
+**Sizing standards:**
+- A common baseline is ~2.0–2.5bb opens (this app’s preflop trainer uses a standard open sizing model)
+- In general: smaller opens allow wider ranges; bigger opens tighten ranges
+
+**Construction rules of thumb (high-level):**
+- Prefer suited hands to offsuit hands (better equity realization)
+- Prefer connected hands to disconnected hands (more board coverage)
+- Avoid dominated offsuit hands in early position (like A7o, K9o)
+
+**When to deviate exploitatively (if you have a reason):**
+- If blinds are tight: open wider (steal more)
+- If blinds are aggressive 3-bettors: tighten opens and/or 4-bet more linear
+- If table is very call-heavy: tighten opens and emphasize hands that realize well postflop
+
+**Common mistakes:**
+- Opening too wide UTG because BTN ranges look fun
+- Over-valuing weak offsuit aces (domination)
+
+**Drills (in this app):**
+- Preflop Trainer → RFI: focus on UTG/HJ discipline
+- Preflop Trainer → BB Defense: understand how your open affects villain’s defense range`
         },
         {
             id: '3betting',
@@ -520,30 +571,36 @@ Use same sizing with both value and bluffs to avoid being exploitable`
             content: `Two fundamental approaches to poker strategy.
 
 **GTO (Game Theory Optimal):**
-- Unexploitable strategy
-- Balanced ranges (mix of value and bluffs)
-- Frequencies designed to make opponent indifferent
-- Best vs unknown, strong opponents
-- Guarantees you don't lose in the long run
+- A balanced strategy designed to be hard to exploit
+- Uses correct value/bluff ratios for a given sizing
+- A strong default when opponents are unknown
 
 **Exploitative:**
-- Adjusts to opponent's specific mistakes
-- Unbalanced (over-fold, over-call, over-bluff vs them)
-- Maximizes profit vs that specific opponent
-- Best vs known, weak opponents
-- Can be exploited by aware opponents
+- Intentionally deviates to punish a specific leak
+- Can earn more vs weak opponents, but becomes exploitable if villain adjusts
 
-**When to Use Each:**
-- **GTO Base:** Start with GTO, adjust from there
-- **Exploit:** When you identify clear tendencies
-  - vs calling station: Bluff less, value bet thinner
-  - vs nit: Bluff more, value bet less
-  - vs maniac: Call more, bluff less
+**How to think about it (practical):**
+- Start with a GTO-ish baseline so you don’t have obvious holes
+- Deviate only when you can name a concrete reason (data / repeated behavior)
 
-**The Balance:**
-Good players use GTO as default and make exploitative adjustments when edges are clear.
+**Common exploits (examples):**
+- Villain over-folds: bluff more, steal more, c-bet more
+- Villain over-calls: bluff less, value bet thinner, size up value
+- Villain under-defends BB: open wider
+- Villain over-3bets: tighten opens, 4-bet more linear, trap more
 
-"Play GTO until you have reason not to."`
+**Important: what this app teaches**
+The trainers generally grade you against a GTO-style recommendation.
+- Use the trainer to build a strong baseline
+- Then apply exploits in real games when you have evidence
+
+**Common mistakes:**
+- Calling something “exploit” when it’s actually just a punt
+- Over-bluffing without knowing villain’s fold frequency
+
+**Drills (in this app):**
+- Use EV loss as a compass: aim to reduce EV loss before adding fancy exploits
+- Use Smart Practice (SRS) to revisit the exact spots you repeatedly miss`
         },
         {
             id: 'balance',
