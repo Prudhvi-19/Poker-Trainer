@@ -186,7 +186,7 @@ function createRecentSessionsWidget() {
             if (session.results) {
                 sessionStats = stats.calculateSessionStats(session.results);
             } else {
-                const counts = stats._getSessionCounts(session);
+                const counts = stats.getSessionCounts(session);
                 sessionStats = {
                     totalHands: counts.total,
                     correct: counts.correct,

@@ -28,6 +28,14 @@ class Stats {
         return { total: 0, correct: 0 };
     }
 
+    /**
+     * Public wrapper for extracting total/correct counts from a session.
+     * Avoids other modules calling the private `_getSessionCounts` directly.
+     */
+    getSessionCounts(session) {
+        return this._getSessionCounts(session);
+    }
+
     // Get today's practice statistics
     getTodayStats() {
         const sessions = storage.getSessions();
