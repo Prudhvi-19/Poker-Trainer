@@ -96,6 +96,13 @@
 
 ## 2026-02-16
 
+### SHIPPED — ENH-001 ELO / Skill Rating System
+
+- **Severity:** E0 (Must-Ship)
+- **Commit:** `0716cb6`
+- **Fix/Feature:** Added a basic v1 skill rating (ELO-like) that updates after each decision and is displayed on the Dashboard.
+- **Verification:** Manual smoke test (app loads; rating updates; no console errors).
+
 ### FIXED — BUG-014 Infinite recursion in cold call scenario generation
 
 - **Severity:** P1
@@ -216,7 +223,7 @@
 ### SHIPPED — ENH-002 EV-based 4-tier decision feedback + EV impact
 
 - **Severity:** E0 (Must-Ship)
-- **Branch:** `enh/e0-ev-feedback`
+- **Commits:** `b6bb1b8`, `78a7f45`
 - **Fix/Feature:** Added Monte Carlo equity (`js/utils/equity.js`) + EV grading utilities (`js/utils/evFeedback.js`) and integrated tiered feedback + EV loss (bb) into Preflop, Postflop, Multi-street, C-Bet, and Bet Sizing trainers. Added feedback tier styling.
 - **Verification:** Manual smoke test (app loads; feedback renders; no console errors).
 
