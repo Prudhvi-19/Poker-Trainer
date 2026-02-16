@@ -225,12 +225,19 @@ function setRandomHand(handId) {
 
     document.getElementById(`${handId}-card1`).value = card1;
     document.getElementById(`${handId}-card2`).value = card2;
+
+    // Programmatic value changes don't trigger 'change' events.
+    // Ensure duplicate-card disabling stays correct.
+    updateCardAvailability();
 }
 
 function clearBoard() {
     for (let i = 1; i <= 5; i++) {
         document.getElementById(`board-card${i}`).value = '';
     }
+
+    // Programmatic value changes don't trigger 'change' events.
+    updateCardAvailability();
 }
 
 function getUsedCards() {
@@ -279,19 +286,31 @@ function calculateEquity() {
         return;
     }
 
-    // Show loading
-    resultsEl.innerHTML = '<div style="text-align: center; padding: 2rem;"><div class="text-muted">Calculating equity (running 10,000 simulations)...</div></div>';
+    // Show loading + disable button to avoid queued calculations (BUG-022)
+    const calculateBtn = document.querySelector('.btn.btn-primary.btn-lg');
+    if (calculateBtn) calculateBtn.disabled = true;
+
+    resultsEl.innerHTML = `
+        <div style="text-align: center; padding: 2rem;">
+            <div class="text-muted">Calculating equity (running 10,000 simulations)...</div>
+            <div class="spinner" style="margin: 1rem auto 0;"></div>
+        </div>
+    `;
 
     // Run Monte Carlo simulation with brief delay to show loading state
     setTimeout(() => {
-        const result = runMonteCarloSimulation(
-            [hand1Card1, hand1Card2],
-            [hand2Card1, hand2Card2],
-            board,
-            10000
-        );
+        try {
+            const result = runMonteCarloSimulation(
+                [hand1Card1, hand1Card2],
+                [hand2Card1, hand2Card2],
+                board,
+                10000
+            );
 
-        displayResults(result, [hand1Card1, hand1Card2], [hand2Card1, hand2Card2], board);
+            displayResults(result, [hand1Card1, hand1Card2], [hand2Card1, hand2Card2], board);
+        } finally {
+            if (calculateBtn) calculateBtn.disabled = false;
+        }
     }, 100);
 }
 
@@ -300,9 +319,11 @@ function runMonteCarloSimulation(hand1, hand2, board, iterations) {
     let hand2Wins = 0;
     let ties = 0;
 
-    const usedCards = new Set([...hand1, ...hand2, ...board]);
+    const baseUsedCards = new Set([...hand1, ...hand2, ...board]);
 
     for (let i = 0; i < iterations; i++) {
+        const usedCards = new Set(baseUsedCards);
+
         // Complete the board
         const fullBoard = [...board];
         while (fullBoard.length < 5) {
@@ -329,11 +350,6 @@ function runMonteCarloSimulation(hand1, hand2, board, iterations) {
             } else {
                 ties++;
             }
-        }
-
-        // Remove added cards for next iteration
-        while (fullBoard.length > board.length) {
-            usedCards.delete(fullBoard.pop());
         }
     }
 
@@ -431,6 +447,8 @@ function evaluateHand(cards) {
     const orderedRanks = ranksWithCounts.map(x => x.rank);
 
     // uniqueRanks sorted by rank value only (for straights/flushes)
+    // NOTE: Lower index in RANKS means a higher card (A=0 ... 2=12).
+    // We keep kickers as ascending indices and compare with compareKickers().
     const uniqueRanks = Object.keys(rankCounts).map(Number).sort((a, b) => a - b);
 
     const isFlush = suits.every(s => s === suits[0]);

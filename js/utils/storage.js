@@ -1,6 +1,7 @@
 // localStorage wrapper with error handling and default values
 
-import { STORAGE_KEYS, DEFAULT_SETTINGS } from './constants.js';
+import { STORAGE_KEYS, DEFAULT_SETTINGS, DEFAULT_RATING } from './constants.js';
+import { showToast } from './helpers.js';
 
 class Storage {
     get(key, defaultValue = null) {
@@ -26,6 +27,13 @@ class Storage {
                 if (key === STORAGE_KEYS.SESSIONS) {
                     const sessions = this.getSessions();
                     if (sessions.length > 50) {
+                        // WARNING: This deletes user data. Inform the user.
+                        showToast(
+                            'Storage is full. Deleting older sessions to make room. Export your data to avoid loss.',
+                            'warning',
+                            6000
+                        );
+
                         // Keep only 50 most recent sessions
                         sessions.length = 50;
                         try {
@@ -33,12 +41,22 @@ class Storage {
                             return true;
                         } catch (retryError) {
                             console.error('Failed to save even after cleanup:', retryError);
+                            showToast(
+                                'Storage is full and Poker Trainer could not save your session. Please export data and clear history.',
+                                'error',
+                                8000
+                            );
                             return false;
                         }
                     }
                 }
 
                 console.error(`Storage full and cleanup failed for ${key}`);
+                showToast(
+                    'Storage is full and Poker Trainer could not save data. Please export data and clear history.',
+                    'error',
+                    8000
+                );
                 return false;
             }
 
@@ -72,8 +90,13 @@ class Storage {
 
     // Specific data access methods
     getSettings() {
-        // Return a clone of DEFAULT_SETTINGS to prevent mutation of the shared constant
-        return this.get(STORAGE_KEYS.SETTINGS, { ...DEFAULT_SETTINGS });
+        // Merge stored settings with DEFAULT_SETTINGS to ensure new keys always exist.
+        // Also return a fresh object to prevent mutation of the shared constant.
+        const stored = this.get(STORAGE_KEYS.SETTINGS, null);
+        return {
+            ...DEFAULT_SETTINGS,
+            ...(stored && typeof stored === 'object' ? stored : {})
+        };
     }
 
     saveSettings(settings) {
@@ -160,6 +183,34 @@ class Storage {
         });
     }
 
+    // --- ENH-001: Skill Rating (ELO-style) ---
+    getRating() {
+        const stored = this.get(STORAGE_KEYS.RATING, null);
+        return {
+            ...DEFAULT_RATING,
+            ...(stored && typeof stored === 'object' ? stored : {})
+        };
+    }
+
+    saveRating(rating) {
+        return this.set(STORAGE_KEYS.RATING, rating);
+    }
+
+    // --- ENH-004: Spaced Repetition System (SRS) ---
+    getSrsState() {
+        const stored = this.get(STORAGE_KEYS.SRS, null);
+        // Keep schema flexible; we'll store a version + items map.
+        return {
+            version: 1,
+            items: {},
+            ...(stored && typeof stored === 'object' ? stored : {})
+        };
+    }
+
+    saveSrsState(state) {
+        return this.set(STORAGE_KEYS.SRS, state);
+    }
+
     updateStreak() {
         const streak = this.getStreak();
         const today = new Date().toDateString();
@@ -202,6 +253,8 @@ class Storage {
             progress: this.getProgress(),
             customRanges: this.getCustomRanges(),
             streak: this.getStreak(),
+            rating: this.getRating(),
+            srs: this.getSrsState(),
             exportDate: new Date().toISOString()
         };
     }
@@ -214,6 +267,8 @@ class Storage {
             if (data.progress) this.set(STORAGE_KEYS.PROGRESS, data.progress);
             if (data.customRanges) this.set(STORAGE_KEYS.CUSTOM_RANGES, data.customRanges);
             if (data.streak) this.set(STORAGE_KEYS.STREAK, data.streak);
+            if (data.rating) this.set(STORAGE_KEYS.RATING, data.rating);
+            if (data.srs) this.set(STORAGE_KEYS.SRS, data.srs);
             return true;
         } catch (error) {
             console.error('Error importing data:', error);

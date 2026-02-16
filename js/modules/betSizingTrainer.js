@@ -6,6 +6,17 @@ import { showToast } from '../utils/helpers.js';
 import { generateBoard, generateHeroHand } from '../utils/deckManager.js';
 import { analyzeBoard as sharedAnalyzeBoard, getSimpleTexture } from '../utils/boardAnalyzer.js';
 import { evaluateHandBoard } from '../utils/handEvaluator.js';
+import ranges from '../data/ranges.js';
+import storage from '../utils/storage.js';
+import { applyDecisionRating, appendRatingHistory, opponentRatingForContext } from '../utils/rating.js';
+import { simulateEquityVsRange } from '../utils/equity.js';
+import {
+    computeEvFeedbackFromEvs,
+    evBetRaise,
+    evCheckToShowdown
+} from '../utils/evFeedback.js';
+import { buildScenarioKeyFromResult, upsertSrsResult } from '../utils/srs.js';
+import { getCurrentKey, isSessionActive, advanceSession, incrementSessionStats } from '../utils/smartPracticeSession.js';
 
 // Bet sizing categories
 const BET_SIZES = {
@@ -19,10 +30,12 @@ const BET_SIZES = {
 const SCENARIOS = ['flop-cbet', 'turn-bet', 'river-value', 'river-bluff'];
 
 let currentScenario = null;
-let stats = { correct: 0, total: 0 };
+let stats = { correct: 0, total: 0, evLostBb: 0 };
 let container = null;
 let mainAreaEl = null;
 let statsBarEl = null;
+
+let smartPracticeActiveKey = null;
 
 function render() {
     container = document.createElement('div');
@@ -94,10 +107,21 @@ function render() {
     container.appendChild(mainAreaEl);
 
     // Start first scenario
+    smartPracticeActiveKey = isSessionActive() ? getCurrentKey() : null;
     generateScenario();
     updateStats();
 
     return container;
+}
+
+function getSmartPracticeOverrideScenario() {
+    if (!smartPracticeActiveKey) return null;
+    const srs = storage.getSrsState();
+    const item = srs?.items?.[smartPracticeActiveKey] || null;
+    const payload = item?.payload || null;
+    const scenario = payload?.scenario || null;
+    if (!scenario || typeof scenario !== 'object') return null;
+    return scenario;
 }
 
 // Hand types for different scenario contexts
@@ -128,6 +152,15 @@ const BOARD_SIZES = {
 };
 
 function generateScenario() {
+    smartPracticeActiveKey = isSessionActive() ? getCurrentKey() : null;
+
+    const override = getSmartPracticeOverrideScenario();
+    if (override) {
+        currentScenario = override;
+        renderScenario();
+        return;
+    }
+
     const scenarioType = SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)];
     const numCards = BOARD_SIZES[scenarioType] || 3;
     const board = generateBoard(numCards);
@@ -354,13 +387,61 @@ function handleAnswer(answer) {
         stats.correct++;
     }
 
+    // ENH-001: update skill rating after each decision
+    updateRatingAfterDecision(isCorrect);
+
     // Stats tracked in-memory for this session
 
-    showFeedback(isCorrect, answer);
+    const evFeedback = computeEvFeedback({
+        scenario: currentScenario,
+        userAnswer: answer,
+        isCorrect,
+        seed: `betsize:${stats.total}:${currentScenario.type}`
+    });
+    stats.evLostBb += evFeedback?.evLossBb || 0;
+
+    // ENH-004: record spaced repetition outcome
+    const scenarioKey = smartPracticeActiveKey || buildScenarioKeyFromResult({
+        module: 'bet-sizing-trainer',
+        trainerType: 'bet-sizing',
+        scenario: {
+            type: currentScenario?.type || null,
+            texture: currentScenario?.analysis?.texture || null,
+            handStrength: currentScenario?.analysis?.strength || null
+        }
+    });
+    upsertSrsResult({
+        scenarioKey,
+        isCorrect,
+        evFeedback,
+        timestamp: new Date().toISOString(),
+        payload: {
+            module: 'bet-sizing-trainer',
+            scenario: currentScenario
+        }
+    });
+    if (isSessionActive() && smartPracticeActiveKey) {
+        incrementSessionStats({ isCorrect, evFeedback });
+    }
+
+    showFeedback(isCorrect, answer, evFeedback);
     updateStats();
 }
 
-function showFeedback(isCorrect, userAnswer) {
+function updateRatingAfterDecision(isCorrect) {
+    const rating = storage.getRating();
+    const opp = opponentRatingForContext({ module: 'bet-sizing-trainer', trainerType: 'bet-sizing' });
+    const next = applyDecisionRating(rating.current, isCorrect, opp);
+    const updated = {
+        ...rating,
+        current: next,
+        history: appendRatingHistory(rating.history, next),
+        lastUpdated: new Date().toISOString()
+    };
+    storage.saveRating(updated);
+}
+
+function showFeedback(isCorrect, userAnswer, evFeedback) {
     if (!mainAreaEl) return;
     const mainArea = mainAreaEl;
 
@@ -370,15 +451,22 @@ function showFeedback(isCorrect, userAnswer) {
         btn.style.pointerEvents = 'none';
     });
 
+    const evLoss = evFeedback?.evLossBb ?? (isCorrect ? 0 : null);
+    const grade = evFeedback?.grade || (isCorrect
+        ? { key: 'perfect', label: 'Perfect', icon: '✅' }
+        : { key: 'blunder', label: 'Blunder', icon: '🔴' }
+    );
+
     // Feedback
     const feedback = document.createElement('div');
-    feedback.className = `feedback-section ${isCorrect ? 'correct' : 'incorrect'}`;
+    feedback.className = `feedback-section grade-${grade.key}`;
 
     feedback.innerHTML = `
-        <div class="feedback-icon">${isCorrect ? '✓' : '✗'}</div>
+        <div class="feedback-icon">${grade.icon}</div>
         <div class="feedback-text">
-            <strong>${isCorrect ? 'Correct!' : 'Incorrect'}</strong>
+            <strong>${grade.label}${evLoss === null ? '' : ` (EV loss: ${evLoss.toFixed(2)}bb)`}</strong>
             <p>Optimal sizing: <strong>${BET_SIZES[currentScenario.correctSize].label}</strong></p>
+            ${!isCorrect && evLoss !== null ? `<p>EV impact: <strong>-${evLoss.toFixed(2)}bb</strong></p>` : ''}
             <p class="feedback-explanation">${currentScenario.correctReason}</p>
         </div>
     `;
@@ -400,9 +488,18 @@ function showFeedback(isCorrect, userAnswer) {
     // Next button
     const nextBtn = document.createElement('button');
     nextBtn.className = 'btn btn-primary';
-    nextBtn.textContent = 'Next Scenario';
+    nextBtn.textContent = smartPracticeActiveKey ? 'Next Review' : 'Next Scenario';
     nextBtn.style.marginTop = '1rem';
-    nextBtn.addEventListener('click', generateScenario);
+    nextBtn.addEventListener('click', () => {
+        if (isSessionActive() && smartPracticeActiveKey) {
+            const { done, nextRoute } = advanceSession();
+            if (!done) {
+                window.location.hash = nextRoute;
+                return;
+            }
+        }
+        generateScenario();
+    });
     feedback.appendChild(nextBtn);
 
     mainArea.appendChild(feedback);
@@ -428,7 +525,79 @@ function updateStats() {
             <span class="stat-value">${accuracy}%</span>
             <span class="stat-label">Accuracy</span>
         </div>
+        <div class="stat-item">
+            <span class="stat-value">${stats.evLostBb.toFixed(1)}bb</span>
+            <span class="stat-label">EV Lost</span>
+        </div>
     `;
+}
+
+function cardObjToStr(c) {
+    if (!c) return null;
+    return `${c.rank}${c.suit}`;
+}
+
+function clamp(n, min, max) {
+    return Math.min(Math.max(n, min), max);
+}
+
+function computeEvFeedback({ scenario, userAnswer, isCorrect, seed }) {
+    if (!scenario) return null;
+
+    const heroCards = (scenario.heroHand || []).map(cardObjToStr).filter(Boolean);
+    const board = (scenario.board || []).map(cardObjToStr).filter(Boolean);
+    if (heroCards.length !== 2 || board.length < 3) return null;
+
+    // Approx villain: BB defense vs BTN (sizing trainer is postflop-ish)
+    const villainRange = ranges.BB_DEFENSE_RANGES?.vsBTN || [];
+    const equityRes = simulateEquityVsRange({
+        heroCards,
+        villainRange,
+        board,
+        iterations: 900,
+        seed
+    });
+
+    const equity = equityRes.equity;
+    const potNow = Number(scenario.potSize) || 0;
+
+    const sizeMap = {
+        SMALL: 0.30,
+        MEDIUM: 0.58,
+        LARGE: 0.85,
+        OVERBET: 1.50
+    };
+
+    // Heuristic fold equity: larger bets create more folds, wet boards reduce folds.
+    const tex = scenario.analysis?.texture;
+    const isDry = tex === 'DRY' || tex === 'STATIC';
+    const isWet = tex === 'WET' || tex === 'DYNAMIC';
+    const baseFe = clamp(0.22 + (isDry ? 0.06 : 0) + (isWet ? -0.05 : 0), 0.08, 0.55);
+
+    const evByAction = {};
+    for (const key of Object.keys(sizeMap)) {
+        const frac = sizeMap[key];
+        const bet = potNow * frac;
+        const fe = clamp(baseFe + (frac - 0.58) * 0.18, 0.06, 0.70);
+        evByAction[key] = evBetRaise({
+            equity,
+            potNow,
+            invest: bet,
+            villainCallExtra: bet,
+            foldEquity: fe
+        });
+    }
+
+    // Include check as a baseline action even though it isn't an option.
+    evByAction.__check = evCheckToShowdown({ equity, potNow });
+
+    return computeEvFeedbackFromEvs({
+        evByAction,
+        correctAction: scenario.correctSize,
+        userAnswer,
+        isCorrect,
+        meta: { equity, iterations: equityRes.iterations }
+    });
 }
 
 export default {

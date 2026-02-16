@@ -10,6 +10,9 @@ export function initNavigation(onNavigate) {
     const nav = document.getElementById('main-nav');
     if (!nav) return;
 
+    // Accessibility: mark this as a navigation landmark
+    nav.setAttribute('role', 'navigation');
+
     // Create navigation items
     NAVIGATION_ITEMS.forEach(item => {
         const navItem = createNavItem(item, onNavigate);
@@ -34,6 +37,7 @@ function createNavItem(item, onNavigate) {
     link.href = `#${item.id}`;
     link.className = 'nav-link';
     link.dataset.module = item.id;
+    link.setAttribute('aria-label', `Navigate to ${item.label}`);
 
     const icon = document.createElement('span');
     icon.className = 'nav-icon';
@@ -77,9 +81,6 @@ export function setActiveNavItem(moduleId) {
             link.classList.remove('active');
         }
     });
-
-    // Update URL hash
-    window.location.hash = moduleId;
 }
 
 /**

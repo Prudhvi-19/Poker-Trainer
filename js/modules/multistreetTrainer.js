@@ -1,22 +1,52 @@
 // Multi-Street Trainer Module
 // Full hand progression: Preflop → Flop → Turn → River
 
-import { POSITIONS, ACTIONS, TRAINER_TYPES, RANKS, SUITS, STREET } from '../utils/constants.js';
-import { randomItem, generateId, formatPercentage, randomHand, isInPosition } from '../utils/helpers.js';
+import { ACTIONS, SUITS, STREET } from '../utils/constants.js';
+import { generateId, formatPercentage, randomHand, isInPosition, showToast } from '../utils/helpers.js';
 import { createHandDisplay, createCard } from '../components/Card.js';
 import ranges from '../data/ranges.js';
 import storage from '../utils/storage.js';
 import { createDeck, shuffle } from '../utils/deckManager.js';
 import { analyzeBoard as sharedAnalyzeBoard } from '../utils/boardAnalyzer.js';
 import { evaluateHandBoard } from '../utils/handEvaluator.js';
+import { setPokerShortcutHandler } from '../utils/shortcutManager.js';
+import { applyDecisionRating, appendRatingHistory, opponentRatingForContext } from '../utils/rating.js';
+import { handCodeToConcreteCards, simulateEquityVsRange } from '../utils/equity.js';
+import {
+    computeEvFeedbackFromEvs,
+    evBetRaise,
+    evCallToShowdown,
+    evCheckToShowdown,
+    evFold
+} from '../utils/evFeedback.js';
+import { buildScenarioKeyFromResult, upsertSrsResult } from '../utils/srs.js';
+import { getCurrentKey, isSessionActive, advanceSession, incrementSessionStats } from '../utils/smartPracticeSession.js';
 
 let currentSession = null;
 let currentHand = null;
+
+let smartPracticeActiveKey = null;
 
 // Store element references to avoid getElementById timing issues
 let statsEl = null;
 let handInfoEl = null;
 let scenarioEl = null;
+
+function persistSession() {
+    if (!currentSession) return;
+    currentSession.endTime = new Date().toISOString();
+    storage.saveSession(currentSession);
+}
+
+function upsertCurrentHandIntoSession() {
+    if (!currentSession || !currentHand) return;
+    const idx = currentSession.hands.findIndex(h => h.id === currentHand.id);
+    if (idx === -1) {
+        currentSession.hands.push(currentHand);
+    } else {
+        currentSession.hands[idx] = currentHand;
+    }
+}
 
 function render() {
     const container = document.createElement('div');
@@ -41,11 +71,14 @@ function render() {
 
     // Scenario area - store reference directly
     scenarioEl = document.createElement('div');
-    scenarioEl.id = 'multistreet-scenario';
+    scenarioEl.id = 'scenario-container';
     container.appendChild(scenarioEl);
 
     // Initialize session (now uses stored references)
     startNewSession();
+
+    // ENH-004: mark if Smart Practice is active
+    smartPracticeActiveKey = isSessionActive() ? getCurrentKey() : null;
 
     // Add keyboard shortcut listener
     const keyboardHandler = (e) => {
@@ -65,24 +98,26 @@ function render() {
         const buttons = scenarioEl.querySelectorAll('.action-buttons .btn');
         if (buttons.length === 0) return;
 
+        // Deterministic action mapping (aligns with BUG-029 fix in postflop trainer)
+        const desiredActions = action === 'raise'
+            ? [ACTIONS.RAISE, ACTIONS.BET]
+            : action === 'call'
+                ? [ACTIONS.CALL, ACTIONS.CHECK]
+                : [action];
+
         let targetButton = null;
-        buttons.forEach(btn => {
-            const btnText = btn.textContent.toLowerCase();
-            if (btnText.includes(action) || (action === 'raise' && btnText.includes('bet'))) {
-                targetButton = btn;
-            }
-        });
+        for (const desired of desiredActions) {
+            targetButton = Array.from(buttons).find(btn => btn.dataset.action === desired) || null;
+            if (targetButton) break;
+        }
 
         if (targetButton) {
             targetButton.click();
         }
     };
 
-    document.addEventListener('poker-shortcut', keyboardHandler);
-
-    window.addEventListener('hashchange', () => {
-        document.removeEventListener('poker-shortcut', keyboardHandler);
-    }, { once: true });
+    // Install/replace active shortcut handler (single global listener)
+    setPokerShortcutHandler(keyboardHandler);
 
     return container;
 }
@@ -99,17 +134,42 @@ function startNewSession() {
 
     updateStats();
     startNewHand();
+
+    // Persist immediately so rapid navigation doesn't lose the session shell (BUG-017)
+    persistSession();
 }
 
 function startNewHand() {
+    smartPracticeActiveKey = isSessionActive() ? getCurrentKey() : null;
     currentHand = generateNewHand();
+    if (!currentHand) {
+        showToast('Could not generate a new hand. Retrying...', 'error');
+        currentHand = generateNewHand();
+    }
+    if (!currentHand) {
+        showToast('Could not generate a new hand. Please refresh the page.', 'error', 6000);
+        return;
+    }
+
+    // Track in session immediately so decisions are not lost mid-hand (BUG-017)
+    upsertCurrentHandIntoSession();
+    persistSession();
+
     updateHandInfo();
     showCurrentStreet();
 }
 
 function generateNewHand() {
-    const heroPosition = randomItem(POSITIONS);
-    const villainPosition = randomItem(POSITIONS.filter(p => p !== heroPosition));
+    try {
+    // For production-grade training determinism and correct range lookups,
+    // constrain to a supported, well-defined heads-up configuration (BTN vs BB).
+    // We still randomize which seat the hero is in so we can train both:
+    // - BTN RFI (open) and
+    // - BB defense vs BTN open
+
+    const heroIsAggressor = Math.random() > 0.5;
+    const heroPosition = heroIsAggressor ? 'BTN' : 'BB';
+    const villainPosition = heroIsAggressor ? 'BB' : 'BTN';
 
     // Generate hero hand
     const heroHand = randomHand();
@@ -117,13 +177,18 @@ function generateNewHand() {
     // Generate actual cards with suits for the hero hand
     const heroCards = generateHeroCards(heroHand);
 
-    // Determine who is preflop aggressor
-    const heroIsAggressor = Math.random() > 0.5;
-
     // Pre-generate full board at hand start to ensure consistency
     const fullBoard = generateFullBoard(heroCards);
+    if (!fullBoard || fullBoard.length !== 5) {
+        return null;
+    }
 
-    return {
+    // Heads-up blinds model (BTN is SB in HU)
+    const blinds = { BTN: 0.5, BB: 1.0 };
+    const heroBlind = blinds[heroPosition] ?? 0;
+    const villainBlind = blinds[villainPosition] ?? 0;
+
+    const hand = {
         id: generateId(),
         heroPosition,
         villainPosition,
@@ -131,14 +196,40 @@ function generateNewHand() {
         heroCards,
         heroIsAggressor,
         currentStreet: STREET.PREFLOP,
-        pot: 1.5, // Blinds posted
-        heroStack: 100,
-        villainStack: 100,
+        // Keep pot/stacks internally consistent (fixes BUG-009)
+        pot: heroBlind + villainBlind,
+        heroStack: 100 - heroBlind,
+        villainStack: 100 - villainBlind,
+        heroContribution: heroBlind,
+        villainContribution: villainBlind,
         board: [],
         fullBoard, // All 5 cards pre-generated, revealed incrementally
         actions: [],
-        decisions: []
+        decisions: [],
+        isComplete: false
     };
+
+    // If villain is opening (hero is BB defending), apply the villain's open
+    // immediately so the displayed pot/stack state matches the scenario text.
+    if (!heroIsAggressor) {
+        applyVillainOpen(hand, 2.5);
+    }
+
+    return hand;
+    } catch (err) {
+        console.error('Error generating multistreet hand:', err);
+        return null;
+    }
+}
+
+function applyVillainOpen(hand, openSize) {
+    const add = openSize - (hand.villainContribution ?? 0);
+    if (add > 0) {
+        hand.pot += add;
+        hand.villainStack -= add;
+        hand.villainContribution = openSize;
+    }
+    hand.actions.push(`${hand.villainPosition} raises to ${openSize}bb`);
 }
 
 function generateHeroCards(hand) {
@@ -280,6 +371,7 @@ function showCurrentStreet() {
         const btn = document.createElement('button');
         btn.className = `btn btn-${option.action.toLowerCase()}`;
         btn.textContent = option.label;
+        btn.dataset.action = option.action;
 
         btn.addEventListener('click', () => handleDecision(scenario, option.action));
 
@@ -304,6 +396,7 @@ function generatePreflopDecision() {
     // Simplified: just practice opening or facing a raise
     if (currentHand.heroIsAggressor) {
         // Hero opens
+        const openSize = 2.5;
         const correctAction = ranges.getRecommendedAction(
             currentHand.heroHand.display,
             currentHand.heroPosition,
@@ -314,32 +407,29 @@ function generatePreflopDecision() {
             street: STREET.PREFLOP,
             correctAction,
             description: `You are ${currentHand.heroPosition}. Folded to you. What do you do?`,
+            openSize,
             options: [
                 { action: ACTIONS.RAISE, label: 'Raise 2.5bb' },
                 { action: ACTIONS.FOLD, label: 'Fold' }
             ]
         };
     } else {
-        // Hero faces a raise - check for 3-bet or call/fold
-        const posKey = `vs${currentHand.villainPosition}`;
-
-        // Determine correct action: 3-bet, call, or fold
-        let correctAction = ACTIONS.FOLD;
-
-        // Check if ranges exist for this position matchup
-        const threeBetRange = ranges.THREE_BET_RANGES[posKey];
-        const defenseRange = ranges.BB_DEFENSE_RANGES[posKey];
-
-        if (threeBetRange && ranges.isInRange(currentHand.heroHand.display, threeBetRange)) {
-            correctAction = ACTIONS.RAISE;
-        } else if (defenseRange && ranges.isInRange(currentHand.heroHand.display, defenseRange)) {
-            correctAction = ACTIONS.CALL;
-        }
+        // Hero faces a raise (villain open). Since we constrain to BTN vs BB,
+        // the correct response is BB defense vs BTN open.
+        const openSize = 2.5;
+        const threeBetSize = 9;
+        const correctAction = ranges.getRecommendedAction(
+            currentHand.heroHand.display,
+            currentHand.villainPosition, // BTN
+            'bb-defense'
+        );
 
         return {
             street: STREET.PREFLOP,
             correctAction,
             description: `${currentHand.villainPosition} raises to 2.5bb. You are ${currentHand.heroPosition}. What do you do?`,
+            openSize,
+            threeBetSize,
             options: [
                 { action: ACTIONS.CALL, label: 'Call 2.5bb' },
                 { action: ACTIONS.RAISE, label: '3-Bet to 9bb' },
@@ -477,6 +567,8 @@ function determineDefenseAction(strength, texture, hasPosition) {
 function handleDecision(scenario, userAction) {
     const isCorrect = userAction === scenario.correctAction;
 
+    const evFeedback = computeEvFeedback({ scenario, userAction, isCorrect, seed: `multistreet:${currentHand.id}:${currentHand.currentStreet}` });
+
     currentSession.totalDecisions++;
     if (isCorrect) {
         currentSession.correctDecisions++;
@@ -486,38 +578,132 @@ function handleDecision(scenario, userAction) {
         street: currentHand.currentStreet,
         action: userAction,
         correctAction: scenario.correctAction,
-        isCorrect
+        isCorrect,
+        evFeedback
     });
+
+    // ENH-004: record spaced repetition outcome.
+    // BUG-040: include at least heroIsAggressor + texture + handStrength to avoid overly-coarse keys.
+    const scenarioKey = smartPracticeActiveKey || buildScenarioKeyFromResult({
+        module: currentSession.module,
+        trainerType: 'multistreet',
+        scenario: {
+            street: currentHand.currentStreet,
+            position: currentHand.heroPosition,
+            heroIsAggressor: currentHand.heroIsAggressor,
+            texture: classifyTexture(currentHand.board),
+            handStrength: scenario.handStrength || null
+        }
+    });
+    upsertSrsResult({
+        scenarioKey,
+        isCorrect,
+        evFeedback,
+        timestamp: new Date().toISOString(),
+        payload: {
+            module: currentSession.module,
+            street: currentHand.currentStreet,
+            position: currentHand.heroPosition,
+            heroIsAggressor: currentHand.heroIsAggressor
+        }
+    });
+    if (isSessionActive() && smartPracticeActiveKey) {
+        incrementSessionStats({ isCorrect, evFeedback });
+    }
 
     // Update pot/stack based on action
     updatePotAndStack(userAction, scenario);
 
-    showDecisionFeedback(scenario, userAction, isCorrect);
+    // ENH-001: update skill rating after each decision
+    updateRatingAfterDecision(isCorrect);
+
+    // Persist in-progress hand after every decision (BUG-017)
+    upsertCurrentHandIntoSession();
+    persistSession();
+
+    showDecisionFeedback(scenario, userAction, isCorrect, evFeedback);
     updateStats();
 }
 
+function updateRatingAfterDecision(isCorrect) {
+    const rating = storage.getRating();
+    const opp = opponentRatingForContext({ module: currentSession?.module, trainerType: 'multistreet', street: currentHand?.currentStreet });
+    const next = applyDecisionRating(rating.current, isCorrect, opp);
+    const updated = {
+        ...rating,
+        current: next,
+        history: appendRatingHistory(rating.history, next),
+        lastUpdated: new Date().toISOString()
+    };
+    storage.saveRating(updated);
+}
+
 function updatePotAndStack(action, scenario) {
-    if (action === ACTIONS.RAISE && currentHand.currentStreet === STREET.PREFLOP) {
-        // Hero raises, villain will call (simplified)
-        const raiseSize = 2.5;
-        currentHand.pot += raiseSize; // Hero's raise goes to pot
-        currentHand.heroStack -= raiseSize;
-        // Villain calls
-        currentHand.pot += raiseSize;
-        currentHand.villainStack -= raiseSize;
-        currentHand.actions.push(`${currentHand.heroPosition} raises ${raiseSize}bb, Villain calls`);
-    } else if (action === ACTIONS.CALL) {
-        // Hero calls a bet/raise
-        const callSize = currentHand.currentStreet === STREET.PREFLOP ? 2.5 : currentHand.pot * 0.67;
-        // Add villain's bet first (it wasn't added when the scenario was generated)
-        if (currentHand.currentStreet !== STREET.PREFLOP) {
-            currentHand.pot += callSize; // Villain's bet
-            currentHand.villainStack -= callSize;
-        } else {
-            // Preflop: villain already raised 2.5, add their raise
-            currentHand.pot += callSize;
-            currentHand.villainStack -= callSize;
+    if (currentHand.currentStreet === STREET.PREFLOP) {
+        const openSize = scenario?.openSize ?? 2.5;
+        const threeBetSize = scenario?.threeBetSize ?? 9;
+
+        const putInTotal = (player, total) => {
+            if (player === 'hero') {
+                const already = currentHand.heroContribution ?? 0;
+                const add = total - already;
+                if (add > 0) {
+                    currentHand.pot += add;
+                    currentHand.heroStack -= add;
+                    currentHand.heroContribution = total;
+                }
+            } else {
+                const already = currentHand.villainContribution ?? 0;
+                const add = total - already;
+                if (add > 0) {
+                    currentHand.pot += add;
+                    currentHand.villainStack -= add;
+                    currentHand.villainContribution = total;
+                }
+            }
+        };
+
+        if (action === ACTIONS.RAISE) {
+            if (currentHand.heroIsAggressor) {
+                // Hero opens, villain calls (simplified)
+                putInTotal('hero', openSize);
+                putInTotal('villain', openSize);
+                currentHand.actions.push(`${currentHand.heroPosition} raises to ${openSize}bb, ${currentHand.villainPosition} calls`);
+            } else {
+                // Villain opened, hero 3-bets, villain calls (simplified)
+                // Villain open already applied before the decision (see generateNewHand)
+                putInTotal('hero', threeBetSize);
+                putInTotal('villain', threeBetSize);
+                currentHand.actions.push(`${currentHand.heroPosition} 3-bets to ${threeBetSize}bb, ${currentHand.villainPosition} calls`);
+            }
+            return;
         }
+
+        if (action === ACTIONS.CALL) {
+            // Facing an open, hero calls (simplified)
+            // Villain open already applied before the decision (see generateNewHand)
+            putInTotal('hero', openSize);
+            currentHand.actions.push(`${currentHand.heroPosition} calls`);
+            return;
+        }
+
+        if (action === ACTIONS.FOLD) {
+            // If it was folded to hero, they simply fold and lose their blind.
+            // If hero was facing an open, villain open was already applied.
+            currentHand.actions.push(`${currentHand.heroPosition} folds`);
+            return;
+        }
+
+        // Check shouldn't be possible preflop in our scenarios
+        return;
+    }
+
+    if (action === ACTIONS.CALL) {
+        // Hero calls a bet/raise postflop
+        const callSize = currentHand.pot * 0.67;
+        // Add villain's bet first (it wasn't added when the scenario was generated)
+        currentHand.pot += callSize;
+        currentHand.villainStack -= callSize;
         // Then add hero's call
         currentHand.pot += callSize;
         currentHand.heroStack -= callSize;
@@ -552,7 +738,7 @@ function updatePotAndStack(action, scenario) {
     }
 }
 
-function showDecisionFeedback(scenario, userAction, isCorrect) {
+function showDecisionFeedback(scenario, userAction, isCorrect, evFeedback) {
     if (!scenarioEl) return;
 
     const card = scenarioEl.querySelector('.scenario-card');
@@ -563,12 +749,17 @@ function showDecisionFeedback(scenario, userAction, isCorrect) {
         buttons.style.display = 'none';
     }
 
+    const evLoss = evFeedback?.evLossBb ?? (isCorrect ? 0 : null);
+    const grade = evFeedback?.grade || (isCorrect ? { key: 'perfect', label: 'Perfect', icon: '✅' } : { key: 'blunder', label: 'Blunder', icon: '🔴' });
+
     const feedback = document.createElement('div');
-    feedback.className = `feedback-panel ${isCorrect ? 'correct' : 'incorrect'}`;
+    feedback.className = `feedback-panel grade-${grade.key}`;
 
     const title = document.createElement('div');
     title.className = 'feedback-title';
-    title.textContent = isCorrect ? '✅ Correct!' : '❌ Incorrect';
+    title.textContent = evLoss === null
+        ? (isCorrect ? '✅ Correct!' : '❌ Incorrect')
+        : `${grade.icon} ${grade.label} (EV loss: ${evLoss.toFixed(2)}bb)`;
 
     const explanation = document.createElement('div');
     explanation.className = 'feedback-explanation';
@@ -589,11 +780,13 @@ function showDecisionFeedback(scenario, userAction, isCorrect) {
         explanation.innerHTML = `
             <p>Your action: <strong>${userAction.toUpperCase()}</strong></p>
             <p>GTO action: <strong>${scenario.correctAction.toUpperCase()}</strong></p>
+            ${evLoss !== null ? `<p>EV impact: <strong>-${evLoss.toFixed(2)}bb</strong></p>` : ''}
             ${strengthLabel ? `<p style="margin-top: 0.5rem; color: var(--color-text-secondary);">Hand strength: ${strengthLabel}</p>` : ''}
         `;
     } else {
         explanation.innerHTML = `
             <p>Good decision! Continuing to next street...</p>
+            ${evLoss !== null ? `<p>EV impact: <strong>-${evLoss.toFixed(2)}bb</strong></p>` : ''}
             ${strengthLabel ? `<p style="margin-top: 0.5rem; color: var(--color-text-secondary);">Hand strength: ${strengthLabel}</p>` : ''}
         `;
     }
@@ -603,20 +796,42 @@ function showDecisionFeedback(scenario, userAction, isCorrect) {
 
     // Determine next action
     const canContinue = userAction !== ACTIONS.FOLD && canAdvanceStreet();
+    if (!canContinue) {
+        currentHand.isComplete = true;
+        upsertCurrentHandIntoSession();
+        persistSession();
+    }
 
     if (canContinue) {
         const nextBtn = document.createElement('button');
         nextBtn.className = 'btn btn-primary';
-        nextBtn.textContent = 'Continue to Next Street';
+        nextBtn.textContent = smartPracticeActiveKey ? 'Next Review' : 'Continue to Next Street';
         nextBtn.style.marginTop = '1rem';
-        nextBtn.addEventListener('click', () => advanceStreet());
+        nextBtn.addEventListener('click', () => {
+            if (isSessionActive() && smartPracticeActiveKey) {
+                const { done, nextRoute } = advanceSession();
+                if (!done) {
+                    window.location.hash = nextRoute;
+                    return;
+                }
+            }
+            advanceStreet();
+        });
         feedback.appendChild(nextBtn);
     } else {
         const newHandBtn = document.createElement('button');
         newHandBtn.className = 'btn btn-primary';
-        newHandBtn.textContent = userAction === ACTIONS.FOLD ? 'New Hand (Folded)' : 'New Hand (Complete)';
+        newHandBtn.textContent = smartPracticeActiveKey ? 'Next Review' : (userAction === ACTIONS.FOLD ? 'New Hand (Folded)' : 'New Hand (Complete)');
         newHandBtn.style.marginTop = '1rem';
         newHandBtn.addEventListener('click', () => {
+            if (isSessionActive() && smartPracticeActiveKey) {
+                const { done, nextRoute } = advanceSession();
+                if (!done) {
+                    window.location.hash = nextRoute;
+                    return;
+                }
+            }
+
             saveHandToSession();
             startNewHand();
         });
@@ -650,6 +865,10 @@ function advanceStreet() {
 
         updateHandInfo();
         showCurrentStreet();
+
+        // Persist after street advancement so navigation doesn't lose state
+        upsertCurrentHandIntoSession();
+        persistSession();
     }
 }
 
@@ -691,12 +910,10 @@ function createBoardDisplay(board) {
 }
 
 function saveHandToSession() {
-    currentSession.hands.push(currentHand);
-
-    // Save session after every hand (storage handles deduplication by ID)
-    // This ensures sessions are saved even if user plays < 5 hands
-    currentSession.endTime = new Date().toISOString();
-    storage.saveSession(currentSession);
+    // Upsert (avoid duplicates) and persist
+    currentHand.isComplete = true;
+    upsertCurrentHandIntoSession();
+    persistSession();
 }
 
 function updateStats() {
@@ -709,15 +926,22 @@ function updateStats() {
     statsEl.innerHTML = '';
     statsEl.className = 'session-stats';
 
+    const totalEvLost = currentSession.hands.reduce((sum, h) => {
+        const handLoss = (h.decisions || []).reduce((s, d) => s + (d.evFeedback?.evLossBb || 0), 0);
+        return sum + handLoss;
+    }, 0);
+
     const handsEl = createStatBox(currentSession.hands.length, 'Hands');
     const decisionsEl = createStatBox(currentSession.totalDecisions, 'Decisions');
     const correctEl = createStatBox(currentSession.correctDecisions, 'Correct');
     const accuracyEl = createStatBox(formatPercentage(accuracy, 0), 'Accuracy');
+    const evEl = createStatBox(`${totalEvLost.toFixed(1)}bb`, 'EV Lost');
 
     statsEl.appendChild(handsEl);
     statsEl.appendChild(decisionsEl);
     statsEl.appendChild(correctEl);
     statsEl.appendChild(accuracyEl);
+    statsEl.appendChild(evEl);
 }
 
 function createStatBox(value, label) {
@@ -736,6 +960,121 @@ function createStatBox(value, label) {
     box.appendChild(labelEl);
 
     return box;
+}
+
+function computeEvFeedback({ scenario, userAction, isCorrect, seed }) {
+    // Only compute for decisions with a hero hand code we can concretize
+    const handCode = currentHand?.heroHand?.display;
+    if (!handCode || !currentHand?.board) return null;
+
+    const used = new Set([...(currentHand.board || []), ...(currentHand.heroCards || [])]);
+    const heroCards = currentHand.heroCards?.length === 2
+        ? currentHand.heroCards
+        : handCodeToConcreteCards(handCode, used, seed);
+    if (!heroCards) return null;
+
+    // Choose villain range by street / role.
+    // Preflop uses actual range tables; postflop uses the closest approximation.
+    let villainRange = [];
+    if (scenario.street === STREET.PREFLOP) {
+        if (currentHand.heroIsAggressor) {
+            // folded-to-hero open spot: villain is BB
+            villainRange = ranges.BB_DEFENSE_RANGES?.vsBTN || [];
+        } else {
+            // hero is BB facing BTN open
+            villainRange = ranges.RFI_RANGES?.BTN || [];
+        }
+    } else {
+        // postflop: approximate villain as BB defend if hero was aggressor, else BTN RFI
+        villainRange = currentHand.heroIsAggressor
+            ? (ranges.BB_DEFENSE_RANGES?.vsBTN || [])
+            : (ranges.RFI_RANGES?.BTN || []);
+    }
+
+    const equityRes = simulateEquityVsRange({
+        heroCards,
+        villainRange,
+        board: currentHand.board,
+        iterations: 1200,
+        seed
+    });
+
+    const equity = equityRes.equity;
+    const meta = { equity, iterations: equityRes.iterations };
+
+    // Pot model
+    const potNow = Number(currentHand.pot) || 0;
+
+    const evByAction = {};
+    evByAction[ACTIONS.FOLD] = evFold();
+    evByAction[ACTIONS.CHECK] = evCheckToShowdown({ equity, potNow });
+
+    // Preflop sizing model
+    if (scenario.street === STREET.PREFLOP) {
+        const openSize = scenario.openSize ?? 2.5;
+        const threeBetSize = scenario.threeBetSize ?? 9;
+
+        if (scenario.options?.some(o => o.action === ACTIONS.CALL)) {
+            evByAction[ACTIONS.CALL] = evCallToShowdown({
+                equity,
+                potNow,
+                callCost: Math.max(0, openSize - (currentHand.heroContribution ?? 0))
+            });
+        }
+
+        if (scenario.options?.some(o => o.action === ACTIONS.RAISE)) {
+            const totalTo = currentHand.heroIsAggressor ? openSize : threeBetSize;
+            const invest = Math.max(0, totalTo - (currentHand.heroContribution ?? 0));
+            const villainCallExtra = Math.max(0, totalTo - (currentHand.villainContribution ?? 0));
+            const fe = currentHand.heroIsAggressor ? 0.35 : 0.22;
+            evByAction[ACTIONS.RAISE] = evBetRaise({
+                equity,
+                potNow,
+                invest,
+                villainCallExtra,
+                foldEquity: fe
+            });
+        }
+    } else {
+        // Postflop sizing model: use 67% pot bet / calls as in this trainer.
+        const betSize = potNow * 0.67;
+
+        // If villain is the aggressor in this street, the decision is facing a bet.
+        // Include villain bet in potNow for call/raise EVs.
+        const facingBet = !currentHand.heroIsAggressor;
+        const potSeen = facingBet ? potNow + betSize : potNow;
+
+        if (scenario.options?.some(o => o.action === ACTIONS.BET)) {
+            evByAction[ACTIONS.BET] = evBetRaise({
+                equity,
+                potNow,
+                invest: betSize,
+                villainCallExtra: betSize,
+                foldEquity: 0.20
+            });
+        }
+        if (scenario.options?.some(o => o.action === ACTIONS.CALL)) {
+            evByAction[ACTIONS.CALL] = evCallToShowdown({ equity, potNow: potSeen, callCost: betSize });
+        }
+        if (scenario.options?.some(o => o.action === ACTIONS.RAISE)) {
+            const raiseTo = betSize * 3;
+            evByAction[ACTIONS.RAISE] = evBetRaise({
+                equity,
+                potNow: potSeen,
+                invest: raiseTo,
+                villainCallExtra: Math.max(0, raiseTo - betSize),
+                foldEquity: 0.32
+            });
+        }
+    }
+
+    return computeEvFeedbackFromEvs({
+        evByAction,
+        correctAction: scenario.correctAction,
+        userAnswer: userAction,
+        isCorrect,
+        meta
+    });
 }
 
 export default {

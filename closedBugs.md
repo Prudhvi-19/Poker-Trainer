@@ -1,0 +1,344 @@
+
+# Closed Bugs
+
+## 2026-02-15
+
+### FIXED — BUG-001 Settings can crash if stored settings are missing newer keys
+
+- **Severity:** P0
+- **Commit:** `b2d56ae`
+- **Fix:** `storage.getSettings()` now merges stored settings into `DEFAULT_SETTINGS` so missing keys can’t crash Settings.
+- **Verification:** Loaded `#settings` in browser without console errors.
+
+### FIXED — BUG-002 `defaultSessionLength.toString()` can throw
+
+- **Severity:** P0
+- **Commit:** `b2d56ae`
+- **Fix:** Hardened to `String(currentSettings.defaultSessionLength ?? DEFAULT_SETTINGS.defaultSessionLength)`.
+- **Verification:** Loaded `#settings` successfully.
+
+### FIXED — BUG-003 Navigation helper mutates URL hash (redundant + can cause double navigation)
+
+- **Severity:** P1
+- **Commit:** `b2d56ae`
+- **Fix:** `setActiveNavItem()` is now UI-only (no `window.location.hash` mutation).
+- **Verification:** Navigated via sidebar; app continues to load correctly.
+
+### FIXED — BUG-004 Postflop trainer keyboard instructions don’t match actual shortcuts
+
+- **Severity:** P1
+- **Commit:** `b2d56ae`
+- **Fix:** Added global `b` keyboard shortcut mapping to the existing `raise` action.
+- **Verification:** Manual review of `js/app.js` shortcut dispatch; app loads.
+
+### FIXED — BUG-006 Equity calculator: Random hand / Clear board don’t refresh duplicate-card disabling
+
+- **Severity:** P2
+- **Commit:** `b2d56ae`
+- **Fix:** Call `updateCardAvailability()` after programmatic value changes.
+- **Verification:** App loads; requires quick in-UI interaction verification later.
+
+### FIXED — BUG-010 Scenario container id inconsistencies can break trainer keyboard shortcuts
+
+- **Severity:** P2
+- **Commit:** `5914195`
+- **Fix:** Standardized trainer scenario containers to use `id="scenario-container"`.
+- **Verification:** Code inspection; interactive regression test pending.
+
+### FIXED — BUG-005 Stats “common mistakes” grouping key uses `scenario.action` (field doesn’t exist)
+
+- **Severity:** P2
+- **Commit:** `41e32a3`
+- **Fix:** Corrected the aggregation key to use stable scenario fields instead of nonexistent `scenario.action`.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-007 Multi-street trainer: incorrect defense ranges used when facing a raise
+
+- **Severity:** P1
+- **Commit:** `615f7e0`
+- **Fix:** Constrained multistreet preflop to supported heads-up BTN/BB scenarios and uses `getRecommendedAction(..., 'bb-defense')` for BB vs BTN opens.
+- **Verification:** Loaded `#multistreet-trainer` in browser; no console errors.
+
+### FIXED — BUG-008 Multi-street trainer: unsupported matchup generation (missing `vs...` keys)
+
+- **Severity:** P2
+- **Commit:** `615f7e0`
+- **Fix:** Scenario generation no longer produces unsupported position matchups; constrained to BTN/BB.
+- **Verification:** Loaded `#multistreet-trainer` in browser.
+
+### FIXED — BUG-009 Multi-street trainer: pot/stacks inconsistent with blinds posting
+
+- **Severity:** P2
+- **Commit:** `615f7e0`
+- **Fix:** Added heads-up blind posting + tracked contributions so pot/stack updates are consistent with scenario actions.
+- **Verification:** Loaded `#multistreet-trainer` in browser and interacted with actions.
+
+### FIXED — BUG-011 Event listener memory leak across trainer modules
+
+- **Severity:** P0
+- **Commits:** `76f8897`, `11d9197`
+- **Fix:** Centralized `poker-shortcut` handling via `js/utils/shortcutManager.js` and clear the active handler on every route change in `js/router.js`.
+- **Verification:** Code inspection; manual navigation test recommended.
+
+### FIXED — BUG-012 XSS vulnerability in Modal innerHTML
+
+- **Severity:** P0
+- **Commit:** `ae21f00`
+- **Fix:** `showModal()` no longer injects raw HTML strings; string content is rendered via `textContent`.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-013 localStorage quota exceeded silently drops sessions
+
+- **Severity:** P0
+- **Commit:** `f82b566`
+- **Fix:** Show toast warnings before truncating sessions and on save failure so user is informed about data loss / action needed.
+- **Verification:** Code inspection; manual storage-fill test recommended.
+
+## 2026-02-16
+
+### SHIPPED — ENH-001 ELO / Skill Rating System
+
+- **Severity:** E0 (Must-Ship)
+- **Commit:** `0716cb6`
+- **Fix/Feature:** Added a basic v1 skill rating (ELO-like) that updates after each decision and is displayed on the Dashboard.
+- **Verification:** Manual smoke test (app loads; rating updates; no console errors).
+
+### FIXED — BUG-014 Infinite recursion in cold call scenario generation
+
+- **Severity:** P1
+- **Commit:** `2841aa2`
+- **Fix:** Avoid empty filtered position arrays during cold-call scenario generation (prevents recursion crash).
+- **Verification:** Code inspection; scenario generation no longer recurses on empty pools.
+
+### FIXED — BUG-015 Keyboard shortcuts fire through modals / feedback (double-action)
+
+- **Severity:** P1
+- **Commits:** `76f8897`, `11d9197`, `a5f1568`
+- **Fix:** Centralized shortcut handling and added guards so Space on focused feedback buttons doesn’t also dispatch a global “next” shortcut.
+- **Verification:** Code inspection; manual in-UI test recommended.
+
+### FIXED — BUG-016 Multi-street trainer crash on hand generation failures
+
+- **Severity:** P1
+- **Commit:** `7efdcf3`
+- **Fix:** Guard `generateNewHand()` failures; retry once, toast on failure, and avoid dereferencing null hand.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-017 Session save not guaranteed on rapid navigation
+
+- **Severity:** P1
+- **Commit:** `7efdcf3`
+- **Fix:** Persist session shell immediately, and persist in-progress hand/session after each decision and street advancement.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-018 Incorrect straight draw detection logic
+
+- **Severity:** P1
+- **Commit:** `445e2a5`
+- **Fix:** Correct wheel straight-draw detection to require the specific wheel ranks rather than a permissive low-card count.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-019 `randomItem()` returns undefined on empty arrays
+
+- **Severity:** P2
+- **Commit:** `e4d5d15`
+- **Fix:** `randomItem([])` now returns `null`.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-020 No schema validation on imported JSON data
+
+- **Severity:** P2
+- **Commit:** `e31b8db`
+- **Fix:** Validate imported JSON structure before importing; reject invalid types; avoid forced reload and refresh streak UI in-place.
+- **Verification:** Code inspection.
+
+### VERIFIED — BUG-021 Hand replayer index-zero false-negative check
+
+- **Severity:** P2
+- **Status:** No change required
+- **Notes:** Current code uses `currentSessionIndex === null` so index `0` is handled correctly.
+
+### FIXED — BUG-022 No progress indicator for Monte Carlo equity calculation
+
+- **Severity:** P2
+- **Commit:** `b6122d4`
+- **Fix:** Show spinner and disable Calculate button while simulation runs.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-023 Settings font-size silently falls back on invalid values
+
+- **Severity:** P2
+- **Commit:** `52f4d9b`
+- **Fix:** Validate stored `fontSize` on startup; reset invalid values to Medium and show a toast.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-024 Equity calculator kicker sorting ambiguity
+
+- **Severity:** P2
+- **Commit:** `9d03a33`
+- **Fix:** Document rank-index encoding assumptions so kicker ordering is explicit.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-025 Streak display not updated on data import
+
+- **Severity:** P2
+- **Commit:** `e31b8db`
+- **Fix:** Refresh in-memory settings and update streak display after import; no page reload required.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-026 Missing ARIA labels on navigation links
+
+- **Severity:** P3
+- **Commit:** `b8be37f`
+- **Fix:** Add `aria-label` to nav links and `role="navigation"` landmark.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-027 No input trimming on hand string parsing
+
+- **Severity:** P3
+- **Commit:** `6c2489b`
+- **Fix:** Trim whitespace in `parseHand()`.
+- **Verification:** Code inspection.
+
+### VERIFIED — BUG-028 Inline styles reference CSS variables that may not exist
+
+- **Severity:** P3
+- **Status:** No change required
+- **Notes:** `--border-radius` is defined in `css/variables.css`.
+
+### FIXED — BUG-029 Action buttons matched by textContent substring (fragile)
+
+- **Severity:** P3
+- **Commits:** `3f000b8`, `091845a`
+- **Fix:** Set `data-action` on buttons and match deterministically; supports raise/bet and call/check aliasing.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-030 Private method `_getSessionCounts()` called from dashboard
+
+- **Severity:** P3
+- **Commit:** `df30357`
+- **Fix:** Exposed public `stats.getSessionCounts()` and updated dashboard to use it.
+- **Verification:** Code inspection.
+
+### SHIPPED — ENH-002 EV-based 4-tier decision feedback + EV impact
+
+- **Severity:** E0 (Must-Ship)
+- **Commits:** `b6bb1b8`, `78a7f45`
+- **Fix/Feature:** Added Monte Carlo equity (`js/utils/equity.js`) + EV grading utilities (`js/utils/evFeedback.js`) and integrated tiered feedback + EV loss (bb) into Preflop, Postflop, Multi-street, C-Bet, and Bet Sizing trainers. Added feedback tier styling.
+- **Verification:** Manual smoke test (app loads; feedback renders; no console errors).
+
+### SHIPPED — ENH-003 Progressive Web App (PWA) with Offline Support
+
+- **Severity:** E0 (Must-Ship)
+- **Commit:** `5924809`
+- **Fix/Feature:** Added `manifest.webmanifest`, placeholder icons, and a service worker with precaching + cache-first fetch strategy. Added service worker registration in `js/app.js`.
+- **Verification:** Loaded app via `http://127.0.0.1:5173` and confirmed `service-worker.js`/manifest/icons were served. Offline behavior should be validated via DevTools (Application → Service Workers/Cache).
+
+### SHIPPED — ENH-004 Smart Practice (Spaced Repetition)
+
+- **Severity:** E0 (Must-Ship)
+- **Commit:** `03cf4e3`
+- **Fix/Feature:** Implemented a simplified SM-2 scheduler in `js/utils/srs.js`, stored in localStorage. Added Dashboard “Smart Practice” section to start a review queue. Integrated SRS result recording into Preflop/Postflop/Multi-street/C-bet/Bet Sizing trainers and added cross-module session routing via `js/utils/smartPracticeSession.js`.
+- **Verification:** Manual smoke test (app loads; Smart Practice card renders; trainers compile). Full end-to-end SRS queue replay should be verified interactively.
+
+### FIXED — BUG-031 Board Texture & Pot Odds trainers missing EV feedback
+
+- **Severity:** P1
+- **Branch/Commit:** `fix/review-bugs-031-034` (pending)
+- **Fix:** Added EV-grade styled feedback (4-tier) + EV-lost stats to `boardTextureTrainer` and `potOddsTrainer`.
+
+### FIXED — BUG-032 Board Texture & Pot Odds trainers not integrated with SRS
+
+- **Severity:** P1
+- **Branch/Commit:** `fix/review-bugs-031-034` (pending)
+- **Fix:** Added `upsertSrsResult` recording + Smart Practice session routing/resume support for these trainers; updated `smartPracticeSession.getRouteForKeyObj` to route to Board Texture & Pot Odds modules.
+
+### FIXED — BUG-033 PWA icons are placeholder stubs
+
+- **Severity:** P1
+- **Branch/Commit:** `fix/review-bugs-031-034` (pending)
+- **Fix:** Generated real poker-themed app icons (512/192/180) and added maskable icon purpose in `manifest.webmanifest`.
+
+### FIXED — BUG-034 Service worker cache version is static
+
+- **Severity:** P1
+- **Branch/Commit:** `fix/review-bugs-031-034` (pending)
+- **Fix:** Switched service worker caching to a stable cache name + network-first for navigations and stale-while-revalidate for assets, so new deployments refresh automatically without manual cache version bumps.
+
+### FIXED — BUG-035 No PWA install prompt UX
+
+- **Severity:** P2
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added an in-app "Install App" button (sidebar footer) using `beforeinstallprompt` (and iOS Safari instructions).
+- **Verification:** Code inspection; manual install prompt test recommended on supported browsers.
+
+### FIXED — BUG-036 No service worker update notification
+
+- **Severity:** P2
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added update detection (service worker `updatefound` + `controllerchange`) and prompts users to reload via modal.
+- **Verification:** Code inspection; manual SW update test recommended.
+
+### FIXED — BUG-037 Preflop EV model uses hardcoded fold equity assumptions
+
+- **Severity:** P2
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Documented fold equity constants as 100bb cash approximations; noted future settings/config work.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-038 EV feedback missing for cold call + squeeze
+
+- **Severity:** P2
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added EV models for `TRAINER_TYPES.COLD_CALL` and `TRAINER_TYPES.SQUEEZE` in `preflopTrainer.computeEvFeedback()`.
+- **Verification:** Code inspection; manual trainer test recommended.
+
+### FIXED — BUG-039 EV loss floor prevents Perfect on close wrong answers
+
+- **Severity:** P2
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Removed EV-loss flooring for incorrect answers in `computeEvFeedbackFromEvs()`.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-040 Multi-street SRS keys too coarse
+
+- **Severity:** P2
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added `heroIsAggressor`, `texture`, and `handStrength` into multistreet SRS scenario key generation.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-042 CSS duplication for EV feedback grades
+
+- **Severity:** P2
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Consolidated grade styles into `css/components.css` and removed duplicates from `css/modules.css`.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-043 Opponent rating hardcoded at 1500
+
+- **Severity:** P3
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added `opponentRatingForContext()` and updated all trainers to use difficulty-mapped opponent ratings.
+- **Verification:** Code inspection.
+
+### FIXED — BUG-044 No rating reset in settings
+
+- **Severity:** P3
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added "Reset Rating" button under Settings → Data Management.
+- **Verification:** Code inspection; manual click test recommended.
+
+### FIXED — BUG-045 Smart Practice session lost on refresh
+
+- **Severity:** P3
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added resume prompt on app init when `SRS_ACTIVE` exists and `SRS_AUTOSTART` is true.
+- **Verification:** Code inspection; manual refresh mid-session recommended.
+
+### FIXED — BUG-046 No offline indicator
+
+- **Severity:** P3
+- **Branch:** `fix/review-bugs-035-040`
+- **Fix:** Added online/offline badge in sidebar footer and listens to `online`/`offline` events.
+- **Verification:** Code inspection; toggle in DevTools recommended.
+

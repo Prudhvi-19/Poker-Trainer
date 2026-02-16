@@ -5,6 +5,10 @@ import stats from '../utils/stats.js';
 import { getRandomQuote, formatPercentage, formatDuration } from '../utils/helpers.js';
 import router from '../router.js';
 import { MODULES } from '../utils/constants.js';
+import { getRatingTier } from '../utils/rating.js';
+import { getDueScenarioKeys } from '../utils/srs.js';
+import { startSession, navigateToCurrentKeyRoute } from '../utils/smartPracticeSession.js';
+import { showModal } from '../components/Modal.js';
 
 function render() {
     const container = document.createElement('div');
@@ -17,6 +21,10 @@ function render() {
     // Today's stats
     const todayStats = createTodayStats();
     container.appendChild(todayStats);
+
+    // Skill rating
+    const rating = createRatingWidget();
+    container.appendChild(rating);
 
     // Overall stats
     const overallStats = createOverallStats();
@@ -38,7 +46,102 @@ function render() {
     const quickStart = createQuickStartSection();
     container.appendChild(quickStart);
 
+    // Smart practice
+    const smartPractice = createSmartPracticeSection();
+    container.appendChild(smartPractice);
+
     return container;
+}
+
+function createSmartPracticeSection() {
+    const dueKeys = getDueScenarioKeys({ limit: 20 });
+    const count = dueKeys.length;
+
+    const section = document.createElement('div');
+    section.className = 'card';
+    section.innerHTML = `
+        <h2 style="margin-bottom: 0.75rem;">🧠 Smart Practice</h2>
+        <p class="text-muted" style="margin-bottom: 1rem;">
+            Review your weak spots with spaced repetition. Due now: <strong>${count}</strong>
+        </p>
+    `;
+
+    const row = document.createElement('div');
+    row.style.display = 'flex';
+    row.style.gap = '0.75rem';
+    row.style.flexWrap = 'wrap';
+
+    const startBtn = document.createElement('button');
+    startBtn.className = 'btn btn-primary';
+    startBtn.textContent = count > 0 ? 'Start Smart Practice' : 'No Reviews Due';
+    startBtn.disabled = count === 0;
+
+    startBtn.addEventListener('click', () => {
+        const keys = getDueScenarioKeys({ limit: 25 });
+        const ok = startSession({ keys });
+        if (ok) {
+            navigateToCurrentKeyRoute();
+        }
+    });
+
+    const learnMore = document.createElement('button');
+    learnMore.className = 'btn btn-secondary';
+    learnMore.textContent = 'How it works';
+    learnMore.addEventListener('click', () => {
+        showModal({
+            title: '🧠 Smart Practice (Spaced Repetition)',
+            content: 'Smart Practice schedules review items based on your mistakes and EV loss. Items you miss come back sooner; items you nail return later.',
+            buttons: [{ text: 'OK', className: 'btn btn-primary' }]
+        });
+    });
+
+    row.appendChild(startBtn);
+    row.appendChild(learnMore);
+    section.appendChild(row);
+    return section;
+}
+
+function createRatingWidget() {
+    const rating = storage.getRating();
+    const tier = getRatingTier(rating.current);
+
+    const section = document.createElement('div');
+    section.className = 'card mb-lg';
+
+    const delta = (() => {
+        const h = Array.isArray(rating.history) ? rating.history : [];
+        if (h.length < 2) return null;
+        const prev = h[h.length - 2]?.r;
+        const curr = h[h.length - 1]?.r;
+        if (!Number.isFinite(prev) || !Number.isFinite(curr)) return null;
+        return curr - prev;
+    })();
+
+    const deltaLabel = delta === null
+        ? ''
+        : `<span class="text-muted" style="font-size: 0.9rem;">(${delta >= 0 ? '+' : ''}${delta})</span>`;
+
+    section.innerHTML = `
+        <h2 style="margin-bottom: 1.5rem;">🏅 Skill Rating</h2>
+        <div class="quick-stats">
+            <div class="stat-box">
+                <div class="stat-value">${rating.current}</div>
+                <div class="stat-label">Rating ${deltaLabel}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value">${tier.label}</div>
+                <div class="stat-label">Tier</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value">${rating.history?.length || 0}</div>
+                <div class="stat-label">Rated Decisions</div>
+            </div>
+        </div>
+        <p class="text-muted" style="margin-top: 1rem;">
+            Rating updates after each decision (correct answers increase rating; incorrect decrease).
+        </p>
+    `;
+    return section;
 }
 
 function createWelcomeSection() {
@@ -186,7 +289,7 @@ function createRecentSessionsWidget() {
             if (session.results) {
                 sessionStats = stats.calculateSessionStats(session.results);
             } else {
-                const counts = stats._getSessionCounts(session);
+                const counts = stats.getSessionCounts(session);
                 sessionStats = {
                     totalHands: counts.total,
                     correct: counts.correct,
